@@ -1,4 +1,5 @@
 # Changelog
+- add DeepSort-based Tracker wrapper in app/vision with env-configurable params
 - add async diagnostics tests for connectivity and performance metrics
 - cache basic and PPE detectors in shared registry for diagnostics
 - add overlay diagnostics checks endpoint and front-end runner
