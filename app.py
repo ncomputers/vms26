@@ -3,21 +3,26 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from starlette.middleware.sessions import SessionMiddleware
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from starlette.middleware.sessions import SessionMiddleware
 
 import logging_config  # noqa: F401
+from app.core.logging import setup_json_logger
 from modules.utils import SNAP_DIR
-from utils.redis import get_sync_client
-from server.config import _load_secret_key
-from server.startup import handle_unexpected_error, init_app as _init_app, lifespan
 from routers import whatsapp
 from datetime import datetime
 
 from core.logging import setup_json_logger
 from core.config import get_config
+
+from server.config import _load_secret_key
+from server.startup import handle_unexpected_error
+from server.startup import init_app as _init_app
+from server.startup import lifespan
+from utils.redis import get_sync_client
+
 
 
 def init_app(
@@ -67,7 +72,9 @@ async def health_ping() -> dict:
 
 @app.get("/manifest.webmanifest", include_in_schema=False)
 async def manifest() -> FileResponse:
-    return FileResponse("static/manifest.webmanifest", media_type="application/manifest+json")
+    return FileResponse(
+        "static/manifest.webmanifest", media_type="application/manifest+json"
+    )
 
 
 def _sw_response(path: str) -> FileResponse:
@@ -89,6 +96,7 @@ async def sw_dev() -> FileResponse:
 @app.get("/offline.html", include_in_schema=False)
 async def offline() -> FileResponse:
     return FileResponse("static/offline.html", media_type="text/html")
+
 
 if CsrfProtectMiddleware:
     app.add_middleware(CsrfProtectMiddleware)
