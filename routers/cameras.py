@@ -63,6 +63,7 @@ from utils import require_feature
 from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.overlay import draw_boxes_np
+from app.vision.overlay import render_from_legacy
 from utils.url import get_stream_type
 
 # utility for resolving stream dimensions
@@ -1369,10 +1370,13 @@ async def camera_mjpeg(
                                 dets = tracker.get_latest(camera_id) or []
                                 if not labels:
                                     dets = [{**d, "label": ""} for d in dets]
-                                arr = draw_boxes_np(arr, dets, thickness=thickness)
-                                bio = io.BytesIO()
-                                Image.fromarray(arr).save(bio, "JPEG", quality=80)
-                                frame_out = bio.getvalue()
+                                if os.getenv("VMS21_OVERLAY_PURE") == "1":
+                                    frame_out = render_from_legacy(arr, arr.shape[1], arr.shape[0], {}, dets, [], None, str(camera_id))
+                                else:
+                                    arr = draw_boxes_np(arr, dets, thickness=thickness)
+                                    bio = io.BytesIO()
+                                    Image.fromarray(arr).save(bio, "JPEG", quality=80)
+                                    frame_out = bio.getvalue()
                             except Exception:
                                 frame_out = frame
                         yield (
