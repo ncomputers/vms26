@@ -16,3 +16,5 @@ Redis acts as the central message bus and datastore.
   after verifying Redis contains the required history.
 * Publishing `cam:<id>` to the `counter.config` channel reloads that camera's
   line configuration and `track_objects` list without restarting trackers.
+* The `CFG_VERSION` key increments whenever configuration is updated. Use
+  `watch_config` to refresh application settings when this version changes.
