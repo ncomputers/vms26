@@ -66,6 +66,9 @@ from utils.overlay import draw_boxes_np
 from app.vision.overlay import render_from_legacy
 from utils.url import get_stream_type
 
+from vision.overlay import render_from_legacy
+from core.config import get_config
+
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
 
@@ -249,6 +252,7 @@ def init_context(
     from config import config as global_config
 
     cfg = global_config
+    cfg = get_config()
     cams = cameras
     trackers_map = trackers
     face_trackers_map = {}
@@ -1365,14 +1369,13 @@ async def camera_mjpeg(
                         frame_out = frame
                         if overlay:
                             try:
-                                img = Image.open(io.BytesIO(frame)).convert("RGB")
-                                arr = np.asarray(img, dtype=np.uint8)
                                 dets = tracker.get_latest(camera_id) or []
                                 if not labels:
                                     dets = [{**d, "label": ""} for d in dets]
                                 if os.getenv("VMS21_OVERLAY_PURE") == "1":
                                     frame_out = render_from_legacy(arr, arr.shape[1], arr.shape[0], {}, dets, [], None, str(camera_id))
                                 else:
+
                                     arr = draw_boxes_np(arr, dets, thickness=thickness)
                                     bio = io.BytesIO()
                                     Image.fromarray(arr).save(bio, "JPEG", quality=80)
