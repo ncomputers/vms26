@@ -418,6 +418,8 @@ The first camera uses the default pipeline, while the second overrides the trans
 
 Logging is configured via [`logging_config.py`](logging_config.py) using Loguru with JSON output and rotation. Adjust verbosity by setting the `LOG_LEVEL` environment variable (e.g., `LOG_LEVEL=DEBUG`) or by adding a `log_level` entry in `config.json`.
 
+Set `VMS21_COUNTING_PURE=1` to enable the new counting-only pipeline which emits entry/exit events to an in-memory list. The variable is unset by default, preserving the legacy counting behaviour.
+
 ## Licensing
 
 The application verifies the `license_key` on startup but will still run if the token is missing or invalid. Feature limits remain disabled until a valid key is activated. Use the **Settings** page (or `/license` endpoint) to update the key at runtime. The page shows license details such as client name, enabled features and expiration. Administrators can generate keys with `key_gen.py` or `license_generator.py`, enabling optional modules like PPE Detection, Visitor Management and Face Recognition.

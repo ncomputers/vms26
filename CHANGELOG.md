@@ -1,4 +1,5 @@
 # Changelog
+- support experimental counting-only pipeline toggled via `VMS21_COUNTING_PURE`
 - add async diagnostics tests for connectivity and performance metrics
 - cache basic and PPE detectors in shared registry for diagnostics
 - add overlay diagnostics checks endpoint and front-end runner
