@@ -1,0 +1,51 @@
+<!-- Purpose: consolidated debug template with recent events panel -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Debug</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/flatly/bootstrap.min.css" rel="stylesheet" />
+    <style>
+    #eventsPanel{position:fixed;top:0;right:0;width:300px;height:100%;overflow-y:auto;border-left:1px solid #ccc;background:#f8f9fa;padding:.5rem;}
+    .event-chip{display:block;margin-bottom:4px;}
+    body{margin-right:320px;}
+    </style>
+</head>
+<body>
+<h1 class="mb-4">Debug</h1>
+<div id="eventsPanel">
+  <h5>Recent Events</h5>
+  <select id="eventFilter" class="form-select form-select-sm mb-2">
+    <option value="">All Events</option>
+  </select>
+  <select id="camFilter" class="form-select form-select-sm mb-2">
+    <option value="">All Cameras</option>
+  </select>
+  <div id="eventsList"></div>
+</div>
+<script>
+const es=new EventSource('/sse/logs/events');
+const list=document.getElementById('eventsList');
+const eventSel=document.getElementById('eventFilter');
+const camSel=document.getElementById('camFilter');
+function addOpt(sel,val){if(![...sel.options].some(o=>o.value==String(val))){const opt=document.createElement('option');opt.value=val;opt.textContent=val;sel.appendChild(opt);}}
+es.onmessage=e=>{
+  const data=JSON.parse(e.data);
+  addOpt(eventSel,data.event);
+  if(data.camera_id!==undefined){addOpt(camSel,data.camera_id);}
+  if(eventSel.value && eventSel.value!==data.event){return;}
+  if(camSel.value && String(camSel.value)!==String(data.camera_id)){return;}
+  const chip=document.createElement('div');
+  let cls='bg-secondary';
+  if(data.level==='info'){cls='bg-info text-dark';}
+  else if(data.level==='warning'){cls='bg-warning text-dark';}
+  else if(data.level==='error'){cls='bg-danger';}
+  chip.className=`badge ${cls} event-chip`;
+  chip.textContent=`${data.event}${data.camera_id!==undefined?' ['+data.camera_id+']':''}`;
+  list.appendChild(chip);
+  list.scrollTop=list.scrollHeight;
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "appName": "VMS Mobile",
+  "appId": "com.rapidcorp.vms",
+  "serverUrl": "https://vms.rapidcorp.in",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "icons": {
+    "android": "res/android/icon.png",
+    "ios": "res/ios/icon.png"
+  },
+  "permissions": [
+    "camera",
+    "storage"
+  ],
+  "gradleWrapperUrl": "https://raw.githubusercontent.com/gradle/gradle/v8.11.1/gradle/wrapper/gradle-wrapper.jar",
+  "signing": {
+    "keystorePath": "android/app/my-release-key.keystore",
+    "alias": "vmsKey",
+    "storePassword": "changeit",
+    "keyPassword": "changeit"
+  }
+}

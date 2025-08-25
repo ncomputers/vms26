@@ -1,0 +1,19 @@
+.overlay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.2s, background-color 0.2s;
+}
+.overlay-toggle.active {
+  color: #fff;
+  background-color: var(--bs-primary);
+}
+.yolo-log {
+  font-family: monospace;
+  font-size: 0.75rem;
+  max-height: 6rem;
+  overflow-y: auto;
+  background: #000;
+  color: #0f0;
+  padding: 0.5rem;
+}

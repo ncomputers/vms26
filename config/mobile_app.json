@@ -1,0 +1,16 @@
+{
+  "appName": "VMS Mobile",
+  "appId": "com.rapidcorp.vms",
+  "serverUrl": "https://vms.rapidcorp.in",
+  "manifestUrl": "/manifest.json",
+  "icons": {
+    "android": "res/android/icon.png",
+    "ios": "res/ios/icon.png"
+  },
+  "version": "1.0.0",
+  "permissions": [
+    "camera",
+    "storage"
+  ],
+  "versionCode": 1
+}

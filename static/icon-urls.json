@@ -1,0 +1,23 @@
+{
+  "icons": [
+    {"name": "icon-48x48.png", "url": "https://via.placeholder.com/48.png"},
+    {"name": "icon-72x72.png", "url": "https://via.placeholder.com/72.png"},
+    {"name": "icon-96x96.png", "url": "https://via.placeholder.com/96.png"},
+    {"name": "icon-144x144.png", "url": "https://via.placeholder.com/144.png"},
+    {"name": "icon-192x192.png", "url": "https://via.placeholder.com/192.png"},
+    {"name": "icon-512x512.png", "url": "https://via.placeholder.com/512.png"},
+    {"name": "icon-1024x1024.png", "url": "https://via.placeholder.com/1024.png"},
+    {"name": "icon-192x192-maskable.png", "url": "https://via.placeholder.com/192.png"},
+    {"name": "icon-512x512-maskable.png", "url": "https://via.placeholder.com/512.png"},
+    {"name": "apple-splash-640x1136.png", "url": "https://via.placeholder.com/640x1136.png"},
+    {"name": "apple-splash-828x1792.png", "url": "https://via.placeholder.com/828x1792.png"},
+    {"name": "apple-splash-1125x2436.png", "url": "https://via.placeholder.com/1125x2436.png"},
+    {"name": "apple-splash-1242x2688.png", "url": "https://via.placeholder.com/1242x2688.png"},
+    {"name": "apple-splash-1536x2048.png", "url": "https://via.placeholder.com/1536x2048.png"},
+    {"name": "apple-splash-1668x2388.png", "url": "https://via.placeholder.com/1668x2388.png"},
+    {"name": "apple-splash-2048x1536.png", "url": "https://via.placeholder.com/2048x1536.png"},
+    {"name": "apple-splash-2048x2732.png", "url": "https://via.placeholder.com/2048x2732.png"},
+    {"name": "apple-splash-2388x1668.png", "url": "https://via.placeholder.com/2388x1668.png"},
+    {"name": "apple-splash-2732x2048.png", "url": "https://via.placeholder.com/2732x2048.png"}
+  ]
+}

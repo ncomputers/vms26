@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <title>Camera Debug Overview</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:2rem;}
+    .cam{margin-bottom:2rem;}
+    img{max-width:320px;display:block;}
+    pre{background:#f0f0f0;padding:1rem;}
+  </style>
+</head>
+<body>
+  <h1>Camera Debug Overview</h1>
+  {% for cam in cameras %}
+  <div class="cam">
+    <h3>{{ cam.id }}: {{ cam.name }}</h3>
+    <img src="/api/cameras/{{ cam.id }}/mjpeg?token={{ cam.token }}" alt="Camera {{ cam.id }}" />
+    <div>Status: {{ cam.status }}</div>
+    <div>Pipeline:</div>
+    <pre>{{ cam.pipeline }}</pre>
+    <div><a href="/debug/camera/{{ cam.id }}">Details</a></div>
+  </div>
+  {% endfor %}
+</body>
+</html>

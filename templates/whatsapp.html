@@ -1,0 +1,12 @@
+<!-- Purpose: embed WhatsApp service status/QR -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WhatsApp</title>
+</head>
+<body class="vms-body">
+{% include 'partials/header.html' %}
+<iframe src="{{ service_url }}/?secret={{ shared_secret }}" style="width:100%;height:80vh;border:none;"></iframe>
+</body>
+</html>

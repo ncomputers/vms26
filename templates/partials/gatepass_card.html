@@ -1,0 +1,152 @@
+{% set cfg = cfg or {} %} {% set branding = branding or cfg.get('branding', {})
+%} {% set show_card_signature = show_card_signature if show_card_signature is
+defined else true %}
+<script>
+  document.documentElement.style.setProperty("--gp-photo-w", "150px");
+  document.documentElement.style.setProperty("--gp-photo-h", "150px");
+  document.documentElement.style.setProperty("--gp-qr", "150px");
+</script>
+<div class="gp-card">
+  <div class="gp-header">
+    {% set raw_logo = branding.company_logo_url or cfg.get('logo_url') %} {% if
+    raw_logo %} {% if raw_logo.startswith('http') %}
+    <img src="{{ raw_logo }}" class="gp-logo" alt="logo" />
+    {% else %} {% set logo_path = raw_logo.split('/static/')[-1] %}
+    <img
+      src='{{ url_for("static", path=logo_path) }}'
+      class="gp-logo"
+      alt="logo"
+    />
+    {% endif %} {% endif %} {% if branding.company_name %}
+    <h5 class="gp-company">{{ branding.company_name }}</h5>
+    {% endif %} {% if branding.site_name %}
+    <div class="gp-site">{{ branding.site_name }}</div>
+    {% endif %}
+  </div>
+  <div class="gp-body">
+    <div class="gp-media">
+      <div class="gp-photo">
+        <img
+          id="prevPhoto"
+          src="{% if rec.image %}data:image/jpeg;base64,{{ rec.image }}{% endif %}"
+          alt="photo"
+          class="{% if not rec.image %}d-none{% endif %}"
+        />
+        <div
+          id="photoPlaceholder"
+          class="d-flex align-items-center justify-content-center w-100 h-100 bg-light border rounded {% if rec.image %}d-none{% endif %}"
+        ></div>
+      </div>
+      <div id="qrBox" class="gp-qr">
+        {% if qr_img %}
+        <img id="qr" src="{{ qr_img }}" alt="qr code" />
+        {% else %}
+        <div id="qrPlaceholder" class="qr-placeholder">QR unavailable</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="gp-details">
+      <div class="gp-row">
+        <span class="gp-label">Name</span>
+        <span id="pName" class="gp-value" title="{{ rec.name or '' }}"
+          >{{ rec.name or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Phone</span>
+        <span id="pPhone" class="gp-value" title="{{ rec.phone or '' }}"
+          >{{ rec.phone or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Email</span>
+        <span id="pEmail" class="gp-value" title="{{ rec.email or '' }}"
+          >{{ rec.email or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Visitor Type</span>
+        <span id="pType" class="gp-value" title="{{ rec.visitor_type or '' }}"
+          >{{ rec.visitor_type or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Company</span>
+        <span id="pCompany" class="gp-value" title="{{ rec.company or '' }}"
+          >{{ rec.company or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Department</span>
+        <span
+          id="pDept"
+          class="gp-value"
+          title="{{ rec.host_department or '' }}"
+          >{{ rec.host_department or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Purpose</span>
+        <span id="pPurpose" class="gp-value" title="{{ rec.purpose or '' }}"
+          >{{ rec.purpose or '' }}</span
+        >
+      </div>
+      {% if rec.id_proof_type %}
+      <div class="gp-row">
+        <span class="gp-label">ID Type</span>
+        <span class="gp-value" title="{{ rec.id_proof_type or '' }}"
+          >{{ rec.id_proof_type or '' }}</span
+        >
+      </div>
+      {% endif %}
+      <div class="gp-row">
+        <span class="gp-label">Gate ID</span>
+        <span id="pGate" class="gp-value" title="{{ rec.gate_id or '' }}"
+          >{{ rec.gate_id or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Entry Time</span>
+        <span class="gp-value" title="{{ rec.time or '' }}"
+          >{{ rec.time or '' }}</span
+        >
+      </div>
+      <div class="gp-row">
+        <span class="gp-label">Valid Until</span>
+        <span id="pValid" class="gp-value" title="{{ rec.valid_to_str or '' }}"
+          >{{ rec.valid_to_str or '' }}</span
+        >
+      </div>
+    </div>
+    <div class="gp-status-wrap">
+      <span
+        id="pStatus"
+        class="badge bg-{{ status_color }} text-uppercase gp-status"
+        >{{ rec.status|capitalize }}</span
+      >
+      <div id="approvalBadge" class="mt-2 d-none">
+        <span class="badge bg-warning text-dark text-uppercase">Pending approval</span>
+        <div id="pApproverEmail" class="small text-muted"></div>
+      </div>
+    </div>
+    {% if show_card_signature and (signature_url or rec.signature) %}
+    <div class="gp-signature">
+      <img src="{{ (signature_url or rec.signature) | default('', true) }}" class="sig" alt="signature" />
+    </div>
+    {% endif %}
+  </div>
+  {% set footer_logo = branding.footer_logo_url or cfg.get('logo2_url') %} {% if
+  footer_logo %}
+  <div class="gp-footer">
+    {% if footer_logo.startswith('http') %}
+    <img src="{{ footer_logo }}" class="gp-footer-logo" alt="footer logo" />
+    {% else %} {% set footer_path = footer_logo.split('/static/')[-1] %}
+    <img
+      src='{{ url_for("static", path=footer_path) }}'
+      class="gp-footer-logo"
+      alt="footer logo"
+    />
+    {% endif %}
+  </div>
+  {% endif %}
+</div>

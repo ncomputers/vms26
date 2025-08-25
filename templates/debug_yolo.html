@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Detection Debug</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:2rem;}
+    pre{background:#f0f0f0;padding:1rem;}
+  </style>
+</head>
+<body>
+<h1>Detection Debug</h1>
+<div id="notice" style="color:red"></div>
+<div>Entered: <span id="entered">0</span> | Exited: <span id="exited">0</span> | Inside: <span id="inside">0</span></div>
+<pre id="log"></pre>
+<script>
+const log=document.getElementById('log');
+const notice=document.getElementById('notice');
+const entered=document.getElementById('entered');
+const exited=document.getElementById('exited');
+const inside=document.getElementById('inside');
+const lines=[];
+const ws=new WebSocket(`ws://${location.host}/ws/debug/yolo`);
+ws.onmessage=e=>{
+  if(e.data==='no tracker'){
+    notice.textContent='No tracker available. Please check tracker configuration.';
+    return;
+  }
+  const parts=e.data.split('\n').filter(Boolean);
+  parts.forEach(p=>lines.push(p));
+  while(lines.length>5) lines.shift();
+  log.textContent=lines.join('\n');
+  try{
+    const last=JSON.parse(lines[lines.length-1]);
+    const inCounts=last.in_counts||{};
+    const outCounts=last.out_counts||{};
+    const enteredTotal=Object.values(inCounts).reduce((a,b)=>a+Number(b),0);
+    const exitedTotal=Object.values(outCounts).reduce((a,b)=>a+Number(b),0);
+    entered.textContent=enteredTotal;
+    exited.textContent=exitedTotal;
+    inside.textContent=Math.max(0,enteredTotal-exitedTotal);
+  }catch{}
+};
+</script>
+</body>
+</html>
