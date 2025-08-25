@@ -8,12 +8,18 @@ management features are disabled or unlicensed.
 When an RTSP URL without a path is supplied, camera creation attempts
 to auto-probe common stream paths and logs the selected URL.
 
+### Environment Variables
+
+- `VMS21_PIPELINE` - When set to `1`, MJPEG overlays are streamed from a
+  lightweight in-process pipeline instead of spawning FFmpeg.
+
 ## Key Classes
 None
 
 ## Key Functions
-- **init_context(config, cameras, trackers, redis_client, templates_path)** - 
+- **init_context(config, cameras, trackers, redis_client, templates_path)** -
 - **_expand_ppe_tasks(tasks)** - Ensure each selected PPE class includes its paired absence/presence.
+- **get_pipeline_overlay(camera_id)** - Retrieve latest overlay frame from optional pipeline.
 
 ## Inputs and Outputs
 Refer to function signatures above for inputs and outputs.

@@ -154,6 +154,18 @@ camera_manager = CameraManager(
 )
 manager = camera_manager
 
+# optional experimental pipeline support
+USE_PIPELINE = os.getenv("VMS21_PIPELINE") == "1"
+pipelines_map: Dict[int, object] = {}
+
+
+def get_pipeline_overlay(camera_id: int) -> bytes | None:
+    """Return latest overlay frame bytes from the optional pipeline."""
+    pipe = pipelines_map.get(camera_id)
+    if pipe and hasattr(pipe, "get_overlay_bytes"):
+        return pipe.get_overlay_bytes()
+    return None
+
 
 def get_camera_manager() -> CameraManager:  # pragma: no cover - simple accessor
     return camera_manager
@@ -273,6 +285,16 @@ def init_context(
         start_face_tracker_fn,
         stop_face_tracker_fn,
     )
+    if USE_PIPELINE:
+        try:
+            from modules.pipeline import Pipeline
+
+            for cam in cams:
+                pipe = Pipeline(cam)
+                pipe.start()
+                pipelines_map[cam.get("id")] = pipe
+        except Exception:
+            logger.exception("failed to start pipeline")
     # Start background health monitoring task
     try:
         loop = asyncio.get_running_loop()
@@ -1324,6 +1346,25 @@ async def camera_mjpeg(
     cam = next((c for c in cams if c.get("id") == camera_id), None)
     if not cam or not cam.get("url"):
         raise HTTPException(status_code=404, detail="camera not found")
+
+    if USE_PIPELINE and overlay:
+        async def generator():
+            boundary = b"--frame"
+            while True:
+                frame = get_pipeline_overlay(camera_id)
+                if frame:
+                    yield (
+                        boundary
+                        + b"\r\nContent-Type: image/jpeg\r\n\r\n"
+                        + frame
+                        + b"\r\n"
+                    )
+                await asyncio.sleep(0.05)
+
+        return StreamingResponse(
+            generator(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+        )
 
     rtsp_url = cam["url"]
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning"]
