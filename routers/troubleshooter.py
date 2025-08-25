@@ -17,6 +17,7 @@ from starlette.responses import StreamingResponse
 
 from diagnostics.registry import list_tests
 from modules.stream_probe import check_rtsp
+from modules import troubleshooter_runner as ts_runner
 from utils.deps import get_cameras, get_templates
 
 router = APIRouter()
@@ -178,6 +179,38 @@ async def troubleshooter_run_sse(
         run_tests_event_source(camera_id, selected),
         media_type="text/event-stream",
     )
+
+
+@router.get("/troubleshooter/start")
+async def troubleshooter_start(
+    camera_id: int = Query(...),
+    cameras: List[dict] = Depends(get_cameras),
+) -> Dict[str, Any]:
+    cam = next((c for c in cameras if c.get("id") == camera_id), None)
+    if cam is None:
+        return {"error": "camera_not_found"}
+    run_id = ts_runner.start_run(cam)
+    return {"run_id": run_id}
+
+
+async def _stream_run(run_id: str) -> AsyncIterator[str]:
+    queue = ts_runner.get_queue(run_id)
+    if queue is None:
+        yield "data: {}\n\n"
+        return
+    loop = asyncio.get_running_loop()
+    while True:
+        msg = await loop.run_in_executor(None, queue.get)
+        payload = json.dumps(msg)
+        yield f"data: {payload}\n\n"
+        if msg.get("stage") == "complete":
+            ts_runner.cleanup(run_id)
+            break
+
+
+@router.get("/troubleshooter/stream")
+async def troubleshooter_stream(run_id: str = Query(...)) -> StreamingResponse:
+    return StreamingResponse(_stream_run(run_id), media_type="text/event-stream")
 
 
 @router.get("/api/troubleshooter/{cam_id}")
