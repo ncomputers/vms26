@@ -9,6 +9,7 @@ from .storage import (
     save_config,
     sync_detection_classes,
 )
+from .versioning import bump_version, watch_config
 
 config = DEFAULT_CONFIG.copy()
 use_gstreamer: bool = config["use_gstreamer"]
@@ -56,4 +57,6 @@ __all__ = [
     "set_config",
     "config",
     "use_gstreamer",
+    "watch_config",
+    "bump_version",
 ] + [name for name in globals().keys() if name.isupper()]

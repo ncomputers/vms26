@@ -15,6 +15,7 @@ from modules.ppe_worker import PPEDetector
 from modules.tracker import PersonTracker
 from modules.utils import SNAP_DIR
 from utils.gpu import get_device
+from config.versioning import watch_config
 
 BASE_DIR = Path(__file__).parent
 
@@ -114,18 +115,26 @@ async def init_trackers(
     cfg: dict[str, Any],
     trackers: dict[int, PersonTracker],
     redis_client: Redis,
-) -> None:
-    """Initialize trackers for enabled cameras using the given Redis client."""
+    config_path: str,
+) -> list[asyncio.Task[None]]:
+    """Initialize trackers and return watcher tasks for configuration updates."""
+    tasks: list[asyncio.Task[None]] = []
     if not cfg.get("enable_person_tracking", True):
         logger.info("Person tracking disabled; skipping tracker initialization")
-        return
+        return tasks
 
     enabled = [cam for cam in cams if cam.get("enabled", True)]
     logger.info("Initializing trackers for {} cameras", len(enabled))
     try:
 
         async def _start(cam: dict[str, Any]) -> None:
-            await asyncio.to_thread(start_tracker, cam, cfg, trackers, redis_client)
+            tr = await asyncio.to_thread(start_tracker, cam, cfg, trackers, redis_client)
+            if tr:
+                tasks.append(
+                    asyncio.create_task(
+                        watch_config(lambda c, tr=tr: tr.update_cfg(c), config_path=config_path)
+                    )
+                )
 
         await asyncio.gather(*(_start(cam) for cam in enabled))
         await asyncio.to_thread(start_watchdog, trackers)
@@ -133,6 +142,7 @@ async def init_trackers(
     except (RuntimeError, OSError) as e:
         logger.exception("Tracker initialization failed: {}", e)
         raise
+    return tasks
 
 
 async def alert_worker(app: FastAPI, cfg: dict[str, Any], redis_client: Redis) -> None:
@@ -192,6 +202,9 @@ async def start_background_workers(
 ) -> list[asyncio.Task[None]]:
     """Preload models and create background tasks."""
     await preload_models(cfg, cams)
+    watcher_tasks = await init_trackers(
+        cams, cfg, trackers, redis_client, app.state.config_path
+    )
     worker_defs = [
         ("alert-worker", lambda: alert_worker(app, cfg, redis_client)),
         ("ppe-detector", lambda: ppe_worker(app, cfg, trackers, redis_client)),
@@ -201,12 +214,7 @@ async def start_background_workers(
             ("visitor-worker", lambda: visitor_worker(app, cfg, redis_client))
         )
 
-    tasks = [
-        asyncio.create_task(
-            init_trackers(cams, cfg, trackers, redis_client),
-            name="tracker-initialization",
-        )
-    ]
+    tasks = watcher_tasks
     tasks.append(
         asyncio.create_task(
             counter_config_listener(redis_client, trackers),
