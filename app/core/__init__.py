@@ -1,1 +1,2 @@
-"""Core components for the application."""
+"""Core utilities for the application."""
+
