@@ -18,10 +18,15 @@ from typing import Optional
 
 import redis as redis_sync
 import redis.asyncio as redis_async
+from loguru import logger
 from redis.exceptions import RedisError
 
 from config import config as shared_config
 from .redis_facade import RedisFacade
+
+
+EVENTS_STREAM = "events_stream"
+_xadd_client = None
 
 
 async def trim_sorted_set(
@@ -107,6 +112,23 @@ def get_sync_client(url: Optional[str] = None) -> redis_sync.Redis:
         logger.error("Failed to connect to Redis at {}: {}", url, e)
         raise
     return client
+
+
+def xadd_event(stream: str, data: dict, maxlen: int = 1000) -> None:
+    """Add ``data`` to Redis *stream* trimming to ``maxlen`` entries."""
+    global _xadd_client
+    if _xadd_client is None:
+        try:
+            _xadd_client = get_sync_client()
+        except Exception as exc:  # pragma: no cover - redis not available
+            logger.warning("xadd_event init failed: {}", exc)
+            _xadd_client = False
+    if not _xadd_client:
+        return
+    try:
+        _xadd_client.xadd(stream, data, maxlen=maxlen, approximate=True)
+    except Exception as exc:  # pragma: no cover - redis failure
+        logger.warning("xadd_event failed for %s: %s", stream, exc)
 
 
 async def get_camera_overrides(

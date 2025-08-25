@@ -28,3 +28,23 @@ for quick inspection. Skipped probes are marked with a grey **skip** badge in th
   Server‑Sent Events. Each `test_result` event includes the `run_id` and the
   accumulating results array, followed by a final `run_complete` event. Capture
   and detection processes continue unaffected during diagnostics runs.
+
+## Runner interface
+
+For deeper inspection the troubleshooter can execute a multi‑stage runner in a
+background subprocess. The runner performs:
+
+1. ICMP ping or RTSP `OPTIONS` check.
+2. `ffprobe`/`gst-discoverer` metadata probe for codec and resolution.
+3. Decode 30 frames without a detector, measuring decode FPS.
+4. Detector warm‑up to establish initial latency.
+5. A five‑second end‑to‑end pipeline dry‑run.
+
+Endpoints:
+
+- `GET /troubleshooter/start?camera_id=1` launches the runner and returns a
+  `run_id`.
+- `GET /troubleshooter/stream?run_id=...` streams structured log events via
+  Server‑Sent Events. Each event reports the stage name, pass/fail status and
+  duration in milliseconds. Runs are isolated from production pipelines and do
+  not pause active streams.
