@@ -1,4 +1,5 @@
 # Changelog
+- add initial SQL migration for events and summaries tables
 - add runtime aggregator for Redis stream summaries
 
 - add async diagnostics tests for connectivity and performance metrics
