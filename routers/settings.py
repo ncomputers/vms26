@@ -18,6 +18,7 @@ from starlette.datastructures import FormData
 from config import config
 from config.constants import ANOMALY_ITEMS, COUNT_GROUPS, PPE_ITEMS
 from config.storage import load_branding, save_branding, save_config
+from config.versioning import bump_version
 from core.tracker_manager import reset_counts, save_cameras, start_tracker, stop_tracker
 from modules.email_utils import send_email
 from modules.utils import require_admin, require_roles
@@ -324,6 +325,7 @@ async def update_settings(request: Request):
     set_branding(branding_updates)
     set_cfg(new_cfg)
     save_config(cfg, cfg_path, redis)
+    bump_version(cfg_path)
     if redisfx:
         await redisfx.publish("events", json.dumps({"type": events.CONFIG_UPDATED}))
     from config import set_config as set_global_config

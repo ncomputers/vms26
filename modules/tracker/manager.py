@@ -35,7 +35,13 @@ except Exception:  # pragma: no cover - missing optional dependency
 from modules.profiler import register_thread
 from utils.gpu import get_device
 from utils.overlay import OverlayThrottler
-from utils.redis import get_sync_client, publish_event, trim_sorted_set_sync
+from utils.redis import (
+    EVENTS_STREAM,
+    get_sync_client,
+    publish_event,
+    trim_sorted_set_sync,
+    xadd_event,
+)
 from utils.time import format_ts
 from utils.url import get_stream_type
 
@@ -439,6 +445,32 @@ def process_frame(
                     key = f"{group}_logs"
                     tracker.redis.zadd(key, {json.dumps(entry): entry["ts"]}, nx=True)
                     trim_sorted_set_sync(tracker.redis, key, entry["ts"])
+                    xadd_event(
+                        EVENTS_STREAM,
+                        {
+                            "camera_id": tracker.cam_id,
+                            "ts_ms": int(now * 1000),
+                            "kind": f"line_cross_{direction}",
+                            "group": group,
+                            "track_id": tid,
+                            "line_id": 0,
+                        },
+                    )
+                    try:
+                        tracker.redis.hset(
+                            f"cam:{tracker.cam_id}:state",
+                            mapping={
+                                "fps_in": tracker.debug_stats.get(
+                                    "capture_fps", 0.0
+                                ),
+                                "fps_out": tracker.debug_stats.get(
+                                    "process_fps", 0.0
+                                ),
+                                "last_error": tracker.stream_error,
+                            },
+                        )
+                    except Exception:
+                        logger.exception("failed to update cam state")
                     if (
                         group == "person"
                         and getattr(tracker, "enable_face_counting", False)

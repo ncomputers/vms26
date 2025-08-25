@@ -1,5 +1,8 @@
 # Changelog
 - optionally stream MJPEG overlays via in-process Pipeline when `VMS21_PIPELINE=1`
+- add DeepSort-based Tracker wrapper in app/vision with env-configurable params
+- add initial SQL migration for events and summaries tables
+- add runtime aggregator for Redis stream summaries
 - add async diagnostics tests for connectivity and performance metrics
 - cache basic and PPE detectors in shared registry for diagnostics
 - add overlay diagnostics checks endpoint and front-end runner

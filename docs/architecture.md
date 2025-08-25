@@ -26,6 +26,10 @@ Historical crossing events are stored in the sorted sets
 score. Older deployments that used `events.db` can delete the SQLite file after
 migrating.
 
+For deployments requiring relational persistence, an initial migration
+(`migrations/0001_create_events_summaries.sql`) is provided to create `events`
+and `summaries` tables along with their indexes.
+
 ### Capture Pipeline
 FFmpeg is the default backend and executes:
 

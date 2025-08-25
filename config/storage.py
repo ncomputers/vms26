@@ -73,8 +73,10 @@ def _apply_defaults(data: dict) -> dict:
             backend_priority = ["gstreamer", "ffmpeg", "opencv"]
         else:
             backend_priority = ["ffmpeg", "gstreamer", "opencv"]
-    elif isinstance(backend_priority, str):
-        backend_priority = [backend_priority]
+    else:
+        if isinstance(backend_priority, str):
+            backend_priority = [backend_priority]
+        backend_priority = ["ffmpeg", *[b for b in backend_priority if b != "ffmpeg"]]
     data["backend_priority"] = backend_priority
     return data
 
