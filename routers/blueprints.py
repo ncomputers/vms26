@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from . import alerts, api_faces, api_identities, auth
+from . import alerts, api_faces, api_identities, api_summary, auth
 from . import cameras as cam_routes
 from . import (
     config_api,
@@ -12,16 +12,25 @@ from . import (
     debug,
     detections,
     diagnostics,
-    troubleshooter,
     entry,
     face_db,
     feedback,
     gatepass,
     health,
-    logs,
 )
 from . import help as help_pages
-from . import mcp, ppe_reports, profile, reports, rtsp, settings, visitor, vms
+from . import (
+    logs,
+    mcp,
+    ppe_reports,
+    profile,
+    reports,
+    rtsp,
+    settings,
+    troubleshooter,
+    visitor,
+    vms,
+)
 from .admin import users as admin_users
 
 # Ordered registry of router modules
@@ -39,6 +48,7 @@ MODULES = [
     face_db,
     api_faces,
     api_identities,
+    api_summary,
     vms,
     entry,
     gatepass,
@@ -82,35 +92,25 @@ def init_all(
     cam_routes.init_context(
         cfg, cams, trackers, redis_client, templates_dir, redis_facade
     )
-    reports.init_context(
-        cfg, trackers, redis_client, templates_dir, cams, redis_facade
-    )
-    ppe_reports.init_context(
-        cfg, trackers, redis_client, templates_dir, redis_facade
-    )
+    reports.init_context(cfg, trackers, redis_client, templates_dir, cams, redis_facade)
+    ppe_reports.init_context(cfg, trackers, redis_client, templates_dir, redis_facade)
     alerts.init_context(
         cfg, trackers, redis_client, templates_dir, config_path, redis_facade
     )
     admin_users.init_context(
         cfg, redis_client, templates_dir, config_path, redis_facade
     )
-    visitor.init_context(
-        cfg, redis_client, templates_dir, cams, redis_facade
-    )
+    visitor.init_context(cfg, redis_client, templates_dir, cams, redis_facade)
     face_db.init_context(cfg, redis_client, redis_facade)
     api_faces.init_context(cfg, redis_client, redis_facade)
     api_identities.init_context(cfg, redis_client, redis_facade)
     diagnostics.init_context(cfg, trackers, cams, templates_dir, redis_facade)
-    troubleshooter.init_context(
-        cfg, trackers, cams, templates_dir, redis_facade
-    )
+    troubleshooter.init_context(cfg, trackers, cams, templates_dir, redis_facade)
 
     vms.init_context(cfg, redis_client, templates_dir, redis_facade)
     entry.init_context(cfg, redis_client, templates_dir, redis_facade)
     gatepass.init_context(cfg, redis_client, templates_dir, redis_facade)
-    profile.init_context(
-        cfg, redis_client, templates_dir, config_path, redis_facade
-    )
+    profile.init_context(cfg, redis_client, templates_dir, config_path, redis_facade)
     help_pages.init_context(cfg, templates_dir, redis_facade)
     mcp.init_context(cfg, templates_dir, redis_facade)
 
