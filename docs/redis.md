@@ -8,6 +8,10 @@ Redis acts as the central message bus and datastore.
   * `person_logs` and `vehicle_logs` contain entry/exit events.
   * `face_logs` tracks counted faces.
   * All raw events may also be mirrored in the `events` set.
+* Real-time line-cross events are pushed to the `events_stream` Redis stream with
+  fields `camera_id`, `ts_ms`, `kind`, `group`, `track_id` and `line_id`.
+* Per-camera state is tracked in hashes `cam:<id>:state` storing `fps_in`,
+  `fps_out` and the most recent `last_error`.
 * Known face metadata is persisted under keys of the form `face:known:<id>` with
   all IDs stored in the `face:known_ids` set.
 * Visitor lookups use the `visitor:face_ids` hash mapping gate-pass or visitor IDs
