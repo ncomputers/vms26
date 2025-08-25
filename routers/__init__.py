@@ -13,6 +13,7 @@ __all__ = [
     "visitor",
     "api_faces",
     "api_identities",
+    "api_summary",
     "vms",
     "blueprints",
     "mcp",
