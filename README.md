@@ -265,7 +265,7 @@ Accessible labels and live region updates ensure screen reader support.
 
 ## Configuration
 
-Edit `config.json` to set camera URLs, model paths, thresholds, and email settings. Most options can also be adjusted in the web UI under **Settings**. Key fields include:
+Edit `config.json` to set camera URLs, model paths, thresholds, and email settings. Most options can also be adjusted in the web UI under **Settings**. Configuration changes are propagated to running pipelines within a few seconds. Key fields include:
 
 - `stream_url` – Optional default stream used when launching via the command line.
 - `person_model`, `ppe_model` – Paths to YOLO models.

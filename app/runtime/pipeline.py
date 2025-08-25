@@ -39,3 +39,4 @@ def ProcessLoop(person_detections, state, line_cfg) -> Tuple[Any, List[Any]]:
         return state, events
 
     return _legacy_process_loop(person_detections, state, line_cfg)
+

@@ -63,7 +63,11 @@ from utils import require_feature
 from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.overlay import draw_boxes_np
+from app.vision.overlay import render_from_legacy
 from utils.url import get_stream_type
+
+from vision.overlay import render_from_legacy
+from core.config import get_config
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
@@ -149,6 +153,18 @@ camera_manager = CameraManager(
     stop_face_tracker_fn,
 )
 manager = camera_manager
+
+# optional experimental pipeline support
+USE_PIPELINE = os.getenv("VMS21_PIPELINE") == "1"
+pipelines_map: Dict[int, object] = {}
+
+
+def get_pipeline_overlay(camera_id: int) -> bytes | None:
+    """Return latest overlay frame bytes from the optional pipeline."""
+    pipe = pipelines_map.get(camera_id)
+    if pipe and hasattr(pipe, "get_overlay_bytes"):
+        return pipe.get_overlay_bytes()
+    return None
 
 
 def get_camera_manager() -> CameraManager:  # pragma: no cover - simple accessor
@@ -248,6 +264,7 @@ def init_context(
     from config import config as global_config
 
     cfg = global_config
+    cfg = get_config()
     cams = cameras
     trackers_map = trackers
     face_trackers_map = {}
@@ -268,6 +285,16 @@ def init_context(
         start_face_tracker_fn,
         stop_face_tracker_fn,
     )
+    if USE_PIPELINE:
+        try:
+            from modules.pipeline import Pipeline
+
+            for cam in cams:
+                pipe = Pipeline(cam)
+                pipe.start()
+                pipelines_map[cam.get("id")] = pipe
+        except Exception:
+            logger.exception("failed to start pipeline")
     # Start background health monitoring task
     try:
         loop = asyncio.get_running_loop()
@@ -1320,6 +1347,25 @@ async def camera_mjpeg(
     if not cam or not cam.get("url"):
         raise HTTPException(status_code=404, detail="camera not found")
 
+    if USE_PIPELINE and overlay:
+        async def generator():
+            boundary = b"--frame"
+            while True:
+                frame = get_pipeline_overlay(camera_id)
+                if frame:
+                    yield (
+                        boundary
+                        + b"\r\nContent-Type: image/jpeg\r\n\r\n"
+                        + frame
+                        + b"\r\n"
+                    )
+                await asyncio.sleep(0.05)
+
+        return StreamingResponse(
+            generator(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+        )
+
     rtsp_url = cam["url"]
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning"]
     if rtsp_url.startswith("rtsp://"):
@@ -1364,15 +1410,17 @@ async def camera_mjpeg(
                         frame_out = frame
                         if overlay:
                             try:
-                                img = Image.open(io.BytesIO(frame)).convert("RGB")
-                                arr = np.asarray(img, dtype=np.uint8)
                                 dets = tracker.get_latest(camera_id) or []
                                 if not labels:
                                     dets = [{**d, "label": ""} for d in dets]
-                                arr = draw_boxes_np(arr, dets, thickness=thickness)
-                                bio = io.BytesIO()
-                                Image.fromarray(arr).save(bio, "JPEG", quality=80)
-                                frame_out = bio.getvalue()
+                                if os.getenv("VMS21_OVERLAY_PURE") == "1":
+                                    frame_out = render_from_legacy(arr, arr.shape[1], arr.shape[0], {}, dets, [], None, str(camera_id))
+                                else:
+
+                                    arr = draw_boxes_np(arr, dets, thickness=thickness)
+                                    bio = io.BytesIO()
+                                    Image.fromarray(arr).save(bio, "JPEG", quality=80)
+                                    frame_out = bio.getvalue()
                             except Exception:
                                 frame_out = frame
                         yield (
