@@ -1,0 +1,33 @@
+{% if not (env.get('VMS_GATEPASS_OLD_PREVIEW') if env is defined else false) %}
+<div class="vms-gatepass">
+  <div class="form">
+    <input id="full_name" placeholder="Full Name" />
+    <input id="phone" placeholder="Phone" />
+    <input id="email" placeholder="Email" />
+    <input id="org" placeholder="Organization" />
+    <input id="gov_id" placeholder="Gov ID" />
+    <input id="host_name" placeholder="Host Name" />
+    <input id="purpose" placeholder="Purpose" />
+    <input id="visit_date" type="date" />
+    <input id="photo-file" type="file" accept="image/*" />
+    <button id="btn-capture" type="button">Capture Photo</button>
+  </div>
+  <div id="gp-preview">
+    <img id="gp-photo" src="https://via.placeholder.com/180x180.png?text=Photo" />
+    <div id="gp-name"></div>
+    <div id="gp-host"></div>
+    <div id="gp-date"></div>
+    <div id="gp-purpose"></div>
+    <canvas id="gp-qr" width="180" height="180"></canvas>
+    <div class="actions">
+      <button id="btn-approve" type="button">Approve</button>
+      <button id="btn-print" type="button">Print</button>
+      <button id="btn-download" type="button">Download PDF</button>
+    </div>
+  </div>
+</div>
+<script src="/static/js/vms_gatepass.js"></script>
+{% else %}
+<!-- Legacy preview placeholder -->
+<div id="legacy-gatepass"></div>
+{% endif %}

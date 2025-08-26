@@ -1,0 +1,15 @@
+"""Redis key constants for VMS module."""
+
+VIS_ID_SEQ = "vms26:ids:visitor"
+GP_ID_SEQ = "vms26:ids:gpass"
+
+VIS_HASH = "vms26:vis:{id}"
+VIS_ALL = "vms26:index:vis:all"
+
+GP_HASH = "vms26:gpass:{id}"
+GP_ALL = "vms26:index:gpass:all"
+GP_BYDATE = "vms26:index:gpass:bydate:{date}"
+GP_LOCK = "vms26:lock:gpass:{visitor_id}:{date}"
+
+CFG_UI_VMS = "vms26:cfg:ui:vms"
+CFG_VERSION = "vms26:cfg:version"

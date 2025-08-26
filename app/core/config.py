@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import threading
 import time
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from loguru import logger
 from redis import Redis
@@ -13,6 +13,7 @@ from redis.exceptions import RedisError
 
 import utils.redis as redis_utils
 from config import load_config, set_config, config as _CONFIG
+from .redis_keys import CFG_UI_VMS, CFG_VERSION
 
 _CFG_VERSION_KEY = "CFG_VERSION"
 _CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
@@ -83,3 +84,40 @@ def watch_config(
 
 
 __all__ = ["bump_version", "watch_config", "_CONFIG"]
+
+
+def get_vms_ui(redis: Optional[Redis] = None) -> dict:
+    """Return stored VMS UI configuration."""
+    client = redis or redis_utils.get_sync_client()
+    data = client.hgetall(CFG_UI_VMS)
+    config: dict[str, dict[str, str]] = {"tiles": {}, "alerts": {}}
+    for k, v in data.items():
+        if k.startswith("tiles."):
+            config["tiles"][k.split(".", 1)[1]] = v
+        elif k.startswith("alerts."):
+            config["alerts"][k.split(".", 1)[1]] = v
+        else:
+            config[k] = v
+    return config
+
+
+def _flatten(prefix: str, data: dict, out: dict) -> None:
+    for k, v in data.items():
+        if isinstance(v, dict):
+            _flatten(f"{prefix}{k}.", v, out)
+        else:
+            out[f"{prefix}{k}"] = v
+
+
+def set_vms_ui(patch: dict, redis: Optional[Redis] = None) -> dict:
+    """Patch VMS UI configuration and bump version."""
+    client = redis or redis_utils.get_sync_client()
+    flat: dict[str, Any] = {}
+    _flatten("", patch, flat)
+    if flat:
+        client.hset(CFG_UI_VMS, mapping=flat)
+    client.incr(CFG_VERSION)
+    return get_vms_ui(client)
+
+
+__all__.extend(["get_vms_ui", "set_vms_ui"])

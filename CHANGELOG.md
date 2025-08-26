@@ -1,4 +1,5 @@
 # Changelog
+- replace local gate pass placeholder image with hosted URL
 - support experimental counting-only pipeline toggled via `VMS21_COUNTING_PURE`
 - optionally stream MJPEG overlays via in-process Pipeline when `VMS21_PIPELINE=1`
 - add DeepSort-based Tracker wrapper in app/vision with env-configurable params
