@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import queue
 import threading
 import time
+from collections import deque
 from os import getenv
-from typing import Optional
+from typing import Deque, Optional
 
 import numpy as np
 
@@ -30,12 +30,12 @@ class CaptureLoop(threading.Thread):
     def run(self) -> None:  # pragma: no cover - simple loop
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         while self.running:
-            if self.pipeline.queue.full():
+            if len(self.pipeline.queue) == self.pipeline.queue.maxlen:
                 try:
-                    self.pipeline.queue.get_nowait()
-                except queue.Empty:
+                    self.pipeline.queue.popleft()
+                except IndexError:
                     pass
-            self.pipeline.queue.put(frame.copy())
+            self.pipeline.queue.append(frame.copy())
             time.sleep(0.05)
 
 
@@ -46,17 +46,28 @@ class ProcessLoop(threading.Thread):
         super().__init__(daemon=True)
         self.pipeline = pipeline
         self.running = True
+        self.target_fps = int(getenv("VMS26_TARGET_FPS", "15"))
+        self.last_ts = 0.0
 
     def run(self) -> None:  # pragma: no cover - simple loop
+        min_interval = 1.0 / float(self.target_fps) if self.target_fps > 0 else 0.0
         while self.running:
-            try:
-                frame = self.pipeline.queue.get(timeout=1)
-            except queue.Empty:
+            if not self.pipeline.queue:
+                time.sleep(0.005)
                 continue
-            if cv2 is None:
+            now = time.time()
+            dt = now - self.last_ts
+            if min_interval and dt < min_interval:
+                time.sleep(min_interval - dt)
+            try:
+                frame = self.pipeline.queue.popleft()
+            except IndexError:
+                continue
+            if cv2 is None or not hasattr(cv2, "imencode"):
                 continue
             q = int(getenv("VMS26_JPEG_QUALITY", 80))
             self.pipeline._overlay_bytes = encode_jpeg(frame, q)
+            self.last_ts = time.time()
 
 
 class Pipeline:
@@ -64,7 +75,8 @@ class Pipeline:
 
     def __init__(self, cam_cfg: dict) -> None:
         self.cam_cfg = cam_cfg
-        self.queue: "queue.Queue[np.ndarray]" = queue.Queue(maxsize=1)
+        maxlen = int(getenv("VMS26_QUEUE_MAX", "2"))
+        self.queue: Deque[np.ndarray] = deque(maxlen=maxlen)
         self._overlay_bytes: bytes | None = None
         self.capture = CaptureLoop(self)
         self.process = ProcessLoop(self)
