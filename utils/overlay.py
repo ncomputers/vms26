@@ -3,10 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+
+font_path = Path(__file__).resolve().parents[1] / "static" / "fonts" / "DejaVuSans.ttf"
+try:
+    _FONT: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(
+        str(font_path), 14
+    )
+except Exception:  # pragma: no cover - font load errors
+    _FONT = ImageFont.load_default()
 
 
 @dataclass
@@ -55,10 +65,7 @@ def draw_boxes_np(
 
     img = Image.fromarray(img_rgb, mode="RGB").copy()
     d = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.load_default()
-    except Exception:  # pragma: no cover - font load errors
-        font = None
+    font = _FONT
     H, W = img_rgb.shape[:2]
     for det in dets:
         try:

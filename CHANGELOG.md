@@ -1,4 +1,5 @@
 # Changelog
+- bundle DejaVuSans font and cache overlay font to avoid per-frame load
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
 
 - throttle per-frame logs and standardize log prefixes; ensure single exception traces
