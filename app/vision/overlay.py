@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -43,11 +44,23 @@ class OverlayInput:
     camera_id: str = ""
 
 
-def _load_font():
+_FONT: ImageFont.FreeTypeFont | ImageFont.ImageFont | None = None
+
+
+def _load_font() -> ImageFont.ImageFont | None:
+    """Load and cache overlay font."""
+    global _FONT
+    if _FONT is not None:
+        return _FONT
+    font_path = Path(__file__).resolve().parents[2] / "static" / "fonts" / "DejaVuSans.ttf"
     try:
-        return ImageFont.load_default()
+        _FONT = ImageFont.truetype(str(font_path), 14)
     except Exception:  # pragma: no cover - font load errors
-        return None
+        try:
+            _FONT = ImageFont.load_default()
+        except Exception:
+            _FONT = None
+    return _FONT
 
 
 def render(

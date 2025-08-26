@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 from typing import Iterable, List, MutableMapping, Tuple
 
+from app.core.prof import profiled
+
 try:  # optional heavy dependency
     from deep_sort_realtime.deepsort_tracker import DeepSort  # type: ignore
 except Exception:  # pragma: no cover - optional in tests
@@ -30,6 +32,7 @@ class Tracker:
         self._tracker = DeepSort(max_age=max_age, embedder_gpu=use_gpu_embedder)
         self.last_seen: dict[int, int] = {}
 
+    @profiled("trk")
     def update_tracks(
         self,
         detections: List[Detection],
