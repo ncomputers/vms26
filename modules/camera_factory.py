@@ -219,7 +219,11 @@ def open_capture(
                 continue
             try:
                 cap.open()
-                logger.info("opened stream using %s transport", transport)
+                logger.info(
+                    "[cap:%s] opened stream using %s transport",
+                    cam_id,
+                    transport,
+                )
                 return cap, transport
             except FrameSourceError as exc:
                 if str(exc) in {
@@ -231,7 +235,7 @@ def open_capture(
                     continue
                 raise
         if last_err == "NO_VIDEO_STREAM" and transport == "tcp":
-            logger.info("no video over TCP, retrying with UDP")
+            logger.info("[cap:%s] no video over TCP, retrying with UDP", cam_id)
             transport = "udp"
             continue
         raise StreamUnavailable(last_err or "failed to open stream")

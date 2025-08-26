@@ -41,6 +41,7 @@ from utils.redis import (
     trim_sorted_set_sync,
     xadd_event,
 )
+from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from utils.time import format_ts
 from utils.url import get_stream_type
 from app.core.perf import PERF
@@ -351,7 +352,6 @@ def process_frame(
                     "counted_out": False,
                     "last_seen": now,
                 },
-
             )
             prev_side_sign = state.get("last_side", 0)
             direction = None
@@ -396,23 +396,20 @@ def process_frame(
                             "track_id": tid,
                             "line_id": 0,
                         }
+
                     try:
                         key = f"cam:{tracker.cam_id}:state"
                         pipe = tracker.redis.pipeline()
                         pipe.hset(
                             key,
                             mapping={
-                                "fps_in": tracker.debug_stats.get(
-                                    "capture_fps", 0.0
-                                ),
-                                "fps_out": tracker.debug_stats.get(
-                                    "process_fps", 0.0
-                                ),
+                                "fps_in": tracker.debug_stats.get("capture_fps", 0.0),
+                                "fps_out": tracker.debug_stats.get("process_fps", 0.0),
                                 "last_error": tracker.stream_error,
                             },
+
                         )
-                        pipe.expire(key, 15)
-                        pipe.execute()
+                        ensure_ttl(tracker.redis, key, 15)
                     except Exception:
                         logger.exception("failed to update cam state")
                     if (
@@ -438,7 +435,6 @@ def process_frame(
                                     else:
                                         tracker.out_counts["face"] = (
                                             tracker.out_counts.get("face", 0) + 1
-
                                         )
                                         trim_sorted_set_sync(
                                             tracker.redis,
@@ -572,7 +568,7 @@ class InferWorker:
     def run(self) -> None:
         t = self.tracker
         register_thread(f"Tracker-{t.cam_id}-infer")
-        logger.info(f"[{t.cam_id}] infer loop started")
+        logger.info(f"[proc:{t.cam_id}] infer loop started")
         batch: list[np.ndarray] = []
         frames: list[np.ndarray] = []
         batch_size = getattr(t, "batch_size", 1)
@@ -589,7 +585,7 @@ class InferWorker:
             infer_batch(t, batch, frames)
             batch = []
             frames = []
-        logger.info(f"[{t.cam_id}] infer loop stopped")
+        logger.info(f"[proc:{t.cam_id}] infer loop stopped")
 
 
 class PostProcessWorker:
@@ -601,7 +597,7 @@ class PostProcessWorker:
     def run(self) -> None:
         t = self.tracker
         register_thread(f"Tracker-{t.cam_id}-post")
-        logger.info(f"[{t.cam_id}] post-process loop started")
+        logger.info(f"[proc:{t.cam_id}] post-process loop started")
         try:
             while t.running or not t.det_queue.empty():
                 try:
@@ -611,12 +607,12 @@ class PostProcessWorker:
                 try:
                     process_frame(t, frame, detections)
                 except Exception:
-                    logger.exception(f"[{t.cam_id}] process error")
+                    logger.exception(f"[proc:{t.cam_id}] process error")
                 t.debug_stats["last_process_ts"] = time.time()
         except Exception:
-            logger.exception(f"[{t.cam_id}] post-process fatal error")
+            logger.exception(f"[proc:{t.cam_id}] post-process fatal error")
         finally:
-            logger.info(f"[{t.cam_id}] post-process loop stopped")
+            logger.info(f"[proc:{t.cam_id}] post-process loop stopped")
             if getattr(t, "renderer", None):
                 t.renderer.close()
             if getattr(t, "face_tracking_enabled", False):
@@ -824,7 +820,6 @@ class PersonTracker:
         # Per-track line-crossing state storing last side and counted flags
         self.track_states: dict[int, dict[int, dict[str, Any]]] = {}
         self.track_state_ttl = 120.0
-
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)

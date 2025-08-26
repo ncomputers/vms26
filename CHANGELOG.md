@@ -1,8 +1,10 @@
 # Changelog
+- throttle per-frame logs and standardize log prefixes; ensure single exception traces
 - remove unused health endpoints and standardize response shapes
 
 - use Redis pipeline for per-frame state updates and apply TTL
 - replace blocking KEYS with SCAN when cleaning camera keys
+- add redis_guard helpers to enforce TTL and wrap pipelines
 - avoid double counting by tracking per-line entry/exit state and expiring stale tracks
 - remove unused RTSP and MJPEG helper scripts
 
