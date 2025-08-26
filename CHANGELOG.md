@@ -1,4 +1,5 @@
 # Changelog
+- add StoppableThread with signal-based shutdown and stalled camera watchdog
 - remove unused health endpoints and standardize response shapes
 
 - use Redis pipeline for per-frame state updates and apply TTL
