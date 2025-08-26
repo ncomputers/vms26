@@ -1,4 +1,5 @@
 # Changelog
+- add project-wide editor and lint configuration with ruff and pre-commit hooks
 - bundle DejaVuSans font and cache overlay font to avoid per-frame load
 - name capture/process/watchdog threads and add diagnostic thread dump endpoint
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
