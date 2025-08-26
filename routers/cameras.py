@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import io
 import json
 import os
 import re
@@ -28,7 +27,6 @@ from fastapi.responses import (
 )
 from fastapi.templating import Jinja2Templates
 from loguru import logger
-from PIL import Image
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from starlette.requests import ClientDisconnect
 
@@ -64,9 +62,8 @@ from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.overlay import draw_boxes_np
 from app.vision.overlay import render_from_legacy
+from utils.jpeg import encode_jpeg
 from utils.url import get_stream_type
-
-from vision.overlay import render_from_legacy
 from core.config import get_config
 
 # utility for resolving stream dimensions
@@ -829,7 +826,7 @@ async def delete_camera(cam_id: int, request: Request):
     await asyncio.to_thread(delete_camera_model, str(cam_id), redis)
 
     if redis:
-        keys = redis.keys(f"camera:{cam_id}*")
+        keys = list(redis.scan_iter(f"camera:{cam_id}*"))
         if keys:
             redis.delete(*keys)
         redis.delete(
@@ -1413,14 +1410,30 @@ async def camera_mjpeg(
                                 dets = tracker.get_latest(camera_id) or []
                                 if not labels:
                                     dets = [{**d, "label": ""} for d in dets]
-                                if os.getenv("VMS21_OVERLAY_PURE") == "1":
-                                    frame_out = render_from_legacy(arr, arr.shape[1], arr.shape[0], {}, dets, [], None, str(camera_id))
-                                else:
-
-                                    arr = draw_boxes_np(arr, dets, thickness=thickness)
-                                    bio = io.BytesIO()
-                                    Image.fromarray(arr).save(bio, "JPEG", quality=80)
-                                    frame_out = bio.getvalue()
+                                arr_bgr = cv2.imdecode(
+                                    np.frombuffer(frame, dtype=np.uint8),
+                                    cv2.IMREAD_COLOR,
+                                )
+                                if arr_bgr is not None:
+                                    arr_rgb = cv2.cvtColor(arr_bgr, cv2.COLOR_BGR2RGB)
+                                    if os.getenv("VMS21_OVERLAY_PURE") == "1":
+                                        frame_out = render_from_legacy(
+                                            arr_rgb,
+                                            arr_rgb.shape[1],
+                                            arr_rgb.shape[0],
+                                            {},
+                                            dets,
+                                            [],
+                                            None,
+                                            str(camera_id),
+                                        )
+                                    else:
+                                        arr_rgb = draw_boxes_np(
+                                            arr_rgb, dets, thickness=thickness
+                                        )
+                                        frame_out = encode_jpeg(
+                                            cv2.cvtColor(arr_rgb, cv2.COLOR_RGB2BGR)
+                                        )
                             except Exception:
                                 frame_out = frame
                         yield (

@@ -1,8 +1,10 @@
 """Worker thread for personal protective equipment detection."""
 
 import json
+import logging
 import threading
 import time
+from os import getenv
 from pathlib import Path
 
 import cv2
@@ -11,9 +13,13 @@ from loguru import logger
 
 from core import events
 from modules.profiler import log_resource_usage, profile_predict, register_thread
+from utils import logx
 from utils.gpu import get_device
 from utils.redis import trim_sorted_set_sync
 from utils import logx
+from app.core.logx import log_throttled
+from app.core.utils import mtime
+
 
 try:  # optional heavy dependency
     import torch  # type: ignore
@@ -50,7 +56,13 @@ def _analyze_frame(img, model, cfg) -> dict[str, float]:
     """Run detection model on ``img`` and return score dict."""
     del cfg  # configuration unused but part of public signature
     res_det = profile_predict(
-        model, "PPEWorker", img, device=getattr(model, "device", None), verbose=False
+        model,
+        "PPEWorker",
+        img,
+        conf=float(getenv("VMS26_CONF", "0.25")),
+        iou=float(getenv("VMS26_IOU", "0.45")),
+        device=getattr(model, "device", None),
+        verbose=False,
     )[0]
     scores: dict[str, float] = {}
     for *_, conf, cls in res_det.boxes.data.tolist():
@@ -165,7 +177,7 @@ class PPEDetector(threading.Thread):
         register_thread("PPEWorker")
         logger.info("PPEWorker started")
         frame_idx = 0
-        last_log = time.time()
+        start_period = mtime()
         skip = int(self.cfg.get("frame_skip", self.cfg.get("skip_frames", 0)))
         while self.running:
             entry = _fetch_job(self.redis)
@@ -194,14 +206,16 @@ class PPEDetector(threading.Thread):
                         _log_status(self.redis, entry, status, conf, self.snap_dir)
                         if self.update_callback:
                             self.update_callback()
-            if time.time() - last_log > 10:
-                if frame_idx > 0:
-                    elapsed = time.time() - last_log
-                    logger.info(
-                        f"PPEWorker processed {frame_idx} frames in {elapsed:.1f}s"
-                    )
-                    if self.cfg.get("enable_profiling"):
-                        log_resource_usage("PPEWorker")
-                    frame_idx = 0
-                last_log = time.time()
+            elapsed = mtime() - start_period
+            if frame_idx > 0 and log_throttled(
+                logger,
+                "ppe_worker_stats",
+                logging.INFO,
+                f"PPEWorker processed {frame_idx} frames in {elapsed:.1f}s",
+                interval=10.0,
+            ):
+                if self.cfg.get("enable_profiling"):
+                    log_resource_usage("PPEWorker")
+                frame_idx = 0
+                start_period = mtime()
         logger.info("PPEWorker stopped")

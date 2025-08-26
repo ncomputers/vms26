@@ -13,33 +13,40 @@ const kpis=[
   {id:'avg',label:'Avg Visit Duration',icon:'hourglass',fmt:v=>v?('~'+v):'—'},
   {id:'ret',label:'Returning %',icon:'arrow-repeat',fmt:v=>v+'%'}
 ];
-let dailyChart,employeeChart,visitorChart,autoTimer;
+let dailyChart,employeeChart,visitorChart;
 
 document.addEventListener('DOMContentLoaded',()=>{
+  const ctrl=window.eventControllers.get('vmsDashboard');
   const wrap=document.getElementById('kpiWrap');
-  wrap.innerHTML=kpis.map(k=>`<div class="col"><div class="card text-center py-3 h-100 position-relative" data-aos="fade-up">
-      <div class="spinner-border loading position-absolute top-50 start-50 translate-middle d-none"></div>
-      <i class="bi bi-${k.icon} fs-3 text-primary mb-1"></i>
-      <div id="kpi-${k.id}" class="fs-2 fw-bold">0</div>
-      <small class="text-muted">${k.label}</small></div></div>`).join('');
+  wrap.innerHTML=kpis.map(k=>`<div class="col"><div class="card text-center py-3 h-100 position-relative" data-aos="fade-up">`
+      +`<div class="spinner-border loading position-absolute top-50 start-50 translate-middle d-none"></div>`
+      +`<i class="bi bi-${k.icon} fs-3 text-primary mb-1"></i>`
+      +`<div id="kpi-${k.id}" class="fs-2 fw-bold">0</div>`
+      +`<small class="text-muted">${k.label}</small></div></div>`).join('');
   new DataTable('#logTable',{searchable:true,fixedHeight:true,perPage:5});
   document.querySelectorAll('#logTable tbody tr').forEach(r=>r.setAttribute('data-aos','fade-up'));
   AOS.init();
   document.querySelectorAll('#sideMenu a.nav-link').forEach(l=>{if(l.getAttribute('href')===location.pathname)l.classList.add('active');});
   loadStats();
-  document.getElementById('timeframe').addEventListener('change',loadStats);
+  document.getElementById('timeframe')?.addEventListener('change',loadStats,{signal:ctrl.signal});
   const auto=document.getElementById('autoRefresh');
   if(auto){
-    auto.addEventListener('change',setAuto);
+    auto.addEventListener('change',setAuto,{signal:ctrl.signal});
     setAuto();
   }
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){clearInterval(autoTimer);}else setAuto();});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden'){
+      window.pageScheduler.clear('vmsAuto');
+    }else{
+      setAuto();
+    }
+  },{signal:ctrl.signal});
 });
 
 function setAuto(){
   const auto=document.getElementById('autoRefresh');
-  clearInterval(autoTimer);
-  if(auto&&auto.checked) autoTimer=setInterval(loadStats,30000);
+  window.pageScheduler.clear('vmsAuto');
+  if(auto&&auto.checked) window.pageScheduler.set('vmsAuto',loadStats,30000);
 }
 
 async function loadStats(){

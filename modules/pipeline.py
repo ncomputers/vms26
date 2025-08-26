@@ -3,8 +3,9 @@ from __future__ import annotations
 import threading
 import time
 from collections import deque
-from os import getenv
 from typing import Deque, Optional
+
+from app.core.utils import getenv_num
 
 import numpy as np
 
@@ -46,7 +47,7 @@ class ProcessLoop(threading.Thread):
         super().__init__(daemon=True)
         self.pipeline = pipeline
         self.running = True
-        self.target_fps = int(getenv("VMS26_TARGET_FPS", "15"))
+        self.target_fps = getenv_num("VMS26_TARGET_FPS", 15, int)
         self.last_ts = 0.0
 
     def run(self) -> None:  # pragma: no cover - simple loop
@@ -65,7 +66,7 @@ class ProcessLoop(threading.Thread):
                 continue
             if cv2 is None or not hasattr(cv2, "imencode"):
                 continue
-            q = int(getenv("VMS26_JPEG_QUALITY", 80))
+            q = getenv_num("VMS26_JPEG_QUALITY", 80, int)
             self.pipeline._overlay_bytes = encode_jpeg(frame, q)
             self.last_ts = time.time()
 
@@ -75,7 +76,7 @@ class Pipeline:
 
     def __init__(self, cam_cfg: dict) -> None:
         self.cam_cfg = cam_cfg
-        maxlen = int(getenv("VMS26_QUEUE_MAX", "2"))
+        maxlen = getenv_num("VMS26_QUEUE_MAX", 2, int)
         self.queue: Deque[np.ndarray] = deque(maxlen=maxlen)
         self._overlay_bytes: bytes | None = None
         self.capture = CaptureLoop(self)

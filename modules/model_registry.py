@@ -11,8 +11,8 @@ from loguru import logger
 try:  # optional heavy dependency
     import torch  # type: ignore
 
-    if hasattr(torch, "backends") and hasattr(torch.backends, "cudnn"):
-        torch.backends.cudnn.benchmark = True  # type: ignore[attr-defined]
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
 except ModuleNotFoundError:  # pragma: no cover - torch optional in tests
     torch = None
 
@@ -79,7 +79,8 @@ def get_yolo(path: str, device: "torch.device | str | None" = None) -> YOLO:
                 dummy = torch.zeros(1, 3, 640, 640, device=dev)
                 if dev.type == "cuda" and fp16 in ("auto", "1"):
                     dummy = dummy.half()
-                model.model(dummy)
+                for _ in range(2):
+                    model.model(dummy)
         _yolo_models[key] = model
     return model
 

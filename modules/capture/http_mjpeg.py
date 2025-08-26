@@ -3,16 +3,20 @@ from __future__ import annotations
 """HTTP MJPEG frame source."""
 
 import io
+import logging
 import queue
 import threading
-from typing import Optional
 
 import numpy as np
 import requests
 from PIL import Image
 
-from .base import IFrameSource, FrameSourceError
+from .base import IFrameSource, FrameSourceError, Backoff
 from utils.logging import log_capture_event
+from utils.logx import log_throttled
+
+
+logger = logging.getLogger(__name__)
 
 
 class HttpMjpegSource(IFrameSource):
@@ -31,39 +35,57 @@ class HttpMjpegSource(IFrameSource):
         self._thread: threading.Thread | None = None
         self._q: queue.Queue[bytes] = queue.Queue(max_queue)
         self._stop = threading.Event()
+        self._backoff = Backoff()
 
     def open(self) -> None:
-        resp = requests.get(self.uri, stream=True, timeout=5)
-        if resp.status_code == 406:
-            raise FrameSourceError("NO_VIDEO_STREAM")
-        if resp.status_code >= 400:
-            raise FrameSourceError("CONNECT_TIMEOUT")
-        self._resp = resp
+        self._stop.clear()
         self._thread = threading.Thread(target=self._reader, daemon=True)
         self._thread.start()
-        log_capture_event(self.cam_id, "opened", backend="http", uri=self.uri)
 
     def _reader(self) -> None:
-        assert self._resp is not None
-        buffer = b""
-        for chunk in self._resp.iter_content(chunk_size=1024):
-            if self._stop.is_set():
-                break
-            buffer += chunk
-            while True:
-                start = buffer.find(b"\xff\xd8")
-                end = buffer.find(b"\xff\xd9")
-                if start != -1 and end != -1 and end > start:
-                    jpg = buffer[start : end + 2]
-                    buffer = buffer[end + 2 :]
-                    if self._q.full():
-                        try:
-                            self._q.get_nowait()
-                        except queue.Empty:
-                            pass
-                    self._q.put(jpg)
-                else:
-                    break
+        while not self._stop.is_set():
+            buffer = b""
+            try:
+                resp = requests.get(self.uri, stream=True, timeout=5)
+                if resp.status_code == 406:
+                    raise RuntimeError("NO_VIDEO_STREAM")
+                if resp.status_code >= 400:
+                    raise RuntimeError(f"STATUS_{resp.status_code}")
+                self._resp = resp
+                log_capture_event(self.cam_id, "opened", backend="http", uri=self.uri)
+                for chunk in resp.iter_content(chunk_size=1024):
+                    if self._stop.is_set():
+                        break
+                    buffer += chunk
+                    while True:
+                        start = buffer.find(b"\xff\xd8")
+                        end = buffer.find(b"\xff\xd9")
+                        if start != -1 and end != -1 and end > start:
+                            jpg = buffer[start : end + 2]
+                            buffer = buffer[end + 2 :]
+                            if self._q.full():
+                                try:
+                                    self._q.get_nowait()
+                                except queue.Empty:
+                                    pass
+                            self._q.put(jpg)
+                        else:
+                            break
+                self._backoff.reset()
+            except Exception as exc:
+                log_throttled(
+                    logger.warning,
+                    f"mjpeg reconnect: {exc}",
+                    key=f"cap:{self.cam_id}:reconnect",
+                )
+                if self._resp:
+                    self._resp.close()
+                    self._resp = None
+                self._backoff.sleep()
+            finally:
+                if self._resp:
+                    self._resp.close()
+                    self._resp = None
 
     def read(self, timeout: float | None = None) -> np.ndarray:
         try:
