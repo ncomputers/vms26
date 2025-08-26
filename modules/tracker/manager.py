@@ -381,8 +381,7 @@ def process_frame(
                             "cam_id": tracker.cam_id,
                             "track_id": tid,
                             "line_id": 0,
-                        },
-                    )
+                        }
                     try:
                         key = f"cam:{tracker.cam_id}:state"
                         pipe = tracker.redis.pipeline()
@@ -557,7 +556,7 @@ class InferWorker:
     def run(self) -> None:
         t = self.tracker
         register_thread(f"Tracker-{t.cam_id}-infer")
-        logger.info(f"[{t.cam_id}] infer loop started")
+        logger.info(f"[proc:{t.cam_id}] infer loop started")
         batch: list[np.ndarray] = []
         frames: list[np.ndarray] = []
         batch_size = getattr(t, "batch_size", 1)
@@ -574,7 +573,7 @@ class InferWorker:
             infer_batch(t, batch, frames)
             batch = []
             frames = []
-        logger.info(f"[{t.cam_id}] infer loop stopped")
+        logger.info(f"[proc:{t.cam_id}] infer loop stopped")
 
 
 class PostProcessWorker:
@@ -586,7 +585,7 @@ class PostProcessWorker:
     def run(self) -> None:
         t = self.tracker
         register_thread(f"Tracker-{t.cam_id}-post")
-        logger.info(f"[{t.cam_id}] post-process loop started")
+        logger.info(f"[proc:{t.cam_id}] post-process loop started")
         try:
             while t.running or not t.det_queue.empty():
                 try:
@@ -596,12 +595,12 @@ class PostProcessWorker:
                 try:
                     process_frame(t, frame, detections)
                 except Exception:
-                    logger.exception(f"[{t.cam_id}] process error")
+                    logger.exception(f"[proc:{t.cam_id}] process error")
                 t.debug_stats["last_process_ts"] = time.time()
         except Exception:
-            logger.exception(f"[{t.cam_id}] post-process fatal error")
+            logger.exception(f"[proc:{t.cam_id}] post-process fatal error")
         finally:
-            logger.info(f"[{t.cam_id}] post-process loop stopped")
+            logger.info(f"[proc:{t.cam_id}] post-process loop stopped")
             if getattr(t, "renderer", None):
                 t.renderer.close()
             if getattr(t, "face_tracking_enabled", False):

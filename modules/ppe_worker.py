@@ -211,8 +211,8 @@ class PPEDetector(threading.Thread):
                 logger,
                 "ppe_worker_stats",
                 logging.INFO,
-                f"PPEWorker processed {frame_idx} frames in {elapsed:.1f}s",
-                interval=10.0,
+                f"[perf] PPEWorker processed {frame_idx} frames in {elapsed:.1f}s",
+                interval=5.0,
             ):
                 if self.cfg.get("enable_profiling"):
                     log_resource_usage("PPEWorker")

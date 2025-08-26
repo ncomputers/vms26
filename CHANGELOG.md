@@ -1,4 +1,5 @@
 # Changelog
+- throttle per-frame logs and standardize log prefixes; ensure single exception traces
 - remove unused health endpoints and standardize response shapes
 
 - use Redis pipeline for per-frame state updates and apply TTL
