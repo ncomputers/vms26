@@ -41,7 +41,7 @@ def check_dependencies(cfg: dict, base_dir: str | Path | None = None) -> None:
     cfg["gst_available"] = gst_available
 
     if not ffmpeg_available and not gst_available:
-        raise DependencyError("Missing dependencies: ffmpeg, gst-launch-1.0")
+        logger.warning("Missing dependencies: ffmpeg, gst-launch-1.0")
     if not ffmpeg_available:
         logger.warning("'ffmpeg' not found; FFmpeg backend disabled")
     if not gst_available:
@@ -77,4 +77,4 @@ def check_dependencies(cfg: dict, base_dir: str | Path | None = None) -> None:
             missing.append(model)
 
     if missing:
-        raise DependencyError("Missing dependencies: " + ", ".join(missing))
+        logger.warning("Missing model files: {}", ", ".join(missing))
