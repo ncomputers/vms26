@@ -23,9 +23,11 @@ except Exception:  # pragma: no cover - optional in tests
     DeepSort = None
 
 try:
+    from pathlib import Path
     from PIL import ImageFont
 
-    FONT = ImageFont.truetype("static/fonts/Inter-Regular.ttf", 14)
+    font_path = Path(__file__).resolve().parents[1] / "static" / "fonts" / "DejaVuSans.ttf"
+    FONT = ImageFont.truetype(str(font_path), 14)
 except Exception:  # pragma: no cover - font is optional
     from PIL import ImageFont as _IF
 
