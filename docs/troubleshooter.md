@@ -40,6 +40,10 @@ background subprocess. The runner performs:
 4. Detector warm‑up to establish initial latency.
 5. A five‑second end‑to‑end pipeline dry‑run.
 
+Each stage runs with an independent ten‑second timeout and emits a JSON log
+line describing the stage, status and duration in milliseconds. Any failure or
+timeout stops subsequent stages to avoid interfering with live pipelines.
+
 Endpoints:
 
 - `GET /troubleshooter/start?camera_id=1` launches the runner and returns a
