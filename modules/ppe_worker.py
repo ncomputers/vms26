@@ -1,6 +1,7 @@
 """Worker thread for personal protective equipment detection."""
 
 import json
+import logging
 import threading
 import time
 from os import getenv
@@ -15,6 +16,10 @@ from modules.profiler import log_resource_usage, profile_predict, register_threa
 from utils import logx
 from utils.gpu import get_device
 from utils.redis import trim_sorted_set_sync
+from utils import logx
+from app.core.logx import log_throttled
+from app.core.utils import mtime
+
 
 try:  # optional heavy dependency
     import torch  # type: ignore
@@ -172,7 +177,7 @@ class PPEDetector(threading.Thread):
         register_thread("PPEWorker")
         logger.info("PPEWorker started")
         frame_idx = 0
-        last_log = time.time()
+        start_period = mtime()
         skip = int(self.cfg.get("frame_skip", self.cfg.get("skip_frames", 0)))
         while self.running:
             entry = _fetch_job(self.redis)
@@ -201,14 +206,16 @@ class PPEDetector(threading.Thread):
                         _log_status(self.redis, entry, status, conf, self.snap_dir)
                         if self.update_callback:
                             self.update_callback()
-            if time.time() - last_log > 10:
-                if frame_idx > 0:
-                    elapsed = time.time() - last_log
-                    logger.info(
-                        f"PPEWorker processed {frame_idx} frames in {elapsed:.1f}s"
-                    )
-                    if self.cfg.get("enable_profiling"):
-                        log_resource_usage("PPEWorker")
-                    frame_idx = 0
-                last_log = time.time()
+            elapsed = mtime() - start_period
+            if frame_idx > 0 and log_throttled(
+                logger,
+                "ppe_worker_stats",
+                logging.INFO,
+                f"PPEWorker processed {frame_idx} frames in {elapsed:.1f}s",
+                interval=10.0,
+            ):
+                if self.cfg.get("enable_profiling"):
+                    log_resource_usage("PPEWorker")
+                frame_idx = 0
+                start_period = mtime()
         logger.info("PPEWorker stopped")
