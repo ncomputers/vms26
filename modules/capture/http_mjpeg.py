@@ -75,8 +75,9 @@ class HttpMjpegSource(IFrameSource):
             except Exception as exc:
                 log_throttled(
                     logger.warning,
-                    f"mjpeg reconnect: {exc}",
+                    f"[cap:{self.cam_id}] mjpeg reconnect: {exc}",
                     key=f"cap:{self.cam_id}:reconnect",
+                    interval=5,
                 )
                 if self._resp:
                     self._resp.close()

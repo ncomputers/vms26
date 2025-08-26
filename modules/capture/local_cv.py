@@ -2,21 +2,30 @@ from __future__ import annotations
 
 """OpenCV based local camera capture."""
 
-import cv2
+from typing import TYPE_CHECKING
+
 import numpy as np
 
-from .base import IFrameSource, FrameSourceError
 from utils.logging import log_capture_event
+
+from .base import FrameSourceError, IFrameSource
+
+if TYPE_CHECKING:  # pragma: no cover - optional dependency
+    import cv2
 
 
 class LocalCvSource(IFrameSource):
     """Capture frames from a local camera using OpenCV."""
 
-    def __init__(self, device: int | str = 0, *, cam_id: int | str | None = None) -> None:
+    def __init__(
+        self, device: int | str = 0, *, cam_id: int | str | None = None
+    ) -> None:
         super().__init__(str(device), cam_id=cam_id)
-        self.cap: cv2.VideoCapture | None = None
+        self.cap: "cv2.VideoCapture | None" = None
 
     def open(self) -> None:
+        import cv2
+
         cap = cv2.VideoCapture(self.uri)
         # minimize internal buffering
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -41,6 +50,8 @@ class LocalCvSource(IFrameSource):
     def info(self) -> dict[str, float | int]:
         if not self.cap:
             return {}
+        import cv2
+
         w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = float(self.cap.get(cv2.CAP_PROP_FPS) or 0.0)

@@ -247,7 +247,8 @@ Accessible labels and live region updates ensure screen reader support.
    For systems with a display, install `opencv-python` to enable OpenCV's GUI
    features. Headless deployments should install `opencv-python-headless` and
    either set `"headless": true` in `config.json` or run without a `DISPLAY`
-   environment variable.
+   environment variable. If OpenCV is not installed, the application still
+   starts but features that rely on local camera capture remain unavailable.
 3. Install [WeasyPrint](https://weasyprint.org/) and its native dependencies for
    PDF generation. On Debian/Ubuntu:
    ```bash
