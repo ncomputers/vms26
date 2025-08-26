@@ -15,7 +15,6 @@ import queue
 import shlex
 import subprocess
 import threading
-import time
 from collections import deque
 
 import ffmpeg
@@ -23,15 +22,15 @@ import numpy as np
 
 from utils.logging import log_capture_event
 from app.core.utils import getenv_num
+from utils.logx import log_throttled
 
-from .base import FrameSourceError, IFrameSource
+
+from .base import FrameSourceError, IFrameSource, Backoff
 
 logger = logging.getLogger(__name__)
 
 
 MAX_SHORT_READS = 3
-BACKOFF_INITIAL = 1.0
-BACKOFF_MAX = 10.0
 
 
 class RtspFfmpegSource(IFrameSource):
@@ -81,7 +80,8 @@ class RtspFfmpegSource(IFrameSource):
         super().__init__(uri, cam_id=cam_id)
         self.width = width
         self.height = height
-        self.tcp = tcp
+        env_tcp = os.getenv("VMS26_RTSP_TCP") == "1"
+        self.tcp = tcp or env_tcp
         self.latency_ms = latency_ms
         self.rw_timeout_usec = rw_timeout_usec
         self.stimeout_usec = stimeout_usec
@@ -93,7 +93,7 @@ class RtspFfmpegSource(IFrameSource):
         self._reader_thread: threading.Thread | None = None
         self._stop_event: threading.Event | None = None
         self._short_reads = 0
-        self._backoff = BACKOFF_INITIAL
+        self._backoff = Backoff()
         self.restarts = 0
 
     def _probe_resolution(self) -> None:
@@ -221,7 +221,7 @@ class RtspFfmpegSource(IFrameSource):
                 np.frombuffer(mv, np.uint8).reshape((self.height, self.width, 3)).copy()
             )
             self._short_reads = 0
-            self._backoff = BACKOFF_INITIAL
+            self._backoff.reset()
             if self._frame_queue and self._frame_queue.full():
                 try:
                     self._frame_queue.get_nowait()
@@ -233,8 +233,12 @@ class RtspFfmpegSource(IFrameSource):
     def _restart_proc(self) -> None:
         self._stop_proc()
         self.restarts += 1
-        time.sleep(self._backoff)
-        self._backoff = min(self._backoff * 2, BACKOFF_MAX)
+        log_throttled(
+            logger.warning,
+            "reconnecting ffmpeg",
+            key=f"cap:{self.cam_id}:reconnect",
+        )
+        self._backoff.sleep()
         self._start_proc()
         if self._frame_queue:
             while not self._frame_queue.empty():

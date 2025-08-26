@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-import io
-
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+from utils.jpeg import encode_jpeg
 
 
 @dataclass
@@ -55,7 +55,7 @@ def render(
     show_boxes: bool = True,
     show_counts: bool = True,
     show_ppe: bool = True,
-    quality: int = 80,
+    quality: int | None = None,
 ) -> bytes:
     """Render overlays on ``input.frame_np`` and return JPEG bytes.
 
@@ -146,9 +146,9 @@ def render(
         draw.text((10, 30), f"Exited: {out_count}", fill=(255, 0, 0), font=font)
         draw.text((10, 50), f"Inside: {inside}", fill=(255, 255, 0), font=font)
 
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=quality)
-    return buf.getvalue()
+    arr_rgb = np.asarray(img)
+    arr_bgr = arr_rgb[:, :, ::-1]
+    return encode_jpeg(arr_bgr, quality)
 
 
 def render_from_legacy(

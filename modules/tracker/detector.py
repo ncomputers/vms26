@@ -28,9 +28,6 @@ GROUP_ALIASES = {
     "vehicle": {"car", "truck", "bus", "motorbike", "motorcycle", "bicycle"}
 }
 
-CONF_THRES = float(getenv("VMS26_CONF", 0.25))
-IOU_THRES = float(getenv("VMS26_IOU", 0.45))
-
 
 def resolve_group(label: str, groups: List[str]) -> str | None:
     """Return matching group name for a YOLO label or ``None``."""
@@ -58,14 +55,16 @@ class Detector:
 
     def detect(self, frame: Any, groups: List[str]) -> List[Tuple[tuple, float, str]]:
         """Return a list of ``(xywh, conf, group)`` detections."""
+        conf_thres = float(getenv("VMS26_CONF", "0.25"))
+        iou_thres = float(getenv("VMS26_IOU", "0.45"))
         results = profile_predict(
             self.model,
             "Tracker",
             frame,
             device=self.device,
             verbose=False,
-            conf=CONF_THRES,
-            iou=IOU_THRES,
+            conf=conf_thres,
+            iou=iou_thres,
         )[0]
         boxes = results.boxes.data
         if hasattr(boxes, "tolist"):
@@ -115,14 +114,16 @@ class Detector:
         self, frames: List[Any], groups: List[str]
     ) -> List[List[Tuple[tuple, float, str]]]:
         """Run detection on a batch of frames."""
+        conf_thres = float(getenv("VMS26_CONF", "0.25"))
+        iou_thres = float(getenv("VMS26_IOU", "0.45"))
         results = profile_predict(
             self.model,
             "Tracker",
             frames,
             device=self.device,
             verbose=False,
-            conf=CONF_THRES,
-            iou=IOU_THRES,
+            conf=conf_thres,
+            iou=iou_thres,
         )
         batch: List[List[Tuple[tuple, float, str]]] = []
         for res in results:

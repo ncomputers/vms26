@@ -66,13 +66,13 @@ def log_inference(
 
 # profile_predict routine
 def profile_predict(model, tag: str, *args, **kwargs):
-    """Wrap YOLOv8 ``predict`` and log inference duration."""
+    """Run a YOLOv8 forward pass and log inference duration."""
     start = time.time()
     if torch is not None:
         with torch.no_grad():
-            res = model.predict(*args, **kwargs)
+            res = model(*args, **kwargs)
     else:
-        res = model.predict(*args, **kwargs)
+        res = model(*args, **kwargs)
     log_inference(tag, time.time() - start)
     return res
 
