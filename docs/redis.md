@@ -22,3 +22,6 @@ Redis acts as the central message bus and datastore.
   line configuration and `track_objects` list without restarting trackers.
 * The `CFG_VERSION` key increments whenever configuration is updated. Use
   `watch_config` to refresh application settings when this version changes.
+* The ``app.core.redis_bus`` module provides helpers for publishing events to
+  the ``vms21:events`` stream via ``xadd_event`` and for updating
+  ``cam:<id>:state`` hashes through ``set_cam_state`` with an expiry.

@@ -1,47 +1,76 @@
-from __future__ import annotations
+"""Application configuration loader.
 
-"""Configuration helpers backed by Redis."""
+This module exposes a :class:`Config` settings model backed by a JSON file.
+The helper :func:`get_config` returns a singleton instance that callers may
+use to access configuration values.  Existing configuration mechanisms are
+unchanged; this module is provided for optional use.
+"""
+
+from __future__ import annotations
 
 import os
 import threading
 import time
 from typing import Any, Callable, Optional
+import json
+from pathlib import Path
+from typing import Any, Optional
+
 
 from loguru import logger
-from redis import Redis
-from redis.exceptions import RedisError
+from pydantic_settings import BaseSettings
+
+
+class Config(BaseSettings):
+    """Pydantic settings for application configuration."""
+
+    features: dict[str, Any] = {}
+    ui: dict[str, Any] = {}
+    thresholds: dict[str, Any] = {}
+    cameras: list[dict[str, Any]] = []
+    target_fps: int = 15
+    jpeg_quality: int = 80
 
 import utils.redis as redis_utils
 from config import load_config, set_config, config as _CONFIG
 from .redis_keys import CFG_UI_VMS, CFG_VERSION
 
-_CFG_VERSION_KEY = "CFG_VERSION"
-_CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
+
+def load_config(path: str = "./config.json") -> Config:
+    """Load configuration from *path*.
+
+    The file is parsed as JSON if it exists, otherwise defaults are used.  A
+    single informational log line is emitted indicating the number of cameras
+    loaded.
+    """
+
+    cfg_path = Path(path)
+    data: dict[str, Any] = {}
+    if cfg_path.exists():
+        try:
+            data = json.loads(cfg_path.read_text())
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON in %s; using defaults", cfg_path)
+            data = {}
+
+    cfg = Config.model_validate(data)
+    logger.info("Loaded configuration with %d cameras", len(cfg.cameras))
+    return cfg
 
 
-def bump_version(client: Optional[Redis] = None) -> int | None:
-    """Increment the global configuration version."""
-    client = client or redis_utils.get_sync_client()
-    try:
-        version = client.incr(_CFG_VERSION_KEY)
-        logger.debug("Bumped config version to {}", version)
-        return version
-    except RedisError as e:  # pragma: no cover
-        logger.warning("Failed to bump config version: {}", e)
-        return None
+_CONFIG: Optional[Config] = None
 
 
-def _reload(client: Redis) -> dict:
-    cfg = load_config(_CONFIG_PATH, client)
-    set_config(cfg)
+def get_config() -> Config:
+    """Return a shared :class:`Config` instance."""
+
+    global _CONFIG
+    if _CONFIG is None:
+        _CONFIG = load_config()
     return _CONFIG
 
 
-def watch_config(
-    callback: Callable[[dict], None], client: Optional[Redis] = None
-) -> threading.Thread:
-    """Watch for configuration changes and invoke ``callback`` on update."""
-    client = client or redis_utils.get_sync_client()
+__all__ = ["Config", "get_config", "load_config"]
 
     def _worker() -> None:
         last = client.get(_CFG_VERSION_KEY)
@@ -121,3 +150,4 @@ def set_vms_ui(patch: dict, redis: Optional[Redis] = None) -> dict:
 
 
 __all__.extend(["get_vms_ui", "set_vms_ui"])
+
