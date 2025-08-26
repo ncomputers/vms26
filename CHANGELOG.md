@@ -1,4 +1,5 @@
 # Changelog
+- remove unused RTSP and MJPEG helper scripts
 - add TurboJPEG-backed `encode_jpeg` helper with env-configurable quality
 - drop legacy `vision.overlay` renderer in favour of `app.vision.overlay`
 - handle missing Loguru handlers gracefully to prevent startup crash
