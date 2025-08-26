@@ -23,3 +23,10 @@ cap, _ = open_capture(url, cam_id)
 # pass-through for a lightweight live view
 cap, _ = open_capture(url, cam_id, stream_mode="lite")
 ```
+
+## Reconnection
+
+Capture sources now retry automatically using an exponential backoff starting
+at 0.5s and capped by the `VMS26_RECONNECT_MAXSLEEP` environment variable
+(default 8s). To force TCP transport for all RTSP streams, set
+`VMS26_RTSP_TCP=1`.

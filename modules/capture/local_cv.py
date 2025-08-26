@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from .base import IFrameSource, FrameSourceError
-from utils.logging import log_capture_event, mask_uri
+from utils.logging import log_capture_event
 
 
 class LocalCvSource(IFrameSource):
