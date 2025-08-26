@@ -34,7 +34,11 @@ def _configure(level: str = LOG_LEVEL) -> None:
     global _sink_ids
     with _lock:
         for sink_id in _sink_ids:
-            logger.remove(sink_id)
+            try:
+                logger.remove(sink_id)
+            except ValueError:
+                # Sink might have been removed elsewhere; ignore missing handlers
+                continue
         _sink_ids = [
             logger.add(
                 sys.stdout,
