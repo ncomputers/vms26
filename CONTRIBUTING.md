@@ -6,7 +6,7 @@ Install the project dependencies and tooling:
 
 ```bash
 pip install -r requirements.txt
-pip install pre-commit flake8 pytest uvicorn
+pip install pre-commit ruff pytest uvicorn
 pre-commit install
 ```
 

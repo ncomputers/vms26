@@ -1,4 +1,5 @@
 # Changelog
+- add project-wide editor and lint configuration with ruff and pre-commit hooks
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
 
 - throttle per-frame logs and standardize log prefixes; ensure single exception traces
