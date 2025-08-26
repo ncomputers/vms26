@@ -86,11 +86,26 @@
       if(entry.active) return;
       const warn=document.getElementById('token-warning');
       if(!entry.token){
-        if(warn){
-          warn.textContent = 'Authentication token missing';
-          warn.classList.remove('d-none');
+        try{
+          const r=await fetch('/api/token');
+          if(r.ok){
+            const d=await r.json();
+            entry.token=d.token;
+            warn && warn.classList.add('d-none');
+          }else{
+            if(warn){
+              warn.textContent='Authentication token missing';
+              warn.classList.remove('d-none');
+            }
+            return;
+          }
+        }catch(e){
+          if(warn){
+            warn.textContent='Authentication token missing';
+            warn.classList.remove('d-none');
+          }
+          return;
         }
-        return;
       }
       warn && warn.classList.add('d-none');
       let canvas = feedEl.querySelector('canvas.overlay');
@@ -176,7 +191,6 @@
 
     const now = Date.now();
     if(now - lastRenderLog > 60000){
-      console.log(src.w, src.h, img?.clientWidth, img?.clientHeight, window.devicePixelRatio);
       lastRenderLog = now;
     }
 
@@ -342,7 +356,6 @@
     const logs=[];
     const tok=info.token?`&token=${encodeURIComponent(info.token)}`:'';
     const url=`${proto}://${location.host}/ws/detections?cam=${encodeURIComponent(cam)}${tok}`;
-    console.log('connectDetections', url);
     const warn=document.getElementById('token-warning');
     if(info.token){
       warn && warn.classList.add('d-none');
@@ -445,16 +458,7 @@
     const camId=img?.dataset.cam || 'global';
     overlayState.key=`overlayFlags:${camId}`;
     const stored=localStorage.getItem(overlayState.key);
-    overlayState.flags = Object.assign({
-      show_lines: defaults.show_lines,
-      show_track_lines: defaults.show_track_lines,
-      show_counts: defaults.show_counts,
-      show_ids: defaults.show_ids,
-      show_face_boxes: defaults.show_face_boxes,
-      show_person: false,
-      show_vehicle: false,
-      show_faces: false,
-    }, stored?JSON.parse(stored):{});
+    overlayState.flags = Object.assign({}, overlayState.flags, stored?JSON.parse(stored):{});
     buttons.forEach(btn=>{
       const flag = btn.dataset.flag;
       btn.classList.toggle('active', !!overlayState.flags[flag]);

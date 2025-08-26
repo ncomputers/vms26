@@ -51,3 +51,4 @@
 - remove legacy `/manage_faces/*` endpoints; use `GET /api/faces` for listings
 - expose Redis facade via app state and router contexts
 
+- prevent duplicate timers and listeners in live view scripts; add scheduler and debounce search inputs

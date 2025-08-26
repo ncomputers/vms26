@@ -1,5 +1,6 @@
 (() => {
-  let timer;
+  const key='alertStats';
+  const ctrl=window.eventControllers.get('alertStats');
   async function loadStats() {
     try {
       const r = await fetch('/api/stats');
@@ -19,14 +20,15 @@
     const el = document.getElementById(id);
     if (el) el.textContent = val != null ? val : 0;
   }
-  document.getElementById('toggleMetrics').addEventListener('click', () => {
+  document.getElementById('toggleMetrics')?.addEventListener('click', () => {
     const box = document.getElementById('miniMetrics');
+    if(!box) return;
     box.classList.toggle('d-none');
     if (!box.classList.contains('d-none')) {
       loadStats();
-      timer = setInterval(loadStats, 5000);
-    } else if (timer) {
-      clearInterval(timer);
+      window.pageScheduler.set(key, loadStats, 5000);
+    } else {
+      window.pageScheduler.clear(key);
     }
-  });
+  },{signal:ctrl.signal});
 })();
