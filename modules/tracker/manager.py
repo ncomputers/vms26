@@ -457,8 +457,10 @@ def process_frame(
                         },
                     )
                     try:
-                        tracker.redis.hset(
-                            f"cam:{tracker.cam_id}:state",
+                        key = f"cam:{tracker.cam_id}:state"
+                        pipe = tracker.redis.pipeline()
+                        pipe.hset(
+                            key,
                             mapping={
                                 "fps_in": tracker.debug_stats.get(
                                     "capture_fps", 0.0
@@ -469,6 +471,8 @@ def process_frame(
                                 "last_error": tracker.stream_error,
                             },
                         )
+                        pipe.expire(key, 15)
+                        pipe.execute()
                     except Exception:
                         logger.exception("failed to update cam state")
                     if (

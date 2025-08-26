@@ -829,7 +829,7 @@ async def delete_camera(cam_id: int, request: Request):
     await asyncio.to_thread(delete_camera_model, str(cam_id), redis)
 
     if redis:
-        keys = redis.keys(f"camera:{cam_id}*")
+        keys = list(redis.scan_iter(f"camera:{cam_id}*"))
         if keys:
             redis.delete(*keys)
         redis.delete(

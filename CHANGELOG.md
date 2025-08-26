@@ -1,4 +1,6 @@
 # Changelog
+- use Redis pipeline for per-frame state updates and apply TTL
+- replace blocking KEYS with SCAN when cleaning camera keys
 - handle missing Loguru handlers gracefully to prevent startup crash
 - replace local gate pass placeholder image with hosted URL
 - centralize Redis key names in `app/core/redis_keys.py`
