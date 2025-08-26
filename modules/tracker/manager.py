@@ -338,7 +338,6 @@ def process_frame(
                     "counted_out": False,
                     "last_seen": now,
                 },
-
             )
             prev_side_sign = state.get("last_side", 0)
             direction = None
@@ -377,25 +376,18 @@ def process_frame(
                             path = str(img_path)
                         except Exception:
                             path = None
+                        # TODO: optionally publish count event with cropped image
                     try:
                         key = f"cam:{tracker.cam_id}:state"
-                        wrap_pipeline(
-                            tracker.redis,
-                            [
-                                lambda p: p.hset(
-                                    key,
-                                    mapping={
-                                        "fps_in": tracker.debug_stats.get(
-                                            "capture_fps", 0.0
-                                        ),
-                                        "fps_out": tracker.debug_stats.get(
-                                            "process_fps", 0.0
-                                        ),
-                                        "last_error": tracker.stream_error,
-                                    },
-                                ),
-                                lambda p: p.expire(key, 15),
-                            ],
+                        pipe = tracker.redis.pipeline()
+                        pipe.hset(
+                            key,
+                            mapping={
+                                "fps_in": tracker.debug_stats.get("capture_fps", 0.0),
+                                "fps_out": tracker.debug_stats.get("process_fps", 0.0),
+                                "last_error": tracker.stream_error,
+                            },
+
                         )
                         ensure_ttl(tracker.redis, key, 15)
                     except Exception:
@@ -423,7 +415,6 @@ def process_frame(
                                     else:
                                         tracker.out_counts["face"] = (
                                             tracker.out_counts.get("face", 0) + 1
-
                                         )
                                         trim_sorted_set_sync(
                                             tracker.redis,
@@ -799,7 +790,6 @@ class PersonTracker:
         # Per-track line-crossing state storing last side and counted flags
         self.track_states: dict[int, dict[int, dict[str, Any]]] = {}
         self.track_state_ttl = 120.0
-
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)
