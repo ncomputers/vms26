@@ -41,6 +41,7 @@ from utils.redis import (
     trim_sorted_set_sync,
     xadd_event,
 )
+from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from utils.time import format_ts
 from utils.url import get_stream_type
 
@@ -376,30 +377,27 @@ def process_frame(
                             path = str(img_path)
                         except Exception:
                             path = None
-                        entry = {
-                            "ts": ts,
-                            "cam_id": tracker.cam_id,
-                            "track_id": tid,
-                            "line_id": 0,
-                        },
-                    )
                     try:
                         key = f"cam:{tracker.cam_id}:state"
-                        pipe = tracker.redis.pipeline()
-                        pipe.hset(
-                            key,
-                            mapping={
-                                "fps_in": tracker.debug_stats.get(
-                                    "capture_fps", 0.0
+                        wrap_pipeline(
+                            tracker.redis,
+                            [
+                                lambda p: p.hset(
+                                    key,
+                                    mapping={
+                                        "fps_in": tracker.debug_stats.get(
+                                            "capture_fps", 0.0
+                                        ),
+                                        "fps_out": tracker.debug_stats.get(
+                                            "process_fps", 0.0
+                                        ),
+                                        "last_error": tracker.stream_error,
+                                    },
                                 ),
-                                "fps_out": tracker.debug_stats.get(
-                                    "process_fps", 0.0
-                                ),
-                                "last_error": tracker.stream_error,
-                            },
+                                lambda p: p.expire(key, 15),
+                            ],
                         )
-                        pipe.expire(key, 15)
-                        pipe.execute()
+                        ensure_ttl(tracker.redis, key, 15)
                     except Exception:
                         logger.exception("failed to update cam state")
                     if (
