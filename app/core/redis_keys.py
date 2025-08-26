@@ -1,13 +1,13 @@
-"""Redis key and stream name constants.
+"""String constants for Redis keys used across the application."""
 
-This module centralizes Redis key conventions so they can be reused across
-components without risk of typos.
-"""
+CFG_VERSION = "vms21:cfg:version"
+CAM_STATE = "vms21:cam:{id}:state"
+OVERLAY_LAST = "vms21:overlay:{id}"
+EVENTS_STREAM = "vms21:events"
 
-EVENT_STREAM = "vms21:events"
-"""Primary stream for application events."""
-
-CAM_STATE_KEY = "cam:{camera_id}:state"
-"""Format string for per-camera state hashes."""
-
-__all__ = ["EVENT_STREAM", "CAM_STATE_KEY"]
+__all__ = [
+    "CFG_VERSION",
+    "CAM_STATE",
+    "OVERLAY_LAST",
+    "EVENTS_STREAM",
+]
