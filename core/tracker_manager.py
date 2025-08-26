@@ -215,9 +215,22 @@ def _check_license(
 
 def _spawn_threads(tracker: PersonTracker) -> Dict[str, threading.Thread]:
     """Create and start worker threads for a tracker."""
-    cap_thread = threading.Thread(target=tracker.capture_worker.run, daemon=True)
-    inf_thread = threading.Thread(target=tracker.infer_worker.run, daemon=True)
-    post_thread = threading.Thread(target=tracker.post_worker.run, daemon=True)
+    cam_id = tracker.cam_id
+    cap_thread = threading.Thread(
+        target=tracker.capture_worker.run,
+        daemon=True,
+        name=f"cap-{cam_id}",
+    )
+    inf_thread = threading.Thread(
+        target=tracker.infer_worker.run,
+        daemon=True,
+        name=f"proc-{cam_id}",
+    )
+    post_thread = threading.Thread(
+        target=tracker.post_worker.run,
+        daemon=True,
+        name=f"post-{cam_id}",
+    )
     cap_thread.start()
     inf_thread.start()
     post_thread.start()
