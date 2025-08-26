@@ -3,6 +3,7 @@
 import json
 import threading
 import time
+from os import getenv
 from pathlib import Path
 
 import cv2
@@ -11,9 +12,9 @@ from loguru import logger
 
 from core import events
 from modules.profiler import log_resource_usage, profile_predict, register_thread
+from utils import logx
 from utils.gpu import get_device
 from utils.redis import trim_sorted_set_sync
-from utils import logx
 
 try:  # optional heavy dependency
     import torch  # type: ignore
@@ -50,7 +51,13 @@ def _analyze_frame(img, model, cfg) -> dict[str, float]:
     """Run detection model on ``img`` and return score dict."""
     del cfg  # configuration unused but part of public signature
     res_det = profile_predict(
-        model, "PPEWorker", img, device=getattr(model, "device", None), verbose=False
+        model,
+        "PPEWorker",
+        img,
+        conf=float(getenv("VMS26_CONF", "0.25")),
+        iou=float(getenv("VMS26_IOU", "0.45")),
+        device=getattr(model, "device", None),
+        verbose=False,
     )[0]
     scores: dict[str, float] = {}
     for *_, conf, cls in res_det.boxes.data.tolist():
