@@ -6,10 +6,17 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Deque, Dict, Optional
 
+try:  # optional heavy dependency
+    import torch  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - torch optional in tests
+    torch = None
+
 import psutil
 from loguru import logger
+
 try:  # pragma: no cover - Redis optional in tests
     from redis.exceptions import RedisError
+
     from utils.redis import get_sync_client
 except Exception:  # pragma: no cover - fallback when redis missing
     RedisError = Exception  # type: ignore
@@ -61,7 +68,11 @@ def log_inference(
 def profile_predict(model, tag: str, *args, **kwargs):
     """Wrap YOLOv8 ``predict`` and log inference duration."""
     start = time.time()
-    res = model.predict(*args, **kwargs)
+    if torch is not None:
+        with torch.no_grad():
+            res = model.predict(*args, **kwargs)
+    else:
+        res = model.predict(*args, **kwargs)
     log_inference(tag, time.time() - start)
     return res
 

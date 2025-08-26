@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from os import getenv
 from typing import Any, List, Tuple
 
 import numpy as np
@@ -12,9 +13,11 @@ except ModuleNotFoundError:  # pragma: no cover - torch is optional in tests
     torch = None
 
 from modules.profiler import profile_predict
+
 try:  # pragma: no cover - Redis optional in tests
-    from utils.redis import get_sync_client
     from redis.exceptions import RedisError
+
+    from utils.redis import get_sync_client
 except Exception:  # pragma: no cover - fallback when redis missing
     get_sync_client = None  # type: ignore
     RedisError = Exception  # type: ignore
@@ -24,6 +27,9 @@ except Exception:  # pragma: no cover - fallback when redis missing
 GROUP_ALIASES = {
     "vehicle": {"car", "truck", "bus", "motorbike", "motorcycle", "bicycle"}
 }
+
+CONF_THRES = float(getenv("VMS26_CONF", 0.25))
+IOU_THRES = float(getenv("VMS26_IOU", 0.45))
 
 
 def resolve_group(label: str, groups: List[str]) -> str | None:
@@ -53,7 +59,13 @@ class Detector:
     def detect(self, frame: Any, groups: List[str]) -> List[Tuple[tuple, float, str]]:
         """Return a list of ``(xywh, conf, group)`` detections."""
         results = profile_predict(
-            self.model, "Tracker", frame, device=self.device, verbose=False
+            self.model,
+            "Tracker",
+            frame,
+            device=self.device,
+            verbose=False,
+            conf=CONF_THRES,
+            iou=IOU_THRES,
         )[0]
         boxes = results.boxes.data
         if hasattr(boxes, "tolist"):
@@ -86,13 +98,13 @@ class Detector:
                     conf = boxes[mask, 4]
                 xywh = xyxy.copy()
                 xywh[:, 2:] -= xywh[:, :2]
-                detections = list(
-                    zip(
-                        map(tuple, xywh.tolist()),
-                        conf.tolist(),
-                        groups_arr[mask].tolist(),
+                detections = [
+                    (tuple(bb), cf, gr)
+                    for bb, cf, gr in zip(
+                        xywh.tolist(), conf.tolist(), groups_arr[mask].tolist()
                     )
-                )
+                    if bb[2] >= 12 and bb[3] >= 12
+                ]
             else:
                 detections = []
         else:
@@ -104,7 +116,13 @@ class Detector:
     ) -> List[List[Tuple[tuple, float, str]]]:
         """Run detection on a batch of frames."""
         results = profile_predict(
-            self.model, "Tracker", frames, device=self.device, verbose=False
+            self.model,
+            "Tracker",
+            frames,
+            device=self.device,
+            verbose=False,
+            conf=CONF_THRES,
+            iou=IOU_THRES,
         )
         batch: List[List[Tuple[tuple, float, str]]] = []
         for res in results:
@@ -139,13 +157,13 @@ class Detector:
                         conf = boxes[mask, 4]
                     xywh = xyxy.copy()
                     xywh[:, 2:] -= xywh[:, :2]
-                    dets = list(
-                        zip(
-                            map(tuple, xywh.tolist()),
-                            conf.tolist(),
-                            groups_arr[mask].tolist(),
+                    dets = [
+                        (tuple(bb), cf, gr)
+                        for bb, cf, gr in zip(
+                            xywh.tolist(), conf.tolist(), groups_arr[mask].tolist()
                         )
-                    )
+                        if bb[2] >= 12 and bb[3] >= 12
+                    ]
                 else:
                     dets = []
             else:
