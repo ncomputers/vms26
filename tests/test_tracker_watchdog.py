@@ -58,9 +58,3 @@ def test_watchdog_restarts_threads(monkeypatch):
     assert status[1]["process_alive"]
     tr.running = False
     tracker_manager.stop_tracker(1, trackers)
-
-
-def test_health_trackers_endpoint(client):
-    resp = client.get("/health/trackers")
-    assert resp.status_code == 200
-    assert isinstance(resp.json(), dict)

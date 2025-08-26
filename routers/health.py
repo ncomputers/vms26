@@ -5,7 +5,9 @@ from __future__ import annotations
 import threading
 import time
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+from loguru import logger
 
 from core.tracker_manager import get_tracker_status
 
@@ -41,47 +43,48 @@ def monitor_readiness(app) -> None:
     threading.Thread(target=_wait, daemon=True).start()
 
 
-@router.get("/health/live", status_code=status.HTTP_200_OK)
-async def live() -> dict[str, str]:
+@router.get("/health/live")
+async def live() -> dict:
     """Liveness probe that always succeeds."""
-    return {"status": "ok"}
+    try:
+        return {"ok": True, "message": "live", "data": None}
+    except Exception:
+        logger.exception("live check failed")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": "internal error", "data": None},
+        )
 
 
 @router.get("/health/ready")
-async def ready(request: Request) -> dict[str, str]:
+async def ready(request: Request):
     """Readiness probe that verifies critical workers are running."""
-    app = request.app
-    if getattr(app.state, "ready", False) and _workers_ready(app):
-        return {"status": "ok"}
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="not ready"
-    )
+    try:
+        app = request.app
+        if getattr(app.state, "ready", False) and _workers_ready(app):
+            return {"ok": True, "message": "ready", "data": None}
+        return JSONResponse(
+            status_code=503,
+            content={"ok": False, "message": "not ready", "data": None},
+        )
+    except Exception:
+        logger.exception("ready check failed")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": "internal error", "data": None},
+        )
 
 
 @router.get("/health")
-async def health() -> dict[str, str]:
+async def health() -> dict:
     """Simple health check endpoint."""
-    return {"status": "ok"}
+    try:
+        return {"ok": True, "message": "healthy", "data": None}
+    except Exception:
+        logger.exception("health check failed")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": "internal error", "data": None},
+        )
 
 
-@router.get("/health/trackers")
-async def trackers_health() -> dict[int, dict]:
-    """Expose status of tracker threads."""
-    return get_tracker_status()
-
-
-@router.get("/health/media")
-async def media_health(request: Request) -> dict[int, dict]:
-    """Report capture backend, process status and last error for each tracker."""
-    trackers = request.app.state.trackers
-    r = request.app.state.redis_client
-    status = get_tracker_status()
-    result: dict[int, dict] = {}
-    for cam_id, tr in trackers.items():
-        last_error = r.get(f"camera_debug:{cam_id}")
-        result[cam_id] = {
-            "backend": tr.capture_backend,
-            "process_alive": status.get(cam_id, {}).get("process_alive", False),
-            "last_error": last_error,
-        }
-    return result

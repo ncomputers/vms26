@@ -6,8 +6,9 @@ import json
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
+from loguru import logger
 from fastapi.templating import Jinja2Templates
 
 from modules import feedback_db
@@ -31,10 +32,23 @@ async def feedback_page(
 
 
 @router.get("/feedback/recent")
-async def recent_feedback(limit: int = 5, redis=Depends(get_redis)) -> List[dict]:
+async def recent_feedback(limit: int = 5, redis=Depends(get_redis)) -> JSONResponse:
     """Return the most recent feedback entries."""
-    entries = feedback_db.list_feedback(redis)
-    return list(reversed(entries[-limit:]))
+    if limit <= 0:
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": "limit must be positive", "data": None},
+        )
+    try:
+        entries = feedback_db.list_feedback(redis)
+        data = list(reversed(entries[-limit:]))
+        return JSONResponse({"ok": True, "message": "", "data": data})
+    except Exception:
+        logger.exception("recent_feedback failed")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": "internal error", "data": None},
+        )
 
 
 @router.post("/feedback")
@@ -57,40 +71,59 @@ async def submit_feedback(
 ) -> JSONResponse:
     """Accept and store a feedback entry."""
     if type not in {"issue", "improvement", "question"}:
-        raise HTTPException(status_code=400, detail="invalid type")
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": "invalid type", "data": None},
+        )
     if severity not in {"blocker", "high", "medium", "low"}:
-        raise HTTPException(status_code=400, detail="invalid severity")
-    paths = []
-    for file in attachments:
-        if not file.filename:
-            continue
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="invalid image type")
-        content = await file.read()
-        if len(content) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="file too large")
-        suffix = Path(file.filename).suffix or ".png"
-        fname = f"{generate_id()}{suffix}"
-        dest = UPLOAD_DIR / fname
-        with open(dest, "wb") as f:
-            f.write(content)
-        paths.append(f"/static/feedback/{fname}")
-    payload = {
-        "title": title,
-        "type": type,
-        "severity": severity,
-        "module": module,
-        "description": description,
-        "expected": expected,
-        "actual": actual,
-        "repro": repro,
-        "contact": contact or "",
-        "anonymous": json.dumps(bool(anonymous)),
-        "allow_contact": json.dumps(bool(allow_contact)),
-        "steps": json.dumps([s for s in steps if s.strip()]),
-        "context": context,
-        "attachments": json.dumps(paths),
-        "status": "new",
-    }
-    fid = feedback_db.create_feedback(redis, payload)
-    return JSONResponse({"id": fid})
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": "invalid severity", "data": None},
+        )
+    try:
+        paths = []
+        for file in attachments:
+            if not file.filename:
+                continue
+            if not file.content_type or not file.content_type.startswith("image/"):
+                return JSONResponse(
+                    status_code=400,
+                    content={"ok": False, "message": "invalid image type", "data": None},
+                )
+            content = await file.read()
+            if len(content) > 5 * 1024 * 1024:
+                return JSONResponse(
+                    status_code=400,
+                    content={"ok": False, "message": "file too large", "data": None},
+                )
+            suffix = Path(file.filename).suffix or ".png"
+            fname = f"{generate_id()}{suffix}"
+            dest = UPLOAD_DIR / fname
+            with open(dest, "wb") as f:
+                f.write(content)
+            paths.append(f"/static/feedback/{fname}")
+        payload = {
+            "title": title,
+            "type": type,
+            "severity": severity,
+            "module": module,
+            "description": description,
+            "expected": expected,
+            "actual": actual,
+            "repro": repro,
+            "contact": contact or "",
+            "anonymous": json.dumps(bool(anonymous)),
+            "allow_contact": json.dumps(bool(allow_contact)),
+            "steps": json.dumps([s for s in steps if s.strip()]),
+            "context": context,
+            "attachments": json.dumps(paths),
+            "status": "new",
+        }
+        fid = feedback_db.create_feedback(redis, payload)
+        return JSONResponse({"ok": True, "message": "created", "data": {"id": fid}})
+    except Exception:
+        logger.exception("submit_feedback failed")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": "internal error", "data": None},
+        )
