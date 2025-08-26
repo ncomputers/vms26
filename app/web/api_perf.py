@@ -4,10 +4,13 @@ from fastapi import APIRouter
 
 from app.core.perf import PERF
 
+from . import handle_errors
+
 router = APIRouter()
 
 
 @router.get("/api/v1/perf")
+@handle_errors
 def get_perf() -> dict:
     """Return per-camera performance statistics."""
     cams: dict[str, dict] = {}
