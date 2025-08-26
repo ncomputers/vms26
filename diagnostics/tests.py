@@ -5,7 +5,8 @@ import time
 from typing import Any, Dict
 from urllib.parse import urlparse
 
-from .registry import register, now_ms, get_source_mode, app_config
+from app.core.utils import now_ms
+from .registry import register, get_source_mode, app_config
 from utils.redis import get_client
 from utils.gpu import probe_cuda
 
