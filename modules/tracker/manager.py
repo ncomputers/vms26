@@ -41,6 +41,7 @@ from utils.redis import (
     trim_sorted_set_sync,
     xadd_event,
 )
+from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from utils.time import format_ts
 from utils.url import get_stream_type
 
@@ -337,7 +338,6 @@ def process_frame(
                     "counted_out": False,
                     "last_seen": now,
                 },
-
             )
             prev_side_sign = state.get("last_side", 0)
             direction = None
@@ -382,23 +382,20 @@ def process_frame(
                             "track_id": tid,
                             "line_id": 0,
                         }
+
                     try:
                         key = f"cam:{tracker.cam_id}:state"
                         pipe = tracker.redis.pipeline()
                         pipe.hset(
                             key,
                             mapping={
-                                "fps_in": tracker.debug_stats.get(
-                                    "capture_fps", 0.0
-                                ),
-                                "fps_out": tracker.debug_stats.get(
-                                    "process_fps", 0.0
-                                ),
+                                "fps_in": tracker.debug_stats.get("capture_fps", 0.0),
+                                "fps_out": tracker.debug_stats.get("process_fps", 0.0),
                                 "last_error": tracker.stream_error,
                             },
+
                         )
-                        pipe.expire(key, 15)
-                        pipe.execute()
+                        ensure_ttl(tracker.redis, key, 15)
                     except Exception:
                         logger.exception("failed to update cam state")
                     if (
@@ -424,7 +421,6 @@ def process_frame(
                                     else:
                                         tracker.out_counts["face"] = (
                                             tracker.out_counts.get("face", 0) + 1
-
                                         )
                                         trim_sorted_set_sync(
                                             tracker.redis,
@@ -800,7 +796,6 @@ class PersonTracker:
         # Per-track line-crossing state storing last side and counted flags
         self.track_states: dict[int, dict[int, dict[str, Any]]] = {}
         self.track_state_ttl = 120.0
-
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)
