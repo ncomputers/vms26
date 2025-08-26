@@ -23,6 +23,7 @@ from modules.profiler import register_thread
 from utils.logx import error as log_error
 from utils.logx import event as log_event
 from utils.logx import warn as log_warn
+from app.core.perf import PERF
 
 if TYPE_CHECKING:
     from .manager import PersonTracker
@@ -181,12 +182,15 @@ class CaptureWorker:
                         prev_gray = gray
                     if skip > 1 and (frame_idx - 1) % skip:
                         continue
+                    PERF[t.cam_id].on_input()
                     if t.frame_queue.full():
                         try:
                             t.frame_queue.get_nowait()
+                            PERF[t.cam_id].on_drop()
                             t.dropped_frames = getattr(t, "dropped_frames", 0) + 1
                             if hasattr(t, "debug_stats"):
                                 t.debug_stats["dropped_frames"] = t.dropped_frames
+                            PERF[t.cam_id].qdepth = t.frame_queue.qsize()
                         except queue.Empty:
                             pass
                     t.raw_frame = frame
@@ -212,8 +216,10 @@ class CaptureWorker:
                         t._warned_no_cuda = True
                     try:
                         t.frame_queue.put(frame, timeout=1)
+                        PERF[t.cam_id].qdepth = t.frame_queue.qsize()
                     except queue.Full:
-                        pass
+                        PERF[t.cam_id].on_drop()
+                        PERF[t.cam_id].qdepth = t.frame_queue.qsize()
                     now = time.time()
                     t.debug_stats["last_capture_ts"] = now
                     t.debug_stats["last_frame_ts"] = now

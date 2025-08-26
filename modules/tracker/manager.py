@@ -43,6 +43,7 @@ from utils.redis import (
 )
 from utils.time import format_ts
 from utils.url import get_stream_type
+from app.core.perf import PERF
 
 from ..duplicate_filter import DuplicateFilter
 from ..overlay import draw_overlays
@@ -144,17 +145,22 @@ def infer_batch(
 ) -> list[Any]:
     """Run batched detection and enqueue frame/detection pairs."""
     try:
+        start = time.time()
         dets_batch = tracker.detector.detect_batch(batch, list(TRACK_CLASSES))
+        elapsed = (time.time() - start) * 1000.0
+        per_frame = elapsed / max(len(batch), 1)
         for frm, dets in zip(frames, dets_batch):
+            PERF[tracker.cam_id].on_det_ms(per_frame)
             if tracker.det_queue.full():
                 try:
                     tracker.det_queue.get_nowait()
+                    PERF[tracker.cam_id].on_drop()
                 except queue.Empty:  # pragma: no cover - queue emptied
                     pass
             try:
                 tracker.det_queue.put((frm, dets), timeout=1)
             except queue.Full:  # pragma: no cover - queue full
-                pass
+                PERF[tracker.cam_id].on_drop()
         return dets_batch
     except Exception:
         logger.exception(f"[{tracker.cam_id}] infer error")
@@ -203,13 +209,17 @@ def process_frame(
             run_det = interval == 0.0 or now - last_ts >= interval
             if run_det:
                 if getattr(tracker, "detector", None):
+                    start_det = time.time()
                     detections = tracker.detector.detect(frame, list(TRACK_CLASSES))
+                    PERF[tracker.cam_id].on_det_ms((time.time() - start_det) * 1000.0)
                 else:  # pragma: no cover - exercised in unit tests
                     from modules.tracker import detector as det
 
+                    start_det = time.time()
                     detections = det.profile_predict(
                         None, "person", frame, device=tracker.device
                     )
+                    PERF[tracker.cam_id].on_det_ms((time.time() - start_det) * 1000.0)
                 tracker._last_det_ts = now
                 tracker.last_detections = detections
 
@@ -241,13 +251,17 @@ def process_frame(
             filtered.append((tuple(arr.tolist()), sc, label))
         try:
             try:
+                start_trk = time.time()
                 ds_tracks = tracker.tracker.update_tracks(
                     filtered,
                     frame=frame,
                     aux=[getattr(tracker, "_counted", {})],
                 )
+                PERF[tracker.cam_id].on_trk_ms((time.time() - start_trk) * 1000.0)
             except TypeError:
+                start_trk = time.time()
                 ds_tracks = tracker.tracker.update_tracks(filtered, frame=frame)
+                PERF[tracker.cam_id].on_trk_ms((time.time() - start_trk) * 1000.0)
         except ValueError:
             logger.exception(f"[{tracker.cam_id}] tracker update error")
             return
@@ -381,8 +395,7 @@ def process_frame(
                             "cam_id": tracker.cam_id,
                             "track_id": tid,
                             "line_id": 0,
-                        },
-                    )
+                        }
                     try:
                         key = f"cam:{tracker.cam_id}:state"
                         pipe = tracker.redis.pipeline()
@@ -540,12 +553,14 @@ def process_frame(
     if tracker.out_queue.full():
         try:
             tracker.out_queue.get_nowait()
+            PERF[tracker.cam_id].on_drop()
         except queue.Empty:
             pass
     try:
         tracker.out_queue.put(processed, timeout=1)
+        PERF[tracker.cam_id].on_output()
     except queue.Full:
-        pass
+        PERF[tracker.cam_id].on_drop()
 
 
 class InferWorker:
@@ -620,6 +635,7 @@ class ProcessingWorker:
         while t.running or not t.frame_queue.empty():
             try:
                 frame = t.frame_queue.get(timeout=1)
+                PERF[t.cam_id].qdepth = t.frame_queue.qsize()
             except queue.Empty:
                 continue
             detections = []
@@ -632,16 +648,23 @@ class ProcessingWorker:
             last_ts = getattr(t, "_last_det_ts", 0.0)
             run_det = interval == 0.0 or now - last_ts >= interval
             if run_det and getattr(t, "detector", None):
+                start_det = time.time()
                 detections = t.detector.detect(frame, list(TRACK_CLASSES))
+                PERF[t.cam_id].on_det_ms((time.time() - start_det) * 1000.0)
                 t._last_det_ts = now
             try:
+                start_trk = time.time()
                 t.tracker.update_tracks(
                     detections,
                     frame=frame,
                     aux=[getattr(t, "_counted", {})],
                 )
+                PERF[t.cam_id].on_trk_ms((time.time() - start_trk) * 1000.0)
             except TypeError:
+                start_trk = time.time()
                 t.tracker.update_tracks(detections, frame=frame)
+                PERF[t.cam_id].on_trk_ms((time.time() - start_trk) * 1000.0)
+            PERF[t.cam_id].on_output()
 
 
 # UniqueFaceCounter class encapsulates uniquefacecounter behavior

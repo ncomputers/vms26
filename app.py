@@ -12,6 +12,7 @@ import logging_config  # noqa: F401
 from app.core.logging import setup_json_logger
 from modules.utils import SNAP_DIR
 from routers import whatsapp
+from app.web import api_perf
 from datetime import datetime
 
 from core.logging import setup_json_logger
@@ -63,6 +64,7 @@ for route, directory_name in static_mounts:
         app.mount(route, StaticFiles(directory=str(directory)), name=directory.name)
 
 app.include_router(whatsapp.router)
+app.include_router(api_perf.router)
 
 
 @app.get("/api/v1/health")
