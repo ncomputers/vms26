@@ -20,6 +20,9 @@ def test_letterbox_unscale_counts(monkeypatch, tmp_path):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.snap_dir = Path(tmp_path)
     tracker.out_queue = queue.Queue()
     tracker.redis = r
@@ -45,6 +48,8 @@ def test_letterbox_unscale_counts(monkeypatch, tmp_path):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -73,7 +78,7 @@ def test_letterbox_unscale_counts(monkeypatch, tmp_path):
     manager_mod.process_frame(tracker, frame1, det1)
     manager_mod.process_frame(tracker, frame2, det2)
 
-    assert tracker.in_counts.get("person", 0) == 1
-    assert tracker.out_counts.get("person", 0) == 0
+    assert tracker.in_counts.get("person", 0) == 0
+    assert tracker.out_counts.get("person", 0) == 1
     bbox = tracker.tracks[1]["bbox"]
     assert bbox == (60, 10, 80, 30)

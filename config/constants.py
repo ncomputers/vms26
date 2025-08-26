@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 import os
 
+from app.core.utils import parse_bool
+
 
 @dataclass
 class FaceThresholds:
@@ -26,7 +28,7 @@ WHATSAPP_SERVICE_URL = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001"
 WHATSAPP_SHARED_SECRET = os.getenv("WHATSAPP_SHARED_SECRET", "")
 
 # Optional development flag to disable stream authentication
-ALLOW_UNAUTHENTICATED_STREAM = os.getenv("ALLOW_UNAUTHENTICATED_STREAM", "0") == "1"
+ALLOW_UNAUTHENTICATED_STREAM = parse_bool(os.getenv("ALLOW_UNAUTHENTICATED_STREAM"))
 
 DEFAULT_CONFIG = {
     "enable_person_tracking": True,

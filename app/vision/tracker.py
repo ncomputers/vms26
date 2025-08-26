@@ -2,7 +2,6 @@ from __future__ import annotations
 
 """DeepSort tracker wrapper for vision module."""
 
-import os
 from dataclasses import dataclass
 from typing import Any, List, Sequence
 
@@ -37,9 +36,11 @@ class Tracker:
         if DeepSort is None:  # pragma: no cover - DeepSort optional
             raise RuntimeError("DeepSort not available")
 
-        max_age = int(os.getenv("TRACKER_MAX_AGE", 30))
-        n_init = int(os.getenv("TRACKER_N_INIT", 3))
-        max_iou_distance = float(os.getenv("TRACKER_MAX_IOU_DISTANCE", 0.7))
+        from app.core.utils import getenv_num
+
+        max_age = getenv_num("TRACKER_MAX_AGE", 30, int)
+        n_init = getenv_num("TRACKER_N_INIT", 3, int)
+        max_iou_distance = getenv_num("TRACKER_MAX_IOU_DISTANCE", 0.7, float)
 
         self._tracker = DeepSort(
             max_age=max_age,

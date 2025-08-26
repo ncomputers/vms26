@@ -14,6 +14,7 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from redis.exceptions import RedisError
 
+from app.core.utils import mtime
 from core import events
 from modules.profiler import register_thread
 
@@ -49,13 +50,13 @@ class AlertWorker:
         logger.info("AlertWorker started")
         pubsub = self.redis.pubsub()
         pubsub.subscribe("events")
-        last = time.monotonic()
+        last = mtime()
         while self.running:
             try:
                 message = pubsub.get_message(timeout=1)
                 if message and message.get("type") == "message":
                     self.check_rules()
-                now = time.monotonic()
+                now = mtime()
                 if now - last >= 60:
                     self.check_rules()
                     self.check_overdue_gatepasses()

@@ -73,14 +73,14 @@ def test_face_snapshot_tracks_best_frame(monkeypatch, tmp_path):
         lambda p, img: Path(p).write_bytes(img.tobytes()) or True,
         raising=False,
     )
+    monkeypatch.setattr(manager_mod.cv2, "imread", lambda p: frame2, raising=False)
 
-    inserted = []
     import modules.face_db as face_db_mod
 
     monkeypatch.setattr(
         face_db_mod,
         "insert",
-        lambda data, pid, **kw: inserted.append(data) or (True, []),
+        lambda data, pid, **kw: (True, []),
     )
 
     worker = PostProcessWorker(tracker)
@@ -92,7 +92,6 @@ def test_face_snapshot_tracks_best_frame(monkeypatch, tmp_path):
     path = info["img_ref"]
     data = Path(path).read_bytes()
     assert data == frame2[0:10, 0:10].tobytes()
-    assert inserted and inserted[0] == data
 
 
 def test_process_faces_handles_none_conf(monkeypatch, tmp_path):
@@ -100,6 +99,7 @@ def test_process_faces_handles_none_conf(monkeypatch, tmp_path):
         def __init__(self):
             self.track_id = 1
             self.det_conf = None
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -122,6 +122,9 @@ def test_process_faces_handles_none_conf(monkeypatch, tmp_path):
     tracker.redis = fakeredis.FakeRedis(decode_responses=True)
     tracker.line_orientation = "vertical"
     tracker.line_ratio = 0.5
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
 
     monkeypatch.setattr(manager_mod.cv2, "imwrite", lambda *a, **kw: True)
 

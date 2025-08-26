@@ -16,6 +16,8 @@ export function initFaceDbSearchLive() {
   const INACTIVITY_TIMEOUT = 10_000; // ms
   let lastActive = Date.now();
 
+  const debounce=(fn,delay)=>{let t;return(...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),delay);};};
+
   async function start() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('unsupported');
@@ -93,6 +95,11 @@ export function initFaceDbSearchLive() {
       stream = null;
     }
   }
+
+  thresholdInput?.addEventListener('input', debounce(()=>{
+    lastActive=Date.now();
+    if(!timer) tick();
+  },300));
 
   window.addEventListener('beforeunload', stop);
   start();

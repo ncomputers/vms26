@@ -1,6 +1,12 @@
 # Changelog
 - use Redis pipeline for per-frame state updates and apply TTL
 - replace blocking KEYS with SCAN when cleaning camera keys
+- avoid double counting by tracking per-line entry/exit state and expiring stale tracks
+- remove unused RTSP and MJPEG helper scripts
+
+- add TurboJPEG-backed `encode_jpeg` helper with env-configurable quality
+- drop legacy `vision.overlay` renderer in favour of `app.vision.overlay`
+
 - handle missing Loguru handlers gracefully to prevent startup crash
 - replace local gate pass placeholder image with hosted URL
 - centralize Redis key names in `app/core/redis_keys.py`
@@ -53,3 +59,4 @@
 - remove legacy `/manage_faces/*` endpoints; use `GET /api/faces` for listings
 - expose Redis facade via app state and router contexts
 
+- prevent duplicate timers and listeners in live view scripts; add scheduler and debounce search inputs

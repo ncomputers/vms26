@@ -184,8 +184,9 @@ class CaptureWorker:
                     if t.frame_queue.full():
                         try:
                             t.frame_queue.get_nowait()
-                            t.dropped_frames += 1
-                            t.debug_stats["dropped_frames"] = t.dropped_frames
+                            t.dropped_frames = getattr(t, "dropped_frames", 0) + 1
+                            if hasattr(t, "debug_stats"):
+                                t.debug_stats["dropped_frames"] = t.dropped_frames
                         except queue.Empty:
                             pass
                     t.raw_frame = frame
@@ -216,20 +217,23 @@ class CaptureWorker:
                     now = time.time()
                     t.debug_stats["last_capture_ts"] = now
                     t.debug_stats["last_frame_ts"] = now
-                    t.frame_times.append(now)
-                    if len(t.frame_times) >= 2:
-                        diffs = [
-                            t.frame_times[i] - t.frame_times[i - 1]
-                            for i in range(1, len(t.frame_times))
-                        ]
-                        avg = sum(diffs) / len(diffs)
-                        if avg > 0:
-                            t.debug_stats["capture_fps"] = 1.0 / avg
-                        t.debug_stats["jitter_ms"] = (
-                            (max(diffs) - min(diffs)) * 1000 if diffs else 0.0
-                        )
-                    t.queue_stats["det_in"] = t.frame_queue.qsize()
-                    t.debug_stats["det_in"] = t.queue_stats["det_in"]
+                    ft = getattr(t, "frame_times", None)
+                    if ft is not None:
+                        ft.append(now)
+                        if len(ft) >= 2:
+                            diffs = [ft[i] - ft[i - 1] for i in range(1, len(ft))]
+                            avg = sum(diffs) / len(diffs)
+                            if avg > 0:
+                                t.debug_stats["capture_fps"] = 1.0 / avg
+                            t.debug_stats["jitter_ms"] = (
+                                (max(diffs) - min(diffs)) * 1000 if diffs else 0.0
+                            )
+                    qs = getattr(t, "queue_stats", None)
+                    if qs is not None:
+                        qs["det_in"] = t.frame_queue.qsize()
+                        t.debug_stats["det_in"] = qs["det_in"]
+                    else:
+                        t.debug_stats["det_in"] = t.frame_queue.qsize()
                     t.debug_stats["packet_loss"] = getattr(
                         cap, "network_error_count", 0
                     )
