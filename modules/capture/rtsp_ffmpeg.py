@@ -235,8 +235,9 @@ class RtspFfmpegSource(IFrameSource):
         self.restarts += 1
         log_throttled(
             logger.warning,
-            "reconnecting ffmpeg",
+            f"[rtsp:{self.cam_id}] reconnecting ffmpeg",
             key=f"cap:{self.cam_id}:reconnect",
+            interval=5,
         )
         self._backoff.sleep()
         self._start_proc()

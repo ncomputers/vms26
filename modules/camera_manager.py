@@ -148,7 +148,9 @@ class CameraManager:
         else:
             duration = asyncio.get_event_loop().time() - start
             if duration > 5.0:
-                logger.warning(f"[{cam.get('id')}] start_tracker took {duration:.2f}s")
+                logger.warning(
+                    f"[proc:{cam.get('id')}] start_tracker took {duration:.2f}s"
+                )
 
     async def start(self, camera_id: int) -> None:
         cam = self._find_cam(camera_id)
@@ -164,13 +166,13 @@ class CameraManager:
             ),
         }
         logger.info(
-            f"[camera:{camera_id}] start type={cam.get('type')} "
+            f"[proc:{camera_id}] start type={cam.get('type')} "
             f"transport={cam.get('rtsp_transport')} flags={flags}"
         )
         try:
             await self._attempt_start(cam)
         except Exception:
-            logger.exception(f"[camera:{camera_id}] tracker start failed")
+            logger.exception(f"[proc:{camera_id}] tracker start failed")
             raise
 
     async def restart(self, camera_id: int) -> None:
@@ -187,7 +189,7 @@ class CameraManager:
             ),
         }
         logger.info(
-            f"[camera:{camera_id}] restart type={cam.get('type')} "
+            f"[proc:{camera_id}] restart type={cam.get('type')} "
             f"transport={cam.get('rtsp_transport')} flags={flags}"
         )
 
