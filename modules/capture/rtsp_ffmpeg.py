@@ -22,6 +22,7 @@ import ffmpeg
 import numpy as np
 
 from utils.logging import log_capture_event
+from app.core.utils import getenv_num
 
 from .base import FrameSourceError, IFrameSource
 
@@ -125,12 +126,12 @@ class RtspFfmpegSource(IFrameSource):
         rw_timeout = (
             self.rw_timeout_usec
             if self.rw_timeout_usec is not None
-            else int(os.getenv("RTSP_RW_TIMEOUT_USEC", "5000000"))
+            else getenv_num("RTSP_RW_TIMEOUT_USEC", 5_000_000, int)
         )
         stimeout = (
             self.stimeout_usec
             if self.stimeout_usec is not None
-            else int(os.getenv("RTSP_STIMEOUT_USEC", "5000000"))
+            else getenv_num("RTSP_STIMEOUT_USEC", 5_000_000, int)
         )
         cmd = [
             "ffmpeg",

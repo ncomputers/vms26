@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import time
 from dataclasses import dataclass
@@ -7,9 +6,10 @@ from itertools import product
 from typing import Any, Dict, List
 from urllib.parse import urlparse, urlunparse
 
+from app.core.utils import getenv_num
 
-FFPROBE_TIMEOUT_SEC = float(os.getenv("FFPROBE_TIMEOUT_SEC", "30"))
-RTSP_STIMEOUT_USEC = int(os.getenv("RTSP_STIMEOUT_USEC", "5000000"))
+FFPROBE_TIMEOUT_SEC = getenv_num("FFPROBE_TIMEOUT_SEC", 30.0, float)
+RTSP_STIMEOUT_USEC = getenv_num("RTSP_STIMEOUT_USEC", 5000000, int)
 
 
 def _parse_ffprobe(text: str) -> Dict[str, Any]:

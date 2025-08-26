@@ -23,7 +23,8 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from typing import Awaitable, Callable, Dict
-import time
+
+from app.core.utils import now_ms
 
 try:  # pragma: no cover - best effort if config package missing
     from config import config as app_config
@@ -71,16 +72,6 @@ def list_tests() -> "OrderedDict[str, Callable[..., Awaitable[dict]]]":
         "license_limits",
     ]
     return OrderedDict((name, REGISTRY[name]) for name in order if name in REGISTRY)
-
-
-# ---------------------------------------------------------------------------
-# Utility helpers
-# ---------------------------------------------------------------------------
-
-def now_ms() -> int:
-    """Return current time in milliseconds."""
-
-    return int(time.time() * 1000)
 
 
 def get_source_mode(cam_id: int) -> str:
