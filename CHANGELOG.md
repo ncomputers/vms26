@@ -1,4 +1,5 @@
 # Changelog
+- name capture/process/watchdog threads and add diagnostic thread dump endpoint
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
 
 - throttle per-frame logs and standardize log prefixes; ensure single exception traces

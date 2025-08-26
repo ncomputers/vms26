@@ -29,7 +29,8 @@ class CaptureLoop(StoppableThread):
     exercising the threading behaviour expected by the server."""
 
     def __init__(self, pipeline: "Pipeline") -> None:
-        super().__init__(daemon=True)
+        cam_id = pipeline.cam_cfg.get("id", id(pipeline))
+        super().__init__(daemon=True, name=f"cap-{cam_id}")
         self.pipeline = pipeline
 
     def run(self) -> None:  # pragma: no cover - simple loop
@@ -48,7 +49,8 @@ class ProcessLoop(StoppableThread):
     """Encode frames from the capture loop to JPEG overlays."""
 
     def __init__(self, pipeline: "Pipeline") -> None:
-        super().__init__(daemon=True)
+        cam_id = pipeline.cam_cfg.get("id", id(pipeline))
+        super().__init__(daemon=True, name=f"proc-{cam_id}")
         self.pipeline = pipeline
         self.target_fps = getenv_num("VMS26_TARGET_FPS", 15, int)
         self.last_processed_ts = time.time()

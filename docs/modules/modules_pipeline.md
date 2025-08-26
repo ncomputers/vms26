@@ -17,6 +17,7 @@ setting.
   blocking.
 - **ProcessLoop** – daemon thread encoding frames to overlay bytes while
   pacing to a target frame rate.
+- Threads are named ``cap-{id}`` and ``proc-{id}`` to aid diagnostics.
 
 ## Key Functions
 - **Pipeline.start()** – launch capture and process threads.
