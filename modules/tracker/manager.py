@@ -20,11 +20,10 @@ import psutil
 from loguru import logger
 from redis.exceptions import RedisError
 
-from utils import logx
-
 from config import config
 from config.constants import ANOMALY_ITEMS
 from core import events
+from utils import logx
 
 # Face detector is optional; import lazily to keep modules independent
 try:  # pragma: no cover - face engine optional
@@ -241,7 +240,14 @@ def process_frame(
                 continue
             filtered.append((tuple(arr.tolist()), sc, label))
         try:
-            ds_tracks = tracker.tracker.update_tracks(filtered, frame=frame)
+            try:
+                ds_tracks = tracker.tracker.update_tracks(
+                    filtered,
+                    frame=frame,
+                    aux=[getattr(tracker, "_counted", {})],
+                )
+            except TypeError:
+                ds_tracks = tracker.tracker.update_tracks(filtered, frame=frame)
         except ValueError:
             logger.exception(f"[{tracker.cam_id}] tracker update error")
             return
@@ -281,9 +287,7 @@ def process_frame(
             # spurious flips.  Keeping these variables separate avoids
             # shadowing the ``side`` helper function.
             prev_side_sign = prev.get("last_side")
-            prev_line_dist = prev.get(
-                "last_line_dist", tracker.cross_hysteresis + 1.0
-            )
+            prev_line_dist = prev.get("last_line_dist", tracker.cross_hysteresis + 1.0)
             prev_frames = prev.get("frames_on_side", {1: 0, -1: 0})
             prev_travel = prev.get("travel_px", 0.0)
             prev_center = prev.get("center")
@@ -307,9 +311,7 @@ def process_frame(
                 frames_on_side[-cur_side_sign] = 0
                 travel_px = step_travel
             else:
-                frames_on_side[cur_side_sign] = frames_on_side.get(
-                    cur_side_sign, 0
-                ) + 1
+                frames_on_side[cur_side_sign] = frames_on_side.get(cur_side_sign, 0) + 1
                 travel_px = prev_travel + step_travel
             prev_sign = 1 if (prev_side_sign or 0) > 0 else -1
             if tracker.line_orientation == "horizontal":
@@ -364,10 +366,8 @@ def process_frame(
             )
             crossed = (
                 sign_changed
-                and frames_on_prev
-                >= getattr(tracker, "cross_min_frames", 0)
-                and prev_travel
-                >= getattr(tracker, "cross_min_travel_px", 0.0)
+                and frames_on_prev >= getattr(tracker, "cross_min_frames", 0)
+                and prev_travel >= getattr(tracker, "cross_min_travel_px", 0.0)
                 and prev_line_dist > tracker.cross_hysteresis
                 and line_dist > tracker.cross_hysteresis
             )
@@ -460,12 +460,8 @@ def process_frame(
                         tracker.redis.hset(
                             f"cam:{tracker.cam_id}:state",
                             mapping={
-                                "fps_in": tracker.debug_stats.get(
-                                    "capture_fps", 0.0
-                                ),
-                                "fps_out": tracker.debug_stats.get(
-                                    "process_fps", 0.0
-                                ),
+                                "fps_in": tracker.debug_stats.get("capture_fps", 0.0),
+                                "fps_out": tracker.debug_stats.get("process_fps", 0.0),
                                 "last_error": tracker.stream_error,
                             },
                         )
@@ -603,10 +599,12 @@ def process_frame(
             )
         with lock:
             tracker.output_frame = processed
-        tracker.debug_stats["last_overlay_ts"] = time.time()
-        tracker.debug_stats["overlay_match"] = (
-            tracker.output_frame is not None and tracker.output_frame.shape == frame.shape
-        )
+        if hasattr(tracker, "debug_stats"):
+            tracker.debug_stats["last_overlay_ts"] = time.time()
+            tracker.debug_stats["overlay_match"] = (
+                tracker.output_frame is not None
+                and tracker.output_frame.shape == frame.shape
+            )
     else:
         with lock:
             tracker.output_frame = None
@@ -707,7 +705,14 @@ class ProcessingWorker:
             if run_det and getattr(t, "detector", None):
                 detections = t.detector.detect(frame, list(TRACK_CLASSES))
                 t._last_det_ts = now
-            t.tracker.update_tracks(detections, frame=frame)
+            try:
+                t.tracker.update_tracks(
+                    detections,
+                    frame=frame,
+                    aux=[getattr(t, "_counted", {})],
+                )
+            except TypeError:
+                t.tracker.update_tracks(detections, frame=frame)
 
 
 # UniqueFaceCounter class encapsulates uniquefacecounter behavior
@@ -863,7 +868,6 @@ class PersonTracker:
         # Epsilon used by the side-of-line test; points producing a cross
         # product magnitude below this threshold are treated as on the line.
         self.side_eps = cfg.get("side_eps", 2.0)
-
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)

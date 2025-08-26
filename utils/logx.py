@@ -116,6 +116,16 @@ def every(seconds: float, key: str) -> bool:
     return False
 
 
+def log_throttled(fn, *args: Any, key: str, interval: float = 60, **kwargs: Any) -> None:
+    """Invoke ``fn`` only if ``interval`` seconds elapsed for ``key``.
+
+    This provides a convenient way to rate-limit noisy log messages.
+    """
+
+    if every(interval, key):
+        fn(*args, **kwargs)
+
+
 def on_change(key: str, value: Any) -> bool:
     """Return ``True`` when *value* differs from the previous call."""
 
@@ -132,5 +142,6 @@ __all__ = [
     "debug",
     "every",
     "on_change",
+    "log_throttled",
     "push_redis",
 ]

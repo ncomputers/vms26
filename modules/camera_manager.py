@@ -9,6 +9,7 @@ import numpy as np
 from modules.camera_factory import StreamUnavailable, open_capture
 
 from loguru import logger
+from app.core.utils import mtime
 
 BACKOFF_BASE = 0.5
 BACKOFF_MAX = 30.0
@@ -234,7 +235,7 @@ class CameraManager:
         """
 
         info = self._latest.get(cam_id)
-        now = time.monotonic()
+        now = mtime()
         if info and (now - float(info.get("ts", 0.0)) <= 2.0):
             bgr = info.get("bgr")
             if isinstance(bgr, np.ndarray):

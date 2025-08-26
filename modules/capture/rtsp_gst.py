@@ -2,6 +2,8 @@ from __future__ import annotations
 
 """RTSP capture via GStreamer pipelines."""
 
+import os
+
 import cv2
 import numpy as np
 
@@ -31,7 +33,8 @@ class RtspGstSource(IFrameSource):
         cam_id: int | str | None = None,
     ) -> None:
         super().__init__(uri, cam_id=cam_id)
-        self.tcp = tcp
+        env_tcp = os.getenv("VMS26_RTSP_TCP") == "1"
+        self.tcp = tcp or env_tcp
         self.latency_ms = latency_ms
         self.use_nv = use_nv
         self.cap: cv2.VideoCapture | None = None

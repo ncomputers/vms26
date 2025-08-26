@@ -44,16 +44,16 @@ async function searchFrame() {
   }
 }
 
+const ctrl=window.eventControllers.get('webcam');
 mergeBtn?.addEventListener('click', () => {
   mergeBtn.classList.add('d-none');
   newBtn.classList.add('d-none');
-  // Placeholder for merge action; actual call handled server-side
-});
+},{signal:ctrl.signal});
 
 newBtn?.addEventListener('click', () => {
   mergeBtn.classList.add('d-none');
   newBtn.classList.add('d-none');
-});
+},{signal:ctrl.signal});
 
 startCamera();
-setInterval(searchFrame, 1000);
+window.pageScheduler.set('webcamSearch', searchFrame, 1000);

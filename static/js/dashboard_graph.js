@@ -50,14 +50,15 @@ function refreshSnapshot(img,interval=15000){
     const base=img.src.split('?')[0];
     img.src=`${base}?t=${Date.now()}`;
   };
-  setInterval(update,interval);
+  const key=`snapshot-${img.id||'default'}`;
+  window.pageScheduler.set(key,update,interval);
 }
 window.dashboardGraph={load,refreshSnapshot};
 document.addEventListener('DOMContentLoaded',()=>{
+  const ctrl=window.eventControllers.get('dashboardGraph');
   const sel=document.getElementById('timeframe');
-  if(sel) sel.addEventListener('change',load);
+  sel?.addEventListener('change',load,{signal:ctrl.signal});
   const cmp=document.getElementById('comparisonToggle');
-  if(cmp) cmp.addEventListener('change',load);
-
+  cmp?.addEventListener('change',load,{signal:ctrl.signal});
 });
 })();
