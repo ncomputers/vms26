@@ -1,6 +1,6 @@
 import threading
 
-from logging_config import set_log_level
+from logging_config import set_log_level, logger
 
 
 def test_configure_thread_safe():
@@ -19,3 +19,12 @@ def test_configure_thread_safe():
         t.join()
 
     assert not errors
+
+
+def test_set_log_level_missing_handler():
+    """set_log_level should handle external sink removal gracefully."""
+    set_log_level("INFO")
+    # Remove all handlers directly via loguru, leaving stale sink ids
+    logger.remove()
+    # Should not raise even though previous sink ids are invalid
+    set_log_level("DEBUG")
