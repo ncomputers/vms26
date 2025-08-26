@@ -380,87 +380,52 @@ def process_frame(
                             "ts": ts,
                             "cam_id": tracker.cam_id,
                             "track_id": tid,
-                            "direction": direction,
-                            "label": group,
-                            "path": path,
-                        }
-                        if getattr(tracker, "ppe_classes", []):
-                            entry["needs_ppe"] = True
-                        key = f"{group}_logs"
-                        tracker.redis.zadd(
-                            key, {json.dumps(entry): entry["ts"]}, nx=True
-                        )
-                        trim_sorted_set_sync(tracker.redis, key, entry["ts"])
-                        xadd_event(
-                            EVENTS_STREAM,
-                            {
-                                "camera_id": tracker.cam_id,
-                                "ts_ms": int(now * 1000),
-                                "kind": f"line_cross_{direction}",
-                                "group": group,
-                                "track_id": tid,
-                                "line_id": 0,
-
+                            "line_id": 0,
+                        },
+                    )
+                    try:
+                        key = f"cam:{tracker.cam_id}:state"
+                        pipe = tracker.redis.pipeline()
+                        pipe.hset(
+                            key,
+                            mapping={
+                                "fps_in": tracker.debug_stats.get(
+                                    "capture_fps", 0.0
+                                ),
+                                "fps_out": tracker.debug_stats.get(
+                                    "process_fps", 0.0
+                                ),
+                                "last_error": tracker.stream_error,
                             },
                         )
-                        try:
-                            tracker.redis.hset(
-                                f"cam:{tracker.cam_id}:state",
-                                mapping={
-                                    "fps_in": tracker.debug_stats.get(
-                                        "capture_fps", 0.0
-                                    ),
-                                    "fps_out": tracker.debug_stats.get(
-                                        "process_fps", 0.0
-                                    ),
-                                    "last_error": tracker.stream_error,
-                                },
-                            )
-                        except Exception:
-                            logger.exception("failed to update cam state")
-                        if (
-                            group == "person"
-                            and getattr(tracker, "enable_face_counting", False)
-                            and getattr(tracker, "unique_counter", None)
-                            and faces
-                        ):
-                            for fl, ft, fr, fb, emb in faces:
-                                if fl >= l and ft >= t1 and fr <= r and fb <= b:
-                                    if tracker.unique_counter.is_new(emb):
-                                        if direction == "in":
-                                            tracker.in_counts["face"] = (
-                                                tracker.in_counts.get("face", 0) + 1
-                                            )
-                                            publish_event(
-                                                tracker.redis,
-                                                events.FACE_IN,
-                                                cam_id=tracker.cam_id,
-                                                track_id=tid,
-                                                direction=direction,
-                                            )
-                                        else:
-                                            tracker.out_counts["face"] = (
-                                                tracker.out_counts.get("face", 0) + 1
-                                            )
-                                            publish_event(
-                                                tracker.redis,
-                                                events.FACE_OUT,
-                                                cam_id=tracker.cam_id,
-                                                track_id=tid,
-                                                direction=direction,
-                                            )
-                                        updated = True
-                                        face_entry = {
-                                            "ts": ts,
-                                            "cam_id": tracker.cam_id,
-                                            "track_id": tid,
-                                            "direction": direction,
-                                            "label": "face",
-                                        }
-                                        tracker.redis.zadd(
-                                            "face_logs",
-                                            {json.dumps(face_entry): face_entry["ts"]},
-                                            nx=True,
+                        pipe.expire(key, 15)
+                        pipe.execute()
+                    except Exception:
+                        logger.exception("failed to update cam state")
+                    if (
+                        group == "person"
+                        and getattr(tracker, "enable_face_counting", False)
+                        and getattr(tracker, "unique_counter", None)
+                        and faces
+                    ):
+                        for fl, ft, fr, fb, emb in faces:
+                            if fl >= l and ft >= t1 and fr <= r and fb <= b:
+                                if tracker.unique_counter.is_new(emb):
+                                    if entered:
+                                        tracker.in_counts["face"] = (
+                                            tracker.in_counts.get("face", 0) + 1
+                                        )
+                                        publish_event(
+                                            tracker.redis,
+                                            events.FACE_IN,
+                                            cam_id=tracker.cam_id,
+                                            track_id=tid,
+                                            direction=direction,
+                                        )
+                                    else:
+                                        tracker.out_counts["face"] = (
+                                            tracker.out_counts.get("face", 0) + 1
+
                                         )
                                         trim_sorted_set_sync(
                                             tracker.redis,
