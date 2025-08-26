@@ -128,6 +128,7 @@ raw frames without server-side overlays.
 
 `GET /api/cameras/{id}/mjpeg?overlay=1[&thickness=2][&labels=true]` –
 Server-rendered overlay using latest tracker detections.
+JPEG quality can be tuned via the `VMS26_JPEG_QUALITY` environment variable (default: 80).
 
 Fields accepted by the camera creation endpoint:
 
