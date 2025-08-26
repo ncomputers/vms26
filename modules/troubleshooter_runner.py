@@ -4,6 +4,7 @@ import json
 import multiprocessing as mp
 import os
 import subprocess
+import threading
 import time
 import uuid
 from typing import Dict, Any
@@ -15,17 +16,37 @@ import shutil
 _RUNS: Dict[str, Dict[str, Any]] = {}
 
 
-def _run_stage(name: str, func, queue: mp.Queue) -> None:
+def _run_stage(name: str, func, queue: mp.Queue, timeout: float = 10.0) -> bool:
     start = time.time()
     status = "PASS"
     detail = ""
-    try:
-        func()
-    except Exception as exc:  # pragma: no cover - defensive
-        status = "FAIL"
-        detail = str(exc)
+
+    def target() -> None:
+        nonlocal status, detail
+        try:
+            func()
+        except Exception as exc:  # pragma: no cover - defensive
+            status = "FAIL"
+            detail = str(exc)
+
+    th = threading.Thread(target=target, daemon=True)
+    th.start()
+    th.join(timeout)
+    if th.is_alive():
+        status = "TIMEOUT"
+        detail = f">{int(timeout * 1000)}ms"
+
     duration_ms = int((time.time() - start) * 1000)
-    queue.put({"stage": name, "status": status, "duration_ms": duration_ms, "detail": detail})
+    event = {
+        "stage": name,
+        "status": status,
+        "duration_ms": duration_ms,
+        "detail": detail,
+    }
+    # emit compact JSON log line
+    print(json.dumps(event), flush=True)
+    queue.put(event)
+    return status == "PASS"
 
 
 def _worker(url: str, queue: mp.Queue) -> None:
@@ -94,7 +115,9 @@ def _worker(url: str, queue: mp.Queue) -> None:
     ]
 
     for name, fn in stages:
-        _run_stage(name, fn, queue)
+        ok = _run_stage(name, fn, queue)
+        if not ok:
+            break
 
     queue.put({"stage": "complete"})
 
