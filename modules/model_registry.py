@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from os import getenv
 from typing import Dict, Tuple
 
 import psutil
@@ -9,6 +10,9 @@ from loguru import logger
 
 try:  # optional heavy dependency
     import torch  # type: ignore
+
+    if hasattr(torch, "backends") and hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.benchmark = True  # type: ignore[attr-defined]
 except ModuleNotFoundError:  # pragma: no cover - torch optional in tests
     torch = None
 
@@ -60,9 +64,22 @@ def get_yolo(path: str, device: "torch.device | str | None" = None) -> YOLO:
     if model is None:
         _log_mem(f"Before loading YOLO model {path}", dev)
         model = YOLO(path)
-        model.model.to(dev)
+        fp16 = getenv("VMS26_FP16", "auto")
         if dev.type == "cuda":
-            model.model.half()
+            model.model.to("cuda")
+            if fp16 in ("auto", "1"):
+                try:
+                    model.model.half()
+                except Exception:
+                    pass
+        else:
+            model.model.to("cpu")
+        if torch is not None:
+            with torch.no_grad():
+                dummy = torch.zeros(1, 3, 640, 640, device=dev)
+                if dev.type == "cuda" and fp16 in ("auto", "1"):
+                    dummy = dummy.half()
+                model.model(dummy)
         _yolo_models[key] = model
     return model
 

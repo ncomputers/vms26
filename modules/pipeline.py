@@ -3,6 +3,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
+from os import getenv
 from typing import Optional
 
 import numpy as np
@@ -11,6 +12,8 @@ try:
     import cv2  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     cv2 = None  # type: ignore
+
+from utils.jpeg import encode_jpeg
 
 
 class CaptureLoop(threading.Thread):
@@ -52,9 +55,8 @@ class ProcessLoop(threading.Thread):
                 continue
             if cv2 is None:
                 continue
-            ok, buf = cv2.imencode(".jpg", frame)
-            if ok:
-                self.pipeline._overlay_bytes = buf.tobytes()
+            q = int(getenv("VMS26_JPEG_QUALITY", 80))
+            self.pipeline._overlay_bytes = encode_jpeg(frame, q)
 
 
 class Pipeline:
