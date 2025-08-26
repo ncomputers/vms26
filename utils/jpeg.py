@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from os import getenv
 
+from app.core.prof import profiled
+
 DEFAULT_JPEG_QUALITY = int(getenv("VMS26_JPEG_QUALITY", "80"))
 
 try:  # Prefer turbojpeg when available
@@ -14,6 +16,8 @@ try:  # Prefer turbojpeg when available
             q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
             return _jpeg.encode(np_bgr, quality=q)
 
+        encode_jpeg = profiled("enc")(encode_jpeg)
+
     else:  # pragma: no cover - explicit disable
         raise ImportError
 except Exception:  # pragma: no cover - fallback to OpenCV
@@ -23,6 +27,8 @@ except Exception:  # pragma: no cover - fallback to OpenCV
         q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
         ok, buf = cv2.imencode(".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q])
         return buf.tobytes() if ok else b""
+
+    encode_jpeg = profiled("enc")(encode_jpeg)
 
 
 __all__ = ["encode_jpeg"]
