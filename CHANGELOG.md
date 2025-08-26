@@ -1,4 +1,5 @@
 # Changelog
+- replace local gate pass placeholder image with hosted URL
 - centralize Redis key names in `app/core/redis_keys.py`
 - add optional Pydantic-based configuration loader with singleton accessor
 - provide compatibility wrapper for `vision.counting`
