@@ -41,6 +41,7 @@ from utils.redis import (
     trim_sorted_set_sync,
     xadd_event,
 )
+from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from utils.time import format_ts
 from utils.url import get_stream_type
 
@@ -386,9 +387,9 @@ def process_frame(
                                 "fps_out": tracker.debug_stats.get("process_fps", 0.0),
                                 "last_error": tracker.stream_error,
                             },
+
                         )
-                        pipe.expire(key, 15)
-                        pipe.execute()
+                        ensure_ttl(tracker.redis, key, 15)
                     except Exception:
                         logger.exception("failed to update cam state")
                     if (
