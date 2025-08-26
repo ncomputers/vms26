@@ -59,17 +59,16 @@ drawing overlays.
 
 ## Counting Line Geometry
 
-Crossing detection relies on two helpers:
+Crossing detection relies on ``side(point, a, b, eps)`` which returns ``-1`` when
+the point lies to the right of the line segment ``ab``, ``1`` when to the left
+and ``0`` when within ``eps`` units of the line.
 
-- ``side(point, a, b, eps)`` – returns ``-1`` when the point lies to the right
-  of the line segment ``ab``, ``1`` when to the left and ``0`` when within
-  ``eps`` units of the line.
-- ``point_line_distance(point, a, b)`` – computes the perpendicular distance
-  from a point to the counting line.
+For each line, the tracker keeps per-track state with the last side and whether
+an entry or exit has already been counted. When the side changes from non-zero
+to the opposite sign, a single event is emitted:
 
-Each track stores its previous side and its previous distance from the line. A
-crossing is counted only when the sign flips, the track has remained on the
-previous side for ``cross_min_frames`` frames, has travelled at least
-``cross_min_travel_px`` pixels and both the previous and current distances are
-greater than ``cross_hysteresis`` to provide hysteresis around the counting
-line.
+* ``+1`` → ``entered``
+* ``-1`` → ``exited``
+
+Tracks with low confidence or fewer than two frames of age are ignored to avoid
+jitter, and state is evicted if a track is not seen for over 120 seconds.

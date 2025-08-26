@@ -29,6 +29,9 @@ def test_zone_change_cooldown(monkeypatch, tmp_path):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -69,6 +72,8 @@ def test_zone_change_cooldown(monkeypatch, tmp_path):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True

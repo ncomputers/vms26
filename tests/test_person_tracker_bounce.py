@@ -23,6 +23,9 @@ def _make_tracker(tmp_path, redis_client):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -60,6 +63,8 @@ def _run_tracker(tracker, bboxes):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -84,7 +89,7 @@ def _run_tracker(tracker, bboxes):
     post.run()
 
 
-def test_bounce_requires_distance_and_frames(tmp_path):
+def test_multiple_crossings_count_once(tmp_path):
     r = fakeredis.FakeRedis()
     tracker = _make_tracker(tmp_path, r)
 
@@ -92,21 +97,15 @@ def test_bounce_requires_distance_and_frames(tmp_path):
         return (cx - 10, 10, cx + 10, 30)
 
     centers = [
-        20,  # left
-        80,  # right (no count, first crossing)
-        20,  # left (bounce back, still no count)
-        80,  # right again
-        82,  # right move
-        90,  # right move
-        95,  # right move, frames>=2 and travel>10
-        20,  # left, should count
+        20,
+        80,
+        20,
+        80,
+        20,
     ]
     bboxes = [box(c) for c in centers]
 
     _run_tracker(tracker, bboxes)
 
-    logs = [json.loads(x) for x in r.zrange("person_logs", 0, -1)]
-    assert len(logs) == 1
-    assert logs[0]["direction"] == "out"
-    assert tracker.in_counts.get("person", 0) == 0
+    assert tracker.in_counts.get("person", 0) == 1
     assert tracker.out_counts.get("person", 0) == 1

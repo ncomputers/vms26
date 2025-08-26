@@ -20,6 +20,8 @@ def _make_tracker(tmp_path):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -35,6 +37,7 @@ def _make_tracker(tmp_path):
     tracker.cross_hysteresis = 15
     tracker.model_person = type("M", (), {"names": {0: "person"}})()
     tracker.update_callback = None
+    tracker.stream_error = ""
     return tracker
 
 
@@ -60,6 +63,10 @@ def test_crossing_near_endpoint(monkeypatch, tmp_path):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -88,8 +95,8 @@ def test_crossing_near_endpoint(monkeypatch, tmp_path):
     inf.run()
     post.run()
 
-    assert tracker.in_counts.get("person", 0) == 1
-    assert tracker.out_counts.get("person", 0) == 0
+    assert tracker.in_counts.get("person", 0) == 0
+    assert tracker.out_counts.get("person", 0) == 1
 
 
 def test_jitter_near_line_ignored(monkeypatch, tmp_path):

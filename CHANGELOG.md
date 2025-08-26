@@ -1,4 +1,5 @@
 # Changelog
+- avoid double counting by tracking per-line entry/exit state and expiring stale tracks
 - handle missing Loguru handlers gracefully to prevent startup crash
 - replace local gate pass placeholder image with hosted URL
 - centralize Redis key names in `app/core/redis_keys.py`

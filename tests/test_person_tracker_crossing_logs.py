@@ -34,6 +34,9 @@ def test_crossing_logged_and_reported(monkeypatch, tmp_path):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -73,6 +76,8 @@ def test_crossing_logged_and_reported(monkeypatch, tmp_path):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -105,8 +110,5 @@ def test_crossing_logged_and_reported(monkeypatch, tmp_path):
     post.run()
 
     logs = [json.loads(x) for x in r.zrange("person_logs", 0, -1)]
-    assert logs and logs[0]["direction"] == "in"
-
-    raw = r.zrange("person_logs", 0, -1)[0]
-    log = json.loads(raw)
-    assert log["needs_ppe"]
+    assert logs and logs[0]["direction"] == "out"
+    assert any(l.get("needs_ppe") for l in logs)

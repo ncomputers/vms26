@@ -20,11 +20,10 @@ import psutil
 from loguru import logger
 from redis.exceptions import RedisError
 
-from utils import logx
-
 from config import config
 from config.constants import ANOMALY_ITEMS
 from core import events
+from utils import logx
 
 # Face detector is optional; import lazily to keep modules independent
 try:  # pragma: no cover - face engine optional
@@ -254,6 +253,7 @@ def process_frame(
         line_pos = int(
             (h if tracker.line_orientation == "horizontal" else w) * tracker.line_ratio
         )
+        now = time.time()
         for trk in ds_tracks:
             if not trk.is_confirmed():
                 continue
@@ -275,43 +275,11 @@ def process_frame(
                 line_start = (float(line_pos), 0.0)
                 line_end = (float(line_pos), float(h - 1))
             prev = tracker.tracks.get(tid, {})
-            # ``prev_side_sign`` and ``cur_side_sign`` capture only the sign of the
-            # track centre relative to the counting line.  When the point lies
-            # on the line (``raw_side`` == 0) we reuse the previous sign to avoid
-            # spurious flips.  Keeping these variables separate avoids
-            # shadowing the ``side`` helper function.
-            prev_side_sign = prev.get("last_side")
-            prev_line_dist = prev.get(
-                "last_line_dist", tracker.cross_hysteresis + 1.0
-            )
-            prev_frames = prev.get("frames_on_side", {1: 0, -1: 0})
-            prev_travel = prev.get("travel_px", 0.0)
-            prev_center = prev.get("center")
             raw_side = side(
                 (cx, cy), line_start, line_end, getattr(tracker, "side_eps", 2.0)
             )
-            cur_side_sign = prev_side_sign if raw_side == 0 else raw_side
-            line_dist = point_line_distance((cx, cy), line_start, line_end)
-            step_travel = (
-                ((cx - prev_center[0]) ** 2 + (cy - prev_center[1]) ** 2) ** 0.5
-                if prev_center
-                else 0.0
-            )
-            frames_on_side = prev_frames.copy()
-            if (
-                prev_side_sign is not None
-                and cur_side_sign != prev_side_sign
-                and cur_side_sign != 0
-            ):
-                frames_on_side[cur_side_sign] = 1
-                frames_on_side[-cur_side_sign] = 0
-                travel_px = step_travel
-            else:
-                frames_on_side[cur_side_sign] = frames_on_side.get(
-                    cur_side_sign, 0
-                ) + 1
-                travel_px = prev_travel + step_travel
-            prev_sign = 1 if (prev_side_sign or 0) > 0 else -1
+            cur_side_sign = raw_side
+            prev_side_sign = prev.get("last_side")
             if tracker.line_orientation == "horizontal":
                 zone = (
                     "top"
@@ -346,181 +314,163 @@ def process_frame(
                 "bbox": (l, t1, r, b),
                 "zone": zone,
                 "last_side": cur_side_sign,
-                "last_line_dist": line_dist,
                 "trail": trail,
                 "group": group,
                 "label": label,
                 "conf": conf,
-                "frames_on_side": frames_on_side,
-                "travel_px": travel_px,
                 "center": (cx, cy),
             }
-            frames_on_prev = prev_frames.get(prev_sign, 0)
-            sign_changed = (
-                prev_side_sign is not None
-                and prev_side_sign != 0
-                and cur_side_sign != 0
-                and prev_side_sign + cur_side_sign == 0
+            state_lines = tracker.track_states.get(tid, {})
+            state = state_lines.get(
+                0,
+                {
+                    "last_side": cur_side_sign,
+                    "counted_in": False,
+                    "counted_out": False,
+                    "last_seen": now,
+                },
             )
-            crossed = (
-                sign_changed
-                and frames_on_prev
-                >= getattr(tracker, "cross_min_frames", 0)
-                and prev_travel
-                >= getattr(tracker, "cross_min_travel_px", 0.0)
-                and prev_line_dist > tracker.cross_hysteresis
-                and line_dist > tracker.cross_hysteresis
-            )
-            if sign_changed:
-                if tracker.line_orientation == "horizontal":
-                    entered = prev_side_sign < 0 and cur_side_sign > 0
-                else:
-                    entered = prev_side_sign > 0 and cur_side_sign < 0
-                if tracker.reverse:
-                    entered = not entered
-                direction = "in" if entered else "out"
-                logx.event(
-                    "CROSS_DECISION",
-                    camera_id=tracker.cam_id,
-                    track_id=tid,
-                    cls=label,
-                    dir=direction,
-                    crossed=crossed,
-                    line_dist=line_dist,
-                    travel_px=prev_travel,
-                    frames_on_prev=frames_on_prev,
-                    frames_on_cur=prev_frames.get(cur_side_sign, 0),
-                )
-
-            if crossed and {"in_count", "out_count"} & set(
-                getattr(tracker, "tasks", ["in_count", "out_count"])
-            ):
-                if group == "other":
-                    continue
-                if tracker.line_orientation == "horizontal":
-                    entered = prev_side_sign < 0 and cur_side_sign > 0
-                else:
-                    entered = prev_side_sign > 0 and cur_side_sign < 0
-                if tracker.reverse:
-                    entered = not entered
-                direction = "in" if entered else "out"
-                now = time.time()
-                key = (tid, direction)
-                last = tracker._counted.get(key)
-                if not last or now - last >= tracker.count_cooldown:
-                    if entered:
+            prev_side_sign = state.get("last_side", 0)
+            direction = None
+            age = getattr(trk, "age", 0)
+            if conf >= 0.5 and age >= 2 and group != "other":
+                if (
+                    prev_side_sign != cur_side_sign
+                    and prev_side_sign != 0
+                    and cur_side_sign != 0
+                ):
+                    if cur_side_sign > 0 and not state.get("counted_in"):
                         tracker.in_counts[group] = tracker.in_counts.get(group, 0) + 1
-                    else:
+                        state["counted_in"] = True
+                        direction = "in"
+                    elif cur_side_sign < 0 and not state.get("counted_out"):
                         tracker.out_counts[group] = tracker.out_counts.get(group, 0) + 1
-                    logx.event(
-                        "COUNT_EMIT",
-                        camera_id=tracker.cam_id,
-                        group=group,
-                        dir=direction,
-                        track_id=tid,
-                        cls=label,
-                    )
-                    updated = True
-                    tracker._counted[key] = now
-                    ts = int(now)
-                    path = None
-                    try:
-                        crop = frame[t1:b, l:r]
-                        fname = f"{ts}_{tracker.cam_id}_{tid}.jpg"
-                        img_path = tracker.snap_dir / fname
-                        cv2.imwrite(str(img_path), crop)
-                        path = str(img_path)
-                    except Exception:
+                        state["counted_out"] = True
+                        direction = "out"
+                    if direction:
+                        logx.event(
+                            "COUNT_EMIT",
+                            camera_id=tracker.cam_id,
+                            group=group,
+                            dir=direction,
+                            track_id=tid,
+                            cls=label,
+                        )
+                        updated = True
+                        ts = int(now)
                         path = None
-                    entry = {
-                        "ts": ts,
-                        "cam_id": tracker.cam_id,
-                        "track_id": tid,
-                        "direction": direction,
-                        "label": group,
-                        "path": path,
-                    }
-                    if getattr(tracker, "ppe_classes", []):
-                        entry["needs_ppe"] = True
-                    key = f"{group}_logs"
-                    tracker.redis.zadd(key, {json.dumps(entry): entry["ts"]}, nx=True)
-                    trim_sorted_set_sync(tracker.redis, key, entry["ts"])
-                    xadd_event(
-                        EVENTS_STREAM,
-                        {
-                            "camera_id": tracker.cam_id,
-                            "ts_ms": int(now * 1000),
-                            "kind": f"line_cross_{direction}",
-                            "group": group,
+                        try:
+                            crop = frame[t1:b, l:r]
+                            fname = f"{ts}_{tracker.cam_id}_{tid}.jpg"
+                            img_path = tracker.snap_dir / fname
+                            cv2.imwrite(str(img_path), crop)
+                            path = str(img_path)
+                        except Exception:
+                            path = None
+                        entry = {
+                            "ts": ts,
+                            "cam_id": tracker.cam_id,
                             "track_id": tid,
-                            "line_id": 0,
-                        },
-                    )
-                    try:
-                        tracker.redis.hset(
-                            f"cam:{tracker.cam_id}:state",
-                            mapping={
-                                "fps_in": tracker.debug_stats.get(
-                                    "capture_fps", 0.0
-                                ),
-                                "fps_out": tracker.debug_stats.get(
-                                    "process_fps", 0.0
-                                ),
-                                "last_error": tracker.stream_error,
+                            "direction": direction,
+                            "label": group,
+                            "path": path,
+                        }
+                        if getattr(tracker, "ppe_classes", []):
+                            entry["needs_ppe"] = True
+                        key = f"{group}_logs"
+                        tracker.redis.zadd(
+                            key, {json.dumps(entry): entry["ts"]}, nx=True
+                        )
+                        trim_sorted_set_sync(tracker.redis, key, entry["ts"])
+                        xadd_event(
+                            EVENTS_STREAM,
+                            {
+                                "camera_id": tracker.cam_id,
+                                "ts_ms": int(now * 1000),
+                                "kind": f"line_cross_{direction}",
+                                "group": group,
+                                "track_id": tid,
+                                "line_id": 0,
                             },
                         )
-                    except Exception:
-                        logger.exception("failed to update cam state")
-                    if (
-                        group == "person"
-                        and getattr(tracker, "enable_face_counting", False)
-                        and getattr(tracker, "unique_counter", None)
-                        and faces
-                    ):
-                        for fl, ft, fr, fb, emb in faces:
-                            if fl >= l and ft >= t1 and fr <= r and fb <= b:
-                                if tracker.unique_counter.is_new(emb):
-                                    if entered:
-                                        tracker.in_counts["face"] = (
-                                            tracker.in_counts.get("face", 0) + 1
+                        try:
+                            tracker.redis.hset(
+                                f"cam:{tracker.cam_id}:state",
+                                mapping={
+                                    "fps_in": tracker.debug_stats.get(
+                                        "capture_fps", 0.0
+                                    ),
+                                    "fps_out": tracker.debug_stats.get(
+                                        "process_fps", 0.0
+                                    ),
+                                    "last_error": tracker.stream_error,
+                                },
+                            )
+                        except Exception:
+                            logger.exception("failed to update cam state")
+                        if (
+                            group == "person"
+                            and getattr(tracker, "enable_face_counting", False)
+                            and getattr(tracker, "unique_counter", None)
+                            and faces
+                        ):
+                            for fl, ft, fr, fb, emb in faces:
+                                if fl >= l and ft >= t1 and fr <= r and fb <= b:
+                                    if tracker.unique_counter.is_new(emb):
+                                        if direction == "in":
+                                            tracker.in_counts["face"] = (
+                                                tracker.in_counts.get("face", 0) + 1
+                                            )
+                                            publish_event(
+                                                tracker.redis,
+                                                events.FACE_IN,
+                                                cam_id=tracker.cam_id,
+                                                track_id=tid,
+                                                direction=direction,
+                                            )
+                                        else:
+                                            tracker.out_counts["face"] = (
+                                                tracker.out_counts.get("face", 0) + 1
+                                            )
+                                            publish_event(
+                                                tracker.redis,
+                                                events.FACE_OUT,
+                                                cam_id=tracker.cam_id,
+                                                track_id=tid,
+                                                direction=direction,
+                                            )
+                                        updated = True
+                                        face_entry = {
+                                            "ts": ts,
+                                            "cam_id": tracker.cam_id,
+                                            "track_id": tid,
+                                            "direction": direction,
+                                            "label": "face",
+                                        }
+                                        tracker.redis.zadd(
+                                            "face_logs",
+                                            {json.dumps(face_entry): face_entry["ts"]},
+                                            nx=True,
                                         )
-                                        publish_event(
+                                        trim_sorted_set_sync(
                                             tracker.redis,
-                                            events.FACE_IN,
-                                            cam_id=tracker.cam_id,
-                                            track_id=tid,
-                                            direction=direction,
+                                            "face_logs",
+                                            face_entry["ts"],
                                         )
-                                    else:
-                                        tracker.out_counts["face"] = (
-                                            tracker.out_counts.get("face", 0) + 1
-                                        )
-                                        publish_event(
-                                            tracker.redis,
-                                            events.FACE_OUT,
-                                            cam_id=tracker.cam_id,
-                                            track_id=tid,
-                                            direction=direction,
-                                        )
-                                    updated = True
-                                    face_entry = {
-                                        "ts": ts,
-                                        "cam_id": tracker.cam_id,
-                                        "track_id": tid,
-                                        "direction": direction,
-                                        "label": "face",
-                                    }
-                                    tracker.redis.zadd(
-                                        "face_logs",
-                                        {json.dumps(face_entry): face_entry["ts"]},
-                                        nx=True,
-                                    )
-                                    trim_sorted_set_sync(
-                                        tracker.redis,
-                                        "face_logs",
-                                        face_entry["ts"],
-                                    )
-                                break
+                                    break
+            state["last_side"] = cur_side_sign
+            state["last_seen"] = now
+            state_lines[0] = state
+            tracker.track_states[tid] = state_lines
+        now = time.time()
+        cutoff = now - tracker.track_state_ttl
+        for t_id in list(tracker.track_states.keys()):
+            lines = tracker.track_states[t_id]
+            for lid in list(lines.keys()):
+                if lines[lid].get("last_seen", 0) < cutoff:
+                    del lines[lid]
+            if not lines:
+                del tracker.track_states[t_id]
         tracker.tracks = new_tracks
         if {"in_count", "out_count"} & set(
             getattr(tracker, "tasks", ["in_count", "out_count"])
@@ -605,7 +555,8 @@ def process_frame(
             tracker.output_frame = processed
         tracker.debug_stats["last_overlay_ts"] = time.time()
         tracker.debug_stats["overlay_match"] = (
-            tracker.output_frame is not None and tracker.output_frame.shape == frame.shape
+            tracker.output_frame is not None
+            and tracker.output_frame.shape == frame.shape
         )
     else:
         with lock:
@@ -864,6 +815,9 @@ class PersonTracker:
         # product magnitude below this threshold are treated as on the line.
         self.side_eps = cfg.get("side_eps", 2.0)
 
+        # Per-track line-crossing state storing last side and counted flags
+        self.track_states: dict[int, dict[int, dict[str, Any]]] = {}
+        self.track_state_ttl = 120.0
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)
