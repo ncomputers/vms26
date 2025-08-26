@@ -23,6 +23,9 @@ def _make_tracker(tmp_path, redis_client):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -60,6 +63,8 @@ def _run_tracker(tracker, bboxes):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -84,21 +89,21 @@ def _run_tracker(tracker, bboxes):
     post.run()
 
 
-def test_oscillation_no_extra_logs(tmp_path):
+def test_oscillation_counts_each_direction_once(tmp_path):
     r = fakeredis.FakeRedis()
     tracker = _make_tracker(tmp_path, r)
 
     bboxes = [
         (10, 10, 30, 30),  # left
-        (70, 10, 90, 30),  # right -> crossing
-        (45, 10, 65, 30),  # near line, right
-        (35, 10, 55, 30),  # near line, left
-        (45, 10, 65, 30),  # near line, right
+        (70, 10, 90, 30),  # right -> out
+        (45, 10, 65, 30),  # near line right
+        (35, 10, 55, 30),  # near line left -> in
+        (45, 10, 65, 30),  # near line right (no extra count)
     ]
 
     _run_tracker(tracker, bboxes)
 
-    assert r.zcard("person_logs") == 1
+    assert r.zcard("person_logs") == 2
 
 
 def test_debounce_same_direction(monkeypatch, tmp_path):
@@ -117,4 +122,3 @@ def test_debounce_same_direction(monkeypatch, tmp_path):
     logs = [json.loads(x) for x in r.zrange("person_logs", 0, -1)]
     assert len([l for l in logs if l["direction"] == "in"]) == 1
     assert len(logs) == 2
-

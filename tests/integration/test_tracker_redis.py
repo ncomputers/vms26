@@ -5,10 +5,10 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
+import fakeredis
 import numpy as np
 import pytest
 
-import fakeredis
 from modules.tracker import InferWorker, PersonTracker, PostProcessWorker
 from utils.redis import trim_sorted_set
 from utils.redis_facade import RedisFacade
@@ -42,6 +42,9 @@ def test_person_tracker_logs_to_redis(redis_client, monkeypatch, tmp_path):
     tracker.in_counts = {}
     tracker.out_counts = {}
     tracker.tracks = {}
+    tracker.track_states = {}
+    tracker.track_state_ttl = 120.0
+    tracker.stream_error = ""
     tracker.frame_queue = queue.Queue()
     tracker.det_queue = queue.Queue()
     tracker.out_queue = queue.Queue()
@@ -81,6 +84,8 @@ def test_person_tracker_logs_to_redis(redis_client, monkeypatch, tmp_path):
             self._bbox = bbox
             self.track_id = 1
             self.det_class = "person"
+            self.det_conf = 0.9
+            self.age = 2
 
         def is_confirmed(self):
             return True
@@ -116,9 +121,8 @@ def test_person_tracker_logs_to_redis(redis_client, monkeypatch, tmp_path):
     inf.run()
     post.run()
 
-    logs = redis_client.zrange("person_logs", 0, -1)
-    assert len(logs) == 1
-    entry = json.loads(logs[0])
-    assert entry["cam_id"] == 1
-    assert entry["label"] == "person"
-    assert entry["direction"] == "in"
+    raw_logs = redis_client.zrange("person_logs", 0, -1)
+    logs = [json.loads(l) for l in raw_logs]
+    assert len(logs) == 2
+    directions = {e["direction"] for e in logs}
+    assert directions == {"in", "out"}
