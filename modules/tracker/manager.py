@@ -240,7 +240,14 @@ def process_frame(
                 continue
             filtered.append((tuple(arr.tolist()), sc, label))
         try:
-            ds_tracks = tracker.tracker.update_tracks(filtered, frame=frame)
+            try:
+                ds_tracks = tracker.tracker.update_tracks(
+                    filtered,
+                    frame=frame,
+                    aux=[getattr(tracker, "_counted", {})],
+                )
+            except TypeError:
+                ds_tracks = tracker.tracker.update_tracks(filtered, frame=frame)
         except ValueError:
             logger.exception(f"[{tracker.cam_id}] tracker update error")
             return
@@ -280,6 +287,7 @@ def process_frame(
             )
             cur_side_sign = raw_side
             prev_side_sign = prev.get("last_side")
+
             if tracker.line_orientation == "horizontal":
                 zone = (
                     "top"
@@ -329,6 +337,7 @@ def process_frame(
                     "counted_out": False,
                     "last_seen": now,
                 },
+
             )
             prev_side_sign = state.get("last_side", 0)
             direction = None
@@ -391,6 +400,7 @@ def process_frame(
                                 "group": group,
                                 "track_id": tid,
                                 "line_id": 0,
+
                             },
                         )
                         try:
@@ -558,6 +568,7 @@ def process_frame(
             tracker.output_frame is not None
             and tracker.output_frame.shape == frame.shape
         )
+
     else:
         with lock:
             tracker.output_frame = None
@@ -658,7 +669,14 @@ class ProcessingWorker:
             if run_det and getattr(t, "detector", None):
                 detections = t.detector.detect(frame, list(TRACK_CLASSES))
                 t._last_det_ts = now
-            t.tracker.update_tracks(detections, frame=frame)
+            try:
+                t.tracker.update_tracks(
+                    detections,
+                    frame=frame,
+                    aux=[getattr(t, "_counted", {})],
+                )
+            except TypeError:
+                t.tracker.update_tracks(detections, frame=frame)
 
 
 # UniqueFaceCounter class encapsulates uniquefacecounter behavior
@@ -818,6 +836,7 @@ class PersonTracker:
         # Per-track line-crossing state storing last side and counted flags
         self.track_states: dict[int, dict[int, dict[str, Any]]] = {}
         self.track_state_ttl = 120.0
+
 
         # Allow adjusting the maximum age for DeepSort tracks so IDs persist
         self.track_max_age = cfg.get("track_max_age", 10)

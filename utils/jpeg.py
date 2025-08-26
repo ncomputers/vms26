@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from os import getenv
 
+DEFAULT_JPEG_QUALITY = int(getenv("VMS26_JPEG_QUALITY", "80"))
+
 try:  # Prefer turbojpeg when available
     if getenv("VMS26_TURBOJPEG", "auto") in ("auto", "1"):
         from turbojpeg import TurboJPEG  # type: ignore
 
         _jpeg = TurboJPEG()
 
-        def encode_jpeg(np_bgr, q: int) -> bytes:
+        def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
+            q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
             return _jpeg.encode(np_bgr, quality=q)
 
     else:  # pragma: no cover - explicit disable
@@ -16,8 +19,9 @@ try:  # Prefer turbojpeg when available
 except Exception:  # pragma: no cover - fallback to OpenCV
     import cv2  # type: ignore
 
-    def encode_jpeg(np_bgr, q: int) -> bytes:
-        ok, buf = cv2.imencode(".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), int(q)])
+    def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
+        q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
+        ok, buf = cv2.imencode(".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q])
         return buf.tobytes() if ok else b""
 
 

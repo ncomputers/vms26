@@ -45,7 +45,9 @@ ffmpeg -loglevel error -rtsp_transport tcp -fflags nobuffer -flags low_delay \
 options, and `ffmpeg_flags` appends them. The global `frame_skip` parameter
 drops frames before analysis to reduce load. Capture runs on a background
 thread reading into a preallocated buffer and placing complete frames into a
-two-slot queue, discarding the oldest when full. Consecutive short reads
+small deque whose length is controlled by ``VMS26_QUEUE_MAX`` (default ``2``),
+discarding the oldest frame when full. The processing stage paces work to
+``VMS26_TARGET_FPS`` to avoid backlog growth. Consecutive short reads
 trigger FFmpeg restarts with exponential backoff. Unexpected EOFs or broken
 pipes cause the reader to restart FFmpeg with an exponential backoff capped at
 10 s, and the total restart count is exposed via the `/debug` endpoint.
