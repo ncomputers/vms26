@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-import threading
 import time
 from collections import deque
 from typing import Deque, Optional
 
-from app.core.utils import getenv_num
-
 import numpy as np
+
+from app.core.lifecycle import (
+    StoppableThread,
+    register_pipeline,
+    register_signal_handlers,
+    unregister_pipeline,
+)
+from app.core.utils import getenv_num
 
 try:
     import cv2  # type: ignore
@@ -17,7 +22,7 @@ except Exception:  # pragma: no cover - optional dependency
 from utils.jpeg import encode_jpeg
 
 
-class CaptureLoop(threading.Thread):
+class CaptureLoop(StoppableThread):
     """Dummy capture loop generating blank frames.
 
     This minimal implementation avoids external dependencies while still
@@ -26,7 +31,6 @@ class CaptureLoop(threading.Thread):
     def __init__(self, pipeline: "Pipeline") -> None:
         super().__init__(daemon=True)
         self.pipeline = pipeline
-        self.running = True
 
     def run(self) -> None:  # pragma: no cover - simple loop
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -40,15 +44,14 @@ class CaptureLoop(threading.Thread):
             time.sleep(0.05)
 
 
-class ProcessLoop(threading.Thread):
+class ProcessLoop(StoppableThread):
     """Encode frames from the capture loop to JPEG overlays."""
 
     def __init__(self, pipeline: "Pipeline") -> None:
         super().__init__(daemon=True)
         self.pipeline = pipeline
-        self.running = True
         self.target_fps = getenv_num("VMS26_TARGET_FPS", 15, int)
-        self.last_ts = 0.0
+        self.last_processed_ts = time.time()
 
     def run(self) -> None:  # pragma: no cover - simple loop
         min_interval = 1.0 / float(self.target_fps) if self.target_fps > 0 else 0.0
@@ -57,7 +60,7 @@ class ProcessLoop(threading.Thread):
                 time.sleep(0.005)
                 continue
             now = time.time()
-            dt = now - self.last_ts
+            dt = now - self.last_processed_ts
             if min_interval and dt < min_interval:
                 time.sleep(min_interval - dt)
             try:
@@ -68,7 +71,7 @@ class ProcessLoop(threading.Thread):
                 continue
             q = getenv_num("VMS26_JPEG_QUALITY", 80, int)
             self.pipeline._overlay_bytes = encode_jpeg(frame, q)
-            self.last_ts = time.time()
+            self.last_processed_ts = time.time()
 
 
 class Pipeline:
@@ -84,13 +87,18 @@ class Pipeline:
 
     def start(self) -> None:
         """Start capture and processing threads."""
+        register_signal_handlers()
+        register_pipeline(self)
         self.capture.start()
         self.process.start()
 
     def stop(self) -> None:
         """Stop all threads."""
-        self.capture.running = False
-        self.process.running = False
+        unregister_pipeline(self)
+        self.capture.stop()
+        self.process.stop()
+        self.capture.join(timeout=2.0)
+        self.process.join(timeout=2.0)
 
     def get_overlay_bytes(self) -> Optional[bytes]:
         """Return latest encoded overlay frame bytes."""
