@@ -439,6 +439,8 @@ Then open `http://localhost:5002` in your browser. Use the **Cameras** page to a
 ```bash
 python3 -m pytest -q tests
 ```
+When PyTorch with CUDA is installed, a GPU smoke test performs a basic CUDA tensor
+operation to verify functionality.
 
 > **Note:** Features that access the webcam via `getUserMedia` require HTTPS. Run the
 > server with TLS by setting `SSL_CERTFILE` and `SSL_KEYFILE` or deploy behind an

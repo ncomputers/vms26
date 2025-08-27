@@ -6,6 +6,7 @@
 - bundle DejaVuSans font and cache overlay font to avoid per-frame load
 - name capture/process/watchdog threads and add diagnostic thread dump endpoint
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
+- expand GPU smoke test to execute a CUDA tensor operation when available
 
 - throttle per-frame logs and standardize log prefixes; ensure single exception traces
 - remove unused health endpoints and standardize response shapes

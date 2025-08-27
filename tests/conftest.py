@@ -1,5 +1,7 @@
 """Shared pytest fixtures for app testing."""
 
+# ruff: noqa: E402
+
 import sys
 from pathlib import Path
 
@@ -13,13 +15,16 @@ sys.path.insert(0, str(ROOT))
 
 import types
 
-sys.modules.setdefault(
-    "torch",
-    types.SimpleNamespace(
-        cuda=types.SimpleNamespace(is_available=lambda: False),
-        set_num_threads=lambda n: None,
-    ),
-)
+try:
+    import torch  # noqa: F401
+except Exception:  # pragma: no cover - exercised when torch is missing
+    sys.modules.setdefault(
+        "torch",
+        types.SimpleNamespace(
+            cuda=types.SimpleNamespace(is_available=lambda: False),
+            set_num_threads=lambda n: None,
+        ),
+    )
 sys.modules.setdefault("ultralytics", types.SimpleNamespace(YOLO=lambda *a, **k: None))
 sys.modules.setdefault(
     "deep_sort_realtime",
@@ -39,6 +44,7 @@ sys.modules.setdefault(
 
 import server.startup as startup
 from utils.redis_facade import RedisFacade
+
 sys.modules["cv2"] = sys.modules.get(
     "cv2",
     types.SimpleNamespace(
