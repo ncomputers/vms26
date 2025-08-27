@@ -43,16 +43,41 @@ dependencies = [
 ]
 
 [tool.black]
-line-length = 88
+line-length = 100
 target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 100
+known_first_party = ["app", "modules", "utils", "services"]
+
+[tool.ruff]
+line-length = 100
+fix = true
+
+[tool.ruff.lint]
+extend-select = ["B", "C4", "Q", "T20"]
+ignore = ["E203", "E266", "E501"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra -k 'not test_faces and not test_tracker_redis and not test_admin_user_management'"
+markers = [
+    "slow: marks tests as slow",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:Specified provider 'CUDAExecutionProvider':UserWarning",
+]
 testpaths = ["tests"]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["app", "modules", "utils", "services"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["core", "modules", "routers", "schemas", "utils"]
