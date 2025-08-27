@@ -16,6 +16,7 @@ try:  # optional heavy dependency
 except ModuleNotFoundError:  # pragma: no cover - torch is optional in tests
     torch = None
 
+from app.core.perf import PERF
 from core.events import CAPTURE_ERROR, CAPTURE_READ_FAIL, CAPTURE_START, CAPTURE_STOP
 from modules.camera_factory import StreamUnavailable, open_capture
 from modules.camera_manager import LATEST_FRAMES
@@ -23,7 +24,6 @@ from modules.profiler import register_thread
 from utils.logx import error as log_error
 from utils.logx import event as log_event
 from utils.logx import warn as log_warn
-from app.core.perf import PERF
 
 if TYPE_CHECKING:
     from .manager import PersonTracker
@@ -170,6 +170,10 @@ class CaptureWorker:
                         continue
                     fail_count = 0
                     frame_idx += 1
+                    if not t.first_frame_ok and frame is not None:
+                        h, w = frame.shape[:2]
+                        if h > 0 and w > 0:
+                            t.first_frame_ok = True
                     if getattr(t, "adaptive_skip", False):
                         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                         if prev_gray is not None:

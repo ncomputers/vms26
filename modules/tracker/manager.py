@@ -11,6 +11,9 @@ from collections.abc import Iterable
 from datetime import date
 from typing import Any
 
+# ruff: noqa
+
+
 try:  # OpenCV is optional in certain environments
     import cv2  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
@@ -31,6 +34,8 @@ try:  # pragma: no cover - face engine optional
 except Exception:  # pragma: no cover - missing optional dependency
     FaceDetector = None  # type: ignore[assignment]
 
+from app.core.perf import PERF
+from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from modules.profiler import register_thread
 from utils.gpu import get_device
 from utils.overlay import OverlayThrottler
@@ -41,10 +46,8 @@ from utils.redis import (
     trim_sorted_set_sync,
     xadd_event,
 )
-from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from utils.time import format_ts
 from utils.url import get_stream_type
-from app.core.perf import PERF
 
 from ..duplicate_filter import DuplicateFilter
 from ..overlay import draw_overlays
@@ -407,7 +410,6 @@ def process_frame(
                                 "fps_out": tracker.debug_stats.get("process_fps", 0.0),
                                 "last_error": tracker.stream_error,
                             },
-
                         )
                         ensure_ttl(tracker.redis, key, 15)
                     except Exception:
@@ -832,6 +834,7 @@ class PersonTracker:
         self.update_callback = update_callback
         self.online = False
         self.restart_capture = False
+        self.first_frame_ok = False
 
         if any(
             [

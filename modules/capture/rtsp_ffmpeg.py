@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: E402
+
 """RTSP capture using FFmpeg.
 
 This source supports optional command-line flags via the ``FFMPEG_EXTRA_FLAGS``
@@ -20,12 +22,11 @@ from collections import deque
 import ffmpeg
 import numpy as np
 
-from utils.logging import log_capture_event
 from app.core.utils import getenv_num
+from utils.logging import log_capture_event
 from utils.logx import log_throttled
 
-
-from .base import FrameSourceError, IFrameSource, Backoff
+from .base import Backoff, FrameSourceError, IFrameSource
 
 logger = logging.getLogger(__name__)
 
@@ -95,20 +96,28 @@ class RtspFfmpegSource(IFrameSource):
         self._short_reads = 0
         self._backoff = Backoff()
         self.restarts = 0
+        self._udp_fallback = False
 
     def _probe_resolution(self) -> None:
         """Fill ``self.width`` and ``self.height`` from stream metadata."""
         if self.width and self.height:
             return
-        try:
-            info = ffmpeg.probe(self.uri)
-            stream = next(
-                s for s in info.get("streams", []) if s.get("codec_type") == "video"
-            )
-            self.width = self.width or int(stream.get("width", 0) or 0)
-            self.height = self.height or int(stream.get("height", 0) or 0)
-        except Exception as exc:
-            logger.debug("ffprobe failed: %s", exc)
+        opts = [(15_000_000, 3_000_000), (30_000_000, 6_000_000)]
+        for probesize, analyzeduration in opts:
+            try:
+                info = ffmpeg.probe(
+                    self.uri, probesize=probesize, analyzeduration=analyzeduration
+                )
+                stream = next(
+                    s for s in info.get("streams", []) if s.get("codec_type") == "video"
+                )
+                self.width = self.width or int(stream.get("width", 0) or 0)
+                self.height = self.height or int(stream.get("height", 0) or 0)
+                if self.width and self.height:
+                    return
+            except Exception as exc:
+                logger.debug("ffprobe failed: %s", exc)
+        logger.warning("HINT: increase probesize/analyzeduration; try TCP transport.")
 
     def open(self) -> None:
         self._start_proc()
@@ -141,24 +150,35 @@ class RtspFfmpegSource(IFrameSource):
             "-nostdin",
             "-rtsp_transport",
             transport,
-            "-rw_timeout",
-            str(rw_timeout),
-            "-stimeout",
-            str(stimeout),
-            "-i",
-            self.uri,
-            "-fflags",
-            "nobuffer",
-            "-flags",
-            "low_delay",
-            "-probesize",
-            "32",
-            "-f",
-            "rawvideo",
-            "-pix_fmt",
-            "bgr24",
-            "-",
         ]
+        if self.tcp:
+            cmd.extend(["-rtsp_flags", "prefer_tcp"])
+        cmd.extend(
+            [
+                "-rw_timeout",
+                str(rw_timeout),
+                "-stimeout",
+                str(stimeout),
+                "-probesize",
+                "15000000",
+                "-analyzeduration",
+                "3000000",
+                "-fflags",
+                "nobuffer",
+                "-flags",
+                "low_delay",
+                "-avioflags",
+                "direct",
+                "-an",
+                "-i",
+                self.uri,
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "bgr24",
+                "-",
+            ]
+        )
         flags: list[str] = []
         env_flags = os.getenv("FFMPEG_EXTRA_FLAGS")
         if env_flags:
@@ -187,6 +207,9 @@ class RtspFfmpegSource(IFrameSource):
         if not self.width or not self.height:
             self._log_stderr()
             logger.warning("ffmpeg stderr:\n%s", self.last_stderr)
+            logger.warning(
+                "HINT: increase probesize/analyzeduration; try TCP transport."
+            )
             raise FrameSourceError("NO_VIDEO_STREAM")
         try:
             return self._frame_queue.get(timeout=timeout or self.latency_ms / 1000)
@@ -240,6 +263,10 @@ class RtspFfmpegSource(IFrameSource):
             interval=5,
         )
         self._backoff.sleep()
+        if self.tcp and not self._udp_fallback:
+            logger.warning("TCP failed; retrying with UDP transport")
+            self.tcp = False
+            self._udp_fallback = True
         self._start_proc()
         if self._frame_queue:
             while not self._frame_queue.empty():
