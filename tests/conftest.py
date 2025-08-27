@@ -1,6 +1,9 @@
 """Shared pytest fixtures for app testing."""
 
+import socket
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import fakeredis
@@ -11,7 +14,7 @@ from fastapi.testclient import TestClient
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import types
+import types  # noqa: E402
 
 sys.modules.setdefault(
     "torch",
@@ -37,8 +40,9 @@ sys.modules.setdefault(
     ),
 )
 
-import server.startup as startup
-from utils.redis_facade import RedisFacade
+import server.startup as startup  # noqa: E402
+from utils.redis_facade import RedisFacade  # noqa: E402
+
 sys.modules["cv2"] = sys.modules.get(
     "cv2",
     types.SimpleNamespace(
@@ -48,9 +52,9 @@ sys.modules["cv2"] = sys.modules.get(
     ),
 )
 
-import threading
+import threading  # noqa: E402
 
-import modules.utils as m_utils
+import modules.utils as m_utils  # noqa: E402
 
 m_utils.lock = threading.Lock()
 
@@ -78,7 +82,7 @@ class _DummyMiddleware:
         await self.app(scope, receive, send)
 
 
-import builtins
+import builtins  # noqa: E402
 
 builtins.CsrfProtect = _DummyCsrf
 builtins.CsrfProtectMiddleware = _DummyMiddleware
@@ -89,7 +93,7 @@ sys.modules.setdefault(
     ),
 )
 
-import utils.preflight as _preflight
+import utils.preflight as _preflight  # noqa: E402
 
 _preflight.check_dependencies = lambda *a, **k: None
 
@@ -180,3 +184,38 @@ def _flush_redis():
     client.flushall()
     yield
     client.flushall()
+
+
+def _wait_port(host: str, port: int, timeout: float = 5.0) -> None:
+    """Wait until a TCP port becomes available."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise RuntimeError(f"Port {host}:{port} did not open within {timeout}s")
+
+
+@pytest.fixture(scope="session")
+def redis_url():
+    """Provide a temporary Redis server URL for integration tests."""
+    port = 6390
+    proc = subprocess.Popen(
+        ["redis-server", "--save", "", "--appendonly", "no", "--port", str(port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _wait_port("127.0.0.1", port)
+    try:
+        yield f"redis://127.0.0.1:{port}"
+    finally:
+        proc.terminate()
+        proc.wait()
+
+
+@pytest.fixture(scope="session")
+def postgres_dsn():
+    """Return a default Postgres DSN for tests."""
+    return "postgresql://postgres:postgres@localhost:5432/postgres"

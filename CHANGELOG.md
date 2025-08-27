@@ -1,4 +1,5 @@
 # Changelog
+- add smoke tests for repo layout and Redis connectivity
 - enable runtime counting via adapter to vision.counting
 - improve MJPEG streaming: reuse last frame when stalled, throttle writes,
   and handle broken pipes cleanly
