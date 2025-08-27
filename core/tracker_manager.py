@@ -14,23 +14,31 @@ import redis
 from loguru import logger
 from redis.exceptions import RedisError
 
-from utils import logx
-from utils.housekeeping import housekeeping
-
 from config import COUNT_GROUPS, PPE_TASKS
 from config import config as global_cfg
-from config import load_config, save_config, sync_detection_classes
+from config import sync_detection_classes
 from modules import camera_factory
 from modules.tracker import PersonTracker
-from utils.redis import trim_sorted_set_sync
+from utils import logx
+from utils.housekeeping import housekeeping
+from utils.redis import get_sync_client, trim_sorted_set_sync
 
 lock = threading.Lock()
 
 # store tracker threads and restart metadata
 tracker_threads: Dict[int, dict] = {}
 
-# base delay for exponential backoff (seconds)
-BACKOFF_BASE = 1
+# backoff schedule in seconds
+BACKOFF_SCHEDULE = [1, 2, 5, 15, 60]
+
+
+def _persist_watchdog(cam_id: int, **fields: Any) -> None:
+    """Store watchdog state to Redis."""
+    try:
+        r = get_sync_client()
+        r.hset(f"cam:{cam_id}:watchdog", mapping=fields)
+    except Exception:
+        pass
 
 
 # _apply_counter_config routine
@@ -418,6 +426,8 @@ def reset_backoff(cam_id: int) -> None:
         timer.cancel()
         info["timer"] = None
     info["restart_attempts"] = 0
+    info["consecutive_failures"] = 0
+    info["online_emitted"] = False
 
 
 def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
@@ -434,27 +444,41 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
         inf_alive = inf_thread.is_alive() if inf_thread else True
         post_alive = post_thread.is_alive() if post_thread else True
         if cap_alive and inf_alive and post_alive:
-            attempts = info.get("restart_attempts")
-            if attempts:
-                logger.info(
-                    f"Tracker {cam_id} back online after {attempts} attempts"
-                )
-                logx.event(
-                    "TRACKER_ONLINE",
-                    camera_id=cam_id,
-                    attempt=attempts,
-                    last_error=getattr(tr, "stream_error", ""),
-                    mode=getattr(tr, "src_type", None),
-                    url=getattr(tr, "src", None),
-                )
-            reset_backoff(cam_id)
+            if getattr(tr, "first_frame_ok", False):
+                attempts = info.get("restart_attempts")
+                if not info.get("online_emitted"):
+                    logger.info(
+                        f"Tracker {cam_id} back online after {attempts or 0} attempts"
+                    )
+                    logx.event(
+                        "TRACKER_ONLINE",
+                        camera_id=cam_id,
+                        attempt=attempts or 0,
+                        last_error=getattr(tr, "stream_error", ""),
+                        mode=getattr(tr, "src_type", None),
+                        url=getattr(tr, "src", None),
+                    )
+                    info["online_emitted"] = True
+                reset_backoff(cam_id)
             continue
         timer = info.get("timer")
         if timer and timer.is_alive():
             continue
         attempt = info.get("restart_attempts", 0) + 1
-        delay = min(60, BACKOFF_BASE * (2 ** (attempt - 1)))
+        consecutive = info.get("consecutive_failures", 0) + 1
+        schedule_idx = min(attempt - 1, len(BACKOFF_SCHEDULE) - 1)
+        delay = BACKOFF_SCHEDULE[schedule_idx]
         last_error = getattr(tr, "stream_error", "")
+        if consecutive >= 8:
+            delay = 300
+            _persist_watchdog(cam_id, status="offline")
+        info["restart_attempts"] = attempt
+        info["consecutive_failures"] = consecutive
+        _persist_watchdog(
+            cam_id,
+            last_error=last_error,
+            consecutive_failures=consecutive,
+        )
         qsize = None
         if hasattr(tr, "frame_queue"):
             try:
@@ -474,7 +498,6 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
             mode=getattr(tr, "src_type", None),
             url=getattr(tr, "src", None),
         )
-        info["restart_attempts"] = attempt
 
         def _do_restart():
             logger.info(f"Restarting tracker {cam_id} (attempt {attempt})")
