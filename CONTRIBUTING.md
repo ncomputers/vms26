@@ -2,6 +2,8 @@
 
 ## Running checks locally
 
+See [CI and Testing Quick Start](docs/ci.md) for a detailed walk-through.
+
 Install the project dependencies and tooling:
 
 ```bash
