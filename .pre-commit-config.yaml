@@ -14,7 +14,10 @@ repos:
     rev: v0.3.7
     hooks:
       - id: ruff
+        args: ["--fix"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict

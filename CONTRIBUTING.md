@@ -10,6 +10,10 @@ pip install pre-commit ruff pytest uvicorn
 pre-commit install
 ```
 
+The configured hooks run Black, isort, and Ruff with automatic fixes along
+with basic hygiene checks for end-of-file, trailing whitespace, and merge
+conflicts.
+
 Then run all quality checks and tests:
 
 ```bash
