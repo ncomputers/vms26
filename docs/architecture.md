@@ -72,6 +72,7 @@ pipes cause the reader to restart FFmpeg with an exponential backoff capped at
 - Redis server (a running instance is required; fakeredis is not bundled)
 - `ffmpeg` command-line tools
 - Installed Python dependencies from `requirements.txt` (including `ultralytics`)
+- Optional PostgreSQL driver (`psycopg2` or `asyncpg`) and accessible database for integration tests
 - Optional GPU with CUDA for accelerated inference
 
 ## Module Documentation
@@ -100,7 +101,9 @@ message including prune counts.
    ```
    For HTTPS, pass `--ssl-certfile` and `--ssl-keyfile` or run behind a reverse proxy.
 4. Run the test suite to verify your environment:
-   ```bash
-   python3 -m pytest -q
-   ```
+    ```bash
+    python3 -m pytest -q
+    ```
+   The PostgreSQL integration test in `tests/test_postgres.py` requires a working
+   `postgres_dsn` fixture and either `psycopg2` or `asyncpg`; if unavailable, the test is skipped.
 5. See [CONTRIBUTING.md](../CONTRIBUTING.md) for development guidelines.
