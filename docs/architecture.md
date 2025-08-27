@@ -80,6 +80,14 @@ pipes cause the reader to restart FFmpeg with an exponential backoff capped at
 - [Redis](redis.md)
 - [Models](models.md)
 
+## Background Housekeeping
+
+A watchdog thread performs periodic housekeeping every 60 s. It prunes
+registered caches beyond 10 000 entries (keeping the newest items) and, when
+``VMS26_CUDA_EMPTY_EVERY=60`` and a CUDA device is present, calls
+``torch.cuda.empty_cache()``. Each run logs a throttled ``[perf] housekeeping``
+message including prune counts.
+
 ## Getting Started
 1. Clone the repository and install dependencies:
    ```bash

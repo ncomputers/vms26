@@ -10,12 +10,14 @@ import time
 from collections import OrderedDict
 
 from config import config as app_config
+from utils.housekeeping import register_cache
 
 logger = logging.getLogger(__name__)
 
 # URL -> ((width, height), expiry)
 _RES_CACHE: OrderedDict[str, tuple[tuple[int, int], float]] = OrderedDict()
 _CACHE_MAX = 128
+register_cache("resolution", _RES_CACHE)
 
 
 _FALLBACK_TTL = 120
