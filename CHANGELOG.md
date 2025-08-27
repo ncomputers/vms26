@@ -1,4 +1,5 @@
 # Changelog
+- enable runtime counting via adapter to vision.counting
 - improve MJPEG streaming: reuse last frame when stalled, throttle writes,
   and handle broken pipes cleanly
 - add project-wide editor and lint configuration with ruff and pre-commit hooks
