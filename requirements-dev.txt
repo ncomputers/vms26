@@ -1,0 +1,10 @@
+pytest==8.4.1
+pytest-cov==6.2.1
+coverage==7.10.5
+ruff==0.12.10
+black==25.1.0
+isort==6.0.1
+pre-commit==4.3.0
+redis==6.4.0
+psycopg[binary]==3.2.9
+pydantic==2.11.7

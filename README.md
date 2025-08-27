@@ -434,9 +434,10 @@ Launch the FastAPI application:
 python3 app.py
 ```
 
-Then open `http://localhost:5002` in your browser. Use the **Cameras** page to add streams (HTTP, RTSP or local webcams) and **Settings** to adjust options. Tests can be executed with `pytest`:
+Then open `http://localhost:5002` in your browser. Use the **Cameras** page to add streams (HTTP, RTSP or local webcams) and **Settings** to adjust options. Install development dependencies and run tests with `pytest`:
 
 ```bash
+pip install -r requirements-dev.txt
 python3 -m pytest -q tests
 ```
 When PyTorch with CUDA is installed, a GPU smoke test performs a basic CUDA tensor
