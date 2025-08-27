@@ -1,4 +1,6 @@
 # Changelog
+- improve MJPEG streaming: reuse last frame when stalled, throttle writes,
+  and handle broken pipes cleanly
 - add StoppableThread with signal-based shutdown and stalled camera watchdog
 
 - throttle per-frame logs and standardize log prefixes; ensure single exception traces
