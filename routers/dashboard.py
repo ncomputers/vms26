@@ -25,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 from redis.exceptions import ConnectionError as RedisConnectionError
 
+from app.core.utils import getenv_num
 from config.constants import ANOMALY_ITEMS, PPE_ITEMS, PPE_TASKS
 from modules.capture import ensure_gst as _ensure_gst
 from modules.email_utils import sign_token
@@ -38,11 +39,14 @@ from utils.deps import (
     get_templates,
     get_trackers,
 )
+from utils.logx import log_throttled
 from utils.time import parse_range
 
 router = APIRouter()
 
 logger = logger.bind(module="dashboard")
+
+TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
 
 
 async def _load_stats_totals(redis) -> dict:
@@ -245,28 +249,47 @@ async def _stream_response(
             if tr.viewers == 1:
                 tr.restart_capture = True
         no_frame_logged = False
+        last_buf: bytes | None = None
+        boundary = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
+        interval = 1 / (min(tr.fps, TARGET_FPS) if not raw else TARGET_FPS)
+        last_sent = 0.0
         try:
             while True:
                 frame = tr.raw_frame if raw else tr.output_frame
-                if frame is None:
+                if frame is not None:
+                    if no_frame_logged:
+                        logger.info(
+                            f"[{cam_id}] Resumed frames for {'clean' if raw else 'preview'}"
+                        )
+                        no_frame_logged = False
+                    if raw and hasattr(frame, "download"):
+                        frame = frame.download()
+                    _, buf = cv2.imencode(".jpg", frame)
+                    last_buf = buf.tobytes()
+                else:
                     if not no_frame_logged:
                         logger.warning(
                             f"[{cam_id}] No frame for {'clean' if raw else 'preview'}"
                         )
                         no_frame_logged = True
-                    await asyncio.sleep(0.1)
-                    continue
-                if no_frame_logged:
-                    logger.info(
-                        f"[{cam_id}] Resumed frames for {'clean' if raw else 'preview'}"
+                    if last_buf is None:
+                        await asyncio.sleep(0.1)
+                        continue
+                now = time.time()
+                wait = interval - (now - last_sent)
+                if wait > 0:
+                    await asyncio.sleep(wait)
+                try:
+                    yield boundary + last_buf + b"\r\n"
+                except Exception as exc:
+                    log_throttled(
+                        logger.warning,
+                        f"[{cam_id}] mjpeg broken pipe: {exc}",
+                        key=f"dash:{cam_id}:broken_pipe",
+                        interval=5,
                     )
-                    no_frame_logged = False
-                if raw and hasattr(frame, "download"):
-                    frame = frame.download()
-                _, buf = cv2.imencode(".jpg", frame)
-                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
-                if not raw:
-                    await asyncio.sleep(1 / tr.fps)
+                    break
+                last_sent = time.time()
         finally:
             if not raw:
                 tr.viewers -= 1

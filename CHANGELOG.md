@@ -1,4 +1,6 @@
 # Changelog
+- improve MJPEG streaming: reuse last frame when stalled, throttle writes,
+  and handle broken pipes cleanly
 - add project-wide editor and lint configuration with ruff and pre-commit hooks
 - bundle DejaVuSans font and cache overlay font to avoid per-frame load
 - name capture/process/watchdog threads and add diagnostic thread dump endpoint

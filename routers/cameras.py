@@ -30,6 +30,8 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from starlette.requests import ClientDisconnect
 
+from app.core.utils import getenv_num
+from app.vision.overlay import render_from_legacy
 from config import config
 from config.constants import (
     CAMERA_TASKS,
@@ -39,6 +41,7 @@ from config.constants import (
     VEHICLE_LABELS,
 )
 from core.camera_manager import CameraManager as CoreCameraManager
+from core.config import get_config
 from core.tracker_manager import save_cameras, start_tracker, stop_tracker
 from models.camera import Camera, Orientation, Transport, create_camera
 from models.camera import delete_camera as delete_camera_model
@@ -60,16 +63,17 @@ from schemas.camera import CameraCreate
 from utils import require_feature
 from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
-from utils.overlay import draw_boxes_np
-from app.vision.overlay import render_from_legacy
 from utils.jpeg import encode_jpeg
+from utils.logx import log_throttled
+from utils.overlay import draw_boxes_np
 from utils.url import get_stream_type
-from core.config import get_config
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
 
 _CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
+
+TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
 
 
 def mask_credentials(text: str) -> str:
@@ -1345,6 +1349,7 @@ async def camera_mjpeg(
         raise HTTPException(status_code=404, detail="camera not found")
 
     if USE_PIPELINE and overlay:
+
         async def generator():
             boundary = b"--frame"
             while True:
@@ -1392,12 +1397,17 @@ async def camera_mjpeg(
 
     async def generator():
         buffer = b""
+        boundary = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
+        last_frame: bytes | None = None
+        last_sent = 0.0
+        interval = 1 / TARGET_FPS if TARGET_FPS > 0 else 0
         try:
             while True:
                 chunk = await asyncio.to_thread(proc.stdout.read, 1024)
                 if not chunk:
                     break
                 buffer += chunk
+                sent = False
                 while True:
                     start = buffer.find(b"\xff\xd8")
                     end = buffer.find(b"\xff\xd9", start + 2)
@@ -1436,13 +1446,43 @@ async def camera_mjpeg(
                                         )
                             except Exception:
                                 frame_out = frame
-                        yield (
-                            b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
-                            + frame_out
-                            + b"\r\n"
-                        )
+                        last_frame = frame_out
+                        now = time.time()
+                        if interval > 0:
+                            wait = interval - (now - last_sent)
+                            if wait > 0:
+                                await asyncio.sleep(wait)
+                        try:
+                            yield boundary + frame_out + b"\r\n"
+                        except Exception as exc:
+                            log_throttled(
+                                logger.warning,
+                                f"[{camera_id}] mjpeg broken pipe: {exc}",
+                                key=f"mjpeg:{camera_id}:broken_pipe",
+                                interval=5,
+                            )
+                            return
+                        last_sent = time.time()
+                        sent = True
                     else:
                         break
+                if not sent and last_frame is not None:
+                    now = time.time()
+                    if interval > 0:
+                        wait = interval - (now - last_sent)
+                        if wait > 0:
+                            await asyncio.sleep(wait)
+                    try:
+                        yield boundary + last_frame + b"\r\n"
+                    except Exception as exc:
+                        log_throttled(
+                            logger.warning,
+                            f"[{camera_id}] mjpeg broken pipe: {exc}",
+                            key=f"mjpeg:{camera_id}:broken_pipe",
+                            interval=5,
+                        )
+                        return
+                    last_sent = time.time()
         except asyncio.CancelledError:
             proc.kill()
             raise
