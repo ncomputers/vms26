@@ -1,4 +1,5 @@
 # Changelog
+- add integration test for PostgreSQL connectivity using the `postgres_dsn` fixture
 - enable runtime counting via adapter to vision.counting
 - improve MJPEG streaming: reuse last frame when stalled, throttle writes,
   and handle broken pipes cleanly
