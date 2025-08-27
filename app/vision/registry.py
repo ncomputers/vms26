@@ -21,6 +21,7 @@ from typing import Dict, Tuple
 import os
 
 from loguru import logger
+from utils.housekeeping import register_cache
 
 try:  # heavy optional dependency
     import torch  # type: ignore
@@ -40,6 +41,7 @@ _MODEL_ENVS = {
 
 # internal cache for loaded models
 _CACHE: Dict[Tuple[str, str, bool], YOLO] = {}
+register_cache("vision_models", _CACHE)
 
 
 def _resolve_device(device: str | None) -> str:

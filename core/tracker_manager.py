@@ -15,6 +15,7 @@ from loguru import logger
 from redis.exceptions import RedisError
 
 from utils import logx
+from utils.housekeeping import housekeeping
 
 from config import COUNT_GROUPS, PPE_TASKS
 from config import config as global_cfg
@@ -474,8 +475,13 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
 
 def watchdog_loop(trackers: Dict[int, PersonTracker]) -> None:
     """Background watchdog loop."""
+    last_housekeep = time.monotonic()
     while True:
         watchdog_tick(trackers)
+        now = time.monotonic()
+        if now - last_housekeep >= 60:
+            housekeeping()
+            last_housekeep = now
         time.sleep(1)
 
 
