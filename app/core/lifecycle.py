@@ -60,7 +60,7 @@ class Watchdog(StoppableThread):
     """Monitor camera pipelines and log stalled processing."""
 
     def __init__(self, *, interval: float = 5.0, stale_after: float = 10.0) -> None:
-        super().__init__(daemon=True)
+        super().__init__(daemon=True, name="watchdog")
         self.interval = interval
         self.stale_after = stale_after
         self._warned: Set[int | str] = set()

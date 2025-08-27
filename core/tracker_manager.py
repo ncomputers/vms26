@@ -15,6 +15,7 @@ from loguru import logger
 from redis.exceptions import RedisError
 
 from utils import logx
+from utils.housekeeping import housekeeping
 
 from config import COUNT_GROUPS, PPE_TASKS
 from config import config as global_cfg
@@ -215,9 +216,22 @@ def _check_license(
 
 def _spawn_threads(tracker: PersonTracker) -> Dict[str, threading.Thread]:
     """Create and start worker threads for a tracker."""
-    cap_thread = threading.Thread(target=tracker.capture_worker.run, daemon=True)
-    inf_thread = threading.Thread(target=tracker.infer_worker.run, daemon=True)
-    post_thread = threading.Thread(target=tracker.post_worker.run, daemon=True)
+    cam_id = tracker.cam_id
+    cap_thread = threading.Thread(
+        target=tracker.capture_worker.run,
+        daemon=True,
+        name=f"cap-{cam_id}",
+    )
+    inf_thread = threading.Thread(
+        target=tracker.infer_worker.run,
+        daemon=True,
+        name=f"proc-{cam_id}",
+    )
+    post_thread = threading.Thread(
+        target=tracker.post_worker.run,
+        daemon=True,
+        name=f"post-{cam_id}",
+    )
     cap_thread.start()
     inf_thread.start()
     post_thread.start()
@@ -474,8 +488,13 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
 
 def watchdog_loop(trackers: Dict[int, PersonTracker]) -> None:
     """Background watchdog loop."""
+    last_housekeep = time.monotonic()
     while True:
         watchdog_tick(trackers)
+        now = time.monotonic()
+        if now - last_housekeep >= 60:
+            housekeeping()
+            last_housekeep = now
         time.sleep(1)
 
 

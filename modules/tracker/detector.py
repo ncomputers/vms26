@@ -13,6 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - torch is optional in tests
     torch = None
 
 from modules.profiler import profile_predict
+from app.core.prof import profiled
 
 try:  # pragma: no cover - Redis optional in tests
     from redis.exceptions import RedisError
@@ -53,6 +54,7 @@ class Detector:
         except (RedisError, OSError, AttributeError):
             pass
 
+    @profiled("det")
     def detect(self, frame: Any, groups: List[str]) -> List[Tuple[tuple, float, str]]:
         """Return a list of ``(xywh, conf, group)`` detections."""
         conf_thres = float(getenv("VMS26_CONF", "0.25"))
@@ -110,6 +112,7 @@ class Detector:
             detections = []
         return detections
 
+    @profiled("det")
     def detect_batch(
         self, frames: List[Any], groups: List[str]
     ) -> List[List[Tuple[tuple, float, str]]]:

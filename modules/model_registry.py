@@ -7,6 +7,7 @@ from typing import Dict, Tuple
 
 import psutil
 from loguru import logger
+from utils.housekeeping import register_cache
 
 try:  # optional heavy dependency
     import torch  # type: ignore
@@ -32,6 +33,8 @@ from config import config as app_config
 
 _yolo_models: Dict[Tuple[str, str], YOLO] = {}
 _face_models: Dict[Tuple[str, int], FaceAnalysis] = {}
+register_cache("yolo_models", _yolo_models)
+register_cache("face_models", _face_models)
 
 
 def _log_mem(note: str, device: "torch.device | None" = None) -> None:

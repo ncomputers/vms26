@@ -10,6 +10,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.core.diag import dump_threads
+
 from modules.overlay import abs_line_from_ratio, draw_boxes_pil
 from modules.registry import get_detector
 
@@ -33,6 +35,12 @@ except Exception:  # pragma: no cover - optional in tests
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 templates = Jinja2Templates(directory="templates")
+
+
+@router.get("/api/v1/diag/threads")
+async def diag_threads() -> list[dict]:
+    """Return basic information about running threads."""
+    return dump_threads()
 
 
 @router.get("/diagnostics/overlay/{cam_id}", response_class=HTMLResponse)

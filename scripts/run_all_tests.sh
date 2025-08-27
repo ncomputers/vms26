@@ -8,7 +8,7 @@ function cleanup {
 }
 trap cleanup EXIT
 
-flake8 --config .flake8 key_gen.py
+ruff check key_gen.py
 pytest -c pytest.ini
 
 uvicorn app:app --host 0.0.0.0 --port 5000 &

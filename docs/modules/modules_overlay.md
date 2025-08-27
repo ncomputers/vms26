@@ -6,6 +6,9 @@ Purpose: Overlay module. Debug overlays use solid LINE_8 drawing without
 alpha blending or antialiasing, and labels are limited to a single line
 of text with no shadows or rounded corners.
 
+The renderer loads a bundled DejaVuSans font once at startup and falls back
+to Pillow's default font if the file is missing.
+
 ## Key Classes
 None
 

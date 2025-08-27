@@ -10,8 +10,11 @@ repos:
     hooks:
       - id: isort
         args: ["--profile=black"]
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.3.7
     hooks:
-      - id: flake8
-        args: ["--max-line-length=88", "--exit-zero"]
+      - id: ruff
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
