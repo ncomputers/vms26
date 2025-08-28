@@ -26,11 +26,11 @@ except Exception:  # pragma: no cover - optional in tests
         invalidate_host_cache=lambda: None,
     )
 from config import config as cfg
-from modules import face_db, gatepass_service, visitor_db
+from modules import gatepass_service, visitor_db
 from modules.email_utils import send_email, sign_token
 from routers.visitor_utils import visitor_disabled_response
 from schemas.gatepass import GatepassBase
-from utils.face_db_utils import add_face_to_known_db, save_base64_to_image
+from utils.face_db_utils import save_base64_to_image
 from utils.ids import generate_id
 from utils.image import decode_base64_image
 from utils.redis import publish_event, trim_sorted_set_async as trim_sorted_set
@@ -140,26 +140,6 @@ def _validate_active_pass(redis, phone: str) -> None:
         redis.hdel("gatepass:active_phone", phone)
     except Exception:
         logger.exception("Failed to clean stale gate pass {}", existing_id)
-
-
-@router.post("/gatepass/auto_crop")
-async def gatepass_auto_crop(image: UploadFile = File(...)) -> JSONResponse:
-    """Return cropped face from uploaded image using face model."""
-    img_bytes = await image.read()
-    if face_db.face_app is None:
-        return JSONResponse({"error": "model"}, status_code=500)
-    arr = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
-    if arr is None:
-        return JSONResponse({"error": "decode"}, status_code=400)
-    rgb = cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)
-    faces = face_db.face_app.get(rgb)
-    if not faces:
-        return JSONResponse({"error": "no_face"})
-    x1, y1, x2, y2 = [int(v) for v in faces[0].bbox]
-    crop = rgb[y1:y2, x1:x2]
-    _, buf = cv2.imencode(".jpg", cv2.cvtColor(crop, cv2.COLOR_RGB2BGR))
-    b64 = base64.b64encode(buf.tobytes()).decode()
-    return JSONResponse({"image": b64})
 
 
 @router.get("/gatepass/active")
@@ -341,22 +321,6 @@ async def gatepass_create(
     if img_bytes:
         image_path = save_base64_to_image(b64, filename_prefix="gp", subdir="known")
         image_url = f"{image_path}?v={ts_int}"
-        add_face_to_known_db(
-            image_path=image_path,
-            name=name,
-            phone=phone,
-            visitor_type=visitor_type,
-            gate_pass_id=entry["gate_id"],
-            metadata={
-                "source": "gatepass",
-                "host": host,
-                "timestamp": datetime.now().isoformat(),
-            },
-        )
-        try:
-            face_db.insert(img_bytes, entry["gate_id"], source="gatepass")
-        except Exception:
-            pass
     else:
         image_path = None
     try:

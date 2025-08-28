@@ -19,7 +19,6 @@ from config import config as cfg
 from modules import gatepass_service, visitor_db
 from modules.email_utils import send_email, sign_token
 from schemas.gatepass import GatepassRequiredFields
-from utils.face_db_utils import add_face_to_known_db, save_base64_to_image
 from utils.redis import trim_sorted_set_sync
 
 router = APIRouter()
@@ -32,7 +31,6 @@ GATEPASS_RETENTION_SECS = 7 * 24 * 60 * 60  # default to 7 days
 config_obj: dict = {}
 redis = None
 templates: Jinja2Templates | None = None
-face_db = None
 visitor = SimpleNamespace(
     _save_visitor_master=lambda *a, **k: None,
     invalidate_host_cache=lambda: None,
@@ -360,7 +358,6 @@ from .approval import (  # noqa: E402,F401
 )
 from .create import (  # noqa: E402,F401
     gatepass_active,
-    gatepass_auto_crop,
     gatepass_checkout,
     gatepass_create,
     gatepass_delete,
@@ -398,7 +395,6 @@ __all__ = [
     "gatepass_view",
     "gatepass_list",
     "gatepass_export",
-    "gatepass_auto_crop",
     "gatepass_active",
     "gatepass_create",
     "gatepass_verify_form",
