@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from abc import ABC, abstractmethod
 from collections import deque
 from typing import Optional, Tuple
 
@@ -11,7 +12,7 @@ import numpy as np
 
 
 # BaseCameraStream class encapsulates basecamerastream behavior
-class BaseCameraStream:
+class BaseCameraStream(ABC):
     """Generic threaded capture with a small rolling buffer.
 
     Buffer size ``N`` adds roughly ``N / fps`` seconds of latency but keeps the
@@ -33,17 +34,20 @@ class BaseCameraStream:
 
     # ------------------------------------------------------------------
     # _init_stream routine
+    @abstractmethod
     def _init_stream(self) -> None:
         """Set up the underlying capture device."""
-        pass
+        ...
 
     # _read_frame routine
+    @abstractmethod
     def _read_frame(self) -> Tuple[bool, Optional[np.ndarray]]:
-        raise NotImplementedError
+        ...
 
     # _release_stream routine
+    @abstractmethod
     def _release_stream(self) -> None:
-        pass
+        ...
 
     # ------------------------------------------------------------------
     # _capture_loop routine
@@ -74,8 +78,8 @@ class BaseCameraStream:
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         return self.read_latest()
 
-    # isOpened routine
-    def isOpened(self) -> bool:
+    # is_opened routine
+    def is_opened(self) -> bool:
         return self.running and self.initialized
 
     # release routine
