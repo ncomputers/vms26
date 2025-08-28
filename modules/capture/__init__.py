@@ -1,9 +1,18 @@
 """Unified capture sources."""
 
-from .base import IFrameSource, FrameSourceError, Backoff
+from .base import Backoff, FrameSourceError, IFrameSource
 from .local_cv import LocalCvSource
 from .rtsp_ffmpeg import RtspFfmpegSource
-from .rtsp_gst import RtspGstSource, ensure_gst
+
+try:  # pragma: no cover - optional dependency
+    from .rtsp_gst import RtspGstSource, ensure_gst
+except Exception:  # pragma: no cover - gstreamer/opencv missing
+    RtspGstSource = None  # type: ignore[assignment]
+
+    def ensure_gst() -> bool:
+        return False
+
+
 from .http_mjpeg import HttpMjpegSource
 
 __all__ = [
