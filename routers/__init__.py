@@ -11,7 +11,6 @@ __all__ = [
     "ppe_reports",
     "settings",
     "visitor",
-    "api_faces",
     "api_identities",
     "api_summary",
     "vms",

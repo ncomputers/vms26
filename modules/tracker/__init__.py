@@ -1,10 +1,19 @@
 """High level tracking package."""
 
 from .detector import Detector
-from .face_tracker import FaceTracker, start_face_tracker, stop_face_tracker
 from .manager import InferWorker, PersonTracker, PostProcessWorker, ProcessingWorker
 from .stream import CaptureWorker
 from .tracker import Tracker
+
+
+def start_face_tracker(*args, **kwargs):
+    """Placeholder for removed face tracker."""
+    return None
+
+
+def stop_face_tracker(*args, **kwargs):
+    """Placeholder for removed face tracker."""
+    return None
 
 
 class _TrackerCache:
@@ -51,7 +60,6 @@ __all__ = [
     "CaptureWorker",
     "Detector",
     "Tracker",
-    "FaceTracker",
     "start_face_tracker",
     "stop_face_tracker",
     "tracker",

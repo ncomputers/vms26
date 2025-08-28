@@ -8,14 +8,14 @@ from loguru import logger
 from redis import Redis
 
 from config import PPE_TASKS
+from config.versioning import watch_config
 from core.tracker_manager import counter_config_listener, start_tracker, start_watchdog
 from modules.alerts import AlertWorker
-from modules.model_registry import get_insightface, get_yolo
+from modules.model_registry import get_yolo
 from modules.ppe_worker import PPEDetector
 from modules.tracker import PersonTracker
 from modules.utils import SNAP_DIR
 from utils.gpu import get_device
-from config.versioning import watch_config
 
 BASE_DIR = Path(__file__).parent
 
@@ -79,22 +79,6 @@ async def preload_models(cfg: dict[str, Any], cams: list[dict[str, Any]]) -> Non
         tasks.append(_load(lambda: get_yolo(person_model, device), f"{person_model}"))
     plate_model = cfg.get("plate_model", "license_plate_detector.pt")
     tasks.append(_load(lambda: get_yolo(plate_model, device), f"{plate_model}"))
-    fr_enabled = any(
-        cfg.get("features", {}).get(f) for f in ("visitor_mgmt", "face_recognition")
-    )
-    if fr_enabled:
-        if getattr(device, "type", "") != "cuda":
-            logger.warning(
-                "CUDA device not available, disabling visitor management and face recognition"
-            )
-            features = cfg.setdefault("features", {})
-            features["visitor_mgmt"] = False
-            features["face_recognition"] = False
-        else:
-            visitor_model = cfg.get("visitor_model", "buffalo_l")
-            tasks.append(
-                _load(lambda: get_insightface(visitor_model), f"{visitor_model}")
-            )
     if tasks:
         await asyncio.gather(*tasks)
 
@@ -128,11 +112,15 @@ async def init_trackers(
     try:
 
         async def _start(cam: dict[str, Any]) -> None:
-            tr = await asyncio.to_thread(start_tracker, cam, cfg, trackers, redis_client)
+            tr = await asyncio.to_thread(
+                start_tracker, cam, cfg, trackers, redis_client
+            )
             if tr:
                 tasks.append(
                     asyncio.create_task(
-                        watch_config(lambda c, tr=tr: tr.update_cfg(c), config_path=config_path)
+                        watch_config(
+                            lambda c, tr=tr: tr.update_cfg(c), config_path=config_path
+                        )
                     )
                 )
 

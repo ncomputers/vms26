@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from . import alerts, api_faces, api_identities, api_summary, auth
+from . import (
+    alerts,
+    api_identities,
+    api_summary,
+    auth,
+)
 from . import cameras as cam_routes
 from . import (
     config_api,
@@ -13,7 +18,6 @@ from . import (
     detections,
     diagnostics,
     entry,
-    face_db,
     feedback,
     gatepass,
     health,
@@ -45,8 +49,6 @@ MODULES = [
     auth,
     admin_users,
     visitor,
-    face_db,
-    api_faces,
     api_identities,
     api_summary,
     vms,
@@ -89,20 +91,12 @@ def init_all(
         branding_path,
         redis_facade,
     )
-    cam_routes.init_context(
-        cfg, cams, trackers, redis_client, templates_dir, redis_facade
-    )
+    cam_routes.init_context(cfg, cams, trackers, redis_client, templates_dir, redis_facade)
     reports.init_context(cfg, trackers, redis_client, templates_dir, cams, redis_facade)
     ppe_reports.init_context(cfg, trackers, redis_client, templates_dir, redis_facade)
-    alerts.init_context(
-        cfg, trackers, redis_client, templates_dir, config_path, redis_facade
-    )
-    admin_users.init_context(
-        cfg, redis_client, templates_dir, config_path, redis_facade
-    )
+    alerts.init_context(cfg, trackers, redis_client, templates_dir, config_path, redis_facade)
+    admin_users.init_context(cfg, redis_client, templates_dir, config_path, redis_facade)
     visitor.init_context(cfg, redis_client, templates_dir, cams, redis_facade)
-    face_db.init_context(cfg, redis_client, redis_facade)
-    api_faces.init_context(cfg, redis_client, redis_facade)
     api_identities.init_context(cfg, redis_client, redis_facade)
     diagnostics.init_context(cfg, trackers, cams, templates_dir, redis_facade)
     troubleshooter.init_context(cfg, trackers, cams, templates_dir, redis_facade)
