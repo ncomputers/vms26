@@ -5,17 +5,14 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Dict, List
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from loguru import logger
 from redis.exceptions import RedisError
 
-from config import config
+from core.context import AppContext, get_app_context
 from modules import export
-from modules.events_store import RedisStore
 from modules.utils import require_roles
 from schemas.report import ReportQuery
 from utils.time import format_ts
@@ -23,28 +20,6 @@ from utils.time import format_ts
 router = APIRouter()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-redisfx = None
-
-
-# init_context routine
-def init_context(
-    config: dict,
-    trackers: Dict[int, "PersonTracker"],
-    redis_client,
-    templates_path,
-    cameras: List[dict],
-    redis_facade=None,
-) -> None:
-    """Initialize shared context for report routes."""
-    global cfg, trackers_map, redis, templates, cams, store, redisfx
-    cfg = config
-    trackers_map = trackers
-    redis = redis_client
-    redisfx = redis_facade
-    store = RedisStore(redis_client)
-    templates = Jinja2Templates(directory=templates_path)
-    templates.env.add_extension("jinja2.ext.do")
-    cams = cameras
 
 
 @router.get("/report")
@@ -53,6 +28,7 @@ async def report_page(
     type: str = "person",
     range: str = "",
     include_archived: bool = False,
+    ctx: AppContext = Depends(get_app_context),
 ):
     res = require_roles(request, ["admin"])
     if isinstance(res, RedirectResponse):
@@ -61,11 +37,12 @@ async def report_page(
     no_data_message = "No report data available. Verify the tracker is running or adjust log retention settings."
     error_message = None
     try:
+        r = ctx.redis
         if (
-            redis.zcard("history")
-            or redis.zcard("person_logs")
-            or redis.zcard("vehicle_logs")
-            or redis.zcard("face_logs")
+            r.zcard("history")
+            or r.zcard("person_logs")
+            or r.zcard("vehicle_logs")
+            or r.zcard("face_logs")
         ):
             no_data = False
     except Exception as exc:
@@ -73,17 +50,21 @@ async def report_page(
         logger.exception("report data check failed: {}", exc)
     quick_map = {"7d": "week", "this_month": "month"}
     selected_quick = quick_map.get(range, range)
-    cam_list = cams if include_archived else [c for c in cams if not c.get("archived")]
-    return templates.TemplateResponse(
+    cam_list = (
+        ctx.cameras
+        if include_archived
+        else [c for c in ctx.cameras if not c.get("archived")]
+    )
+    return ctx.templates.TemplateResponse(
         "report.html",
         {
             "request": request,
-            "vehicle_enabled": "vehicle" in cfg.get("track_objects", ["person", "vehicle"]),
-            "face_enabled": "face" in cfg.get("track_objects", []),
-            "plate_enabled": "number_plate" in cfg.get("track_objects", []),
+            "vehicle_enabled": "vehicle" in ctx.config.get("track_objects", ["person", "vehicle"]),
+            "face_enabled": "face" in ctx.config.get("track_objects", []),
+            "plate_enabled": "number_plate" in ctx.config.get("track_objects", []),
             "cameras": cam_list,
-            "labels": cfg.get("count_classes", []),
-            "cfg": config,
+            "labels": ctx.config.get("count_classes", []),
+            "cfg": ctx.config,
             "no_data": no_data,
             "error_message": error_message,
             "no_data_message": no_data_message,
@@ -94,14 +75,13 @@ async def report_page(
     )
 
 
-async def _report_data(query: ReportQuery):
+async def _report_data(query: ReportQuery, ctx: AppContext):
     start_ts = int(query.start.timestamp())
     end_ts = int(query.end.timestamp())
     if query.view == "graph":
-
         entries = [
             json.loads(e)
-            for e in await redisfx.call("zrangebyscore", "history", start_ts, end_ts)
+            for e in await ctx.redisfx.call("zrangebyscore", "history", start_ts, end_ts)
         ]
         times, ins, outs, currents = [], [], [], []
         key_in = f"in_{query.type}"
@@ -143,11 +123,11 @@ async def _report_data(query: ReportQuery):
             key = "face_logs"
 
         if last_ts is None:
-            raw_entries = redis.zrevrangebyscore(
+            raw_entries = ctx.redis.zrevrangebyscore(
                 key, end_ts, start_ts, start=0, num=query.rows
             )
         else:
-            raw_entries = redis.zrevrangebyscore(
+            raw_entries = ctx.redis.zrevrangebyscore(
                 key, last_ts, start_ts, start=1, num=query.rows
             )
 
@@ -193,12 +173,16 @@ async def _report_data(query: ReportQuery):
 
 
 @router.get("/report_data")
-async def report_data(query: ReportQuery = Depends(), request: Request = None):
+async def report_data(
+    request: Request,
+    query: ReportQuery = Depends(),
+    ctx: AppContext = Depends(get_app_context),
+):
     res = require_roles(request, ["admin"])
     if isinstance(res, RedirectResponse):
         return res
     try:
-        return await _report_data(query)
+        return await _report_data(query, ctx)
     except RedisError:
         return JSONResponse(
             {"status": "error", "reason": "storage_unavailable"}, status_code=503
@@ -206,12 +190,16 @@ async def report_data(query: ReportQuery = Depends(), request: Request = None):
 
 
 @router.get("/report/export")
-async def report_export(query: ReportQuery = Depends(), request: Request = None):
+async def report_export(
+    request: Request,
+    query: ReportQuery = Depends(),
+    ctx: AppContext = Depends(get_app_context),
+):
     res = require_roles(request, ["admin"])
     if isinstance(res, RedirectResponse):
         return res
     try:
-        data = await _report_data(query)
+        data = await _report_data(query, ctx)
     except RedisError:
         return JSONResponse(
             {"status": "error", "reason": "storage_unavailable"}, status_code=503
