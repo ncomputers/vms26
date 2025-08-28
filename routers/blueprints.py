@@ -32,7 +32,6 @@ from . import (
     rtsp,
     settings,
     troubleshooter,
-    visitor,
     vms,
 )
 from .admin import users as admin_users
@@ -48,7 +47,6 @@ MODULES = [
     alerts,
     auth,
     admin_users,
-    visitor,
     api_identities,
     api_summary,
     vms,
@@ -96,7 +94,6 @@ def init_all(
     ppe_reports.init_context(cfg, trackers, redis_client, templates_dir, redis_facade)
     alerts.init_context(cfg, trackers, redis_client, templates_dir, config_path, redis_facade)
     admin_users.init_context(cfg, redis_client, templates_dir, config_path, redis_facade)
-    visitor.init_context(cfg, redis_client, templates_dir, cams, redis_facade)
     api_identities.init_context(cfg, redis_client, redis_facade)
     diagnostics.init_context(cfg, trackers, cams, templates_dir, redis_facade)
     troubleshooter.init_context(cfg, trackers, cams, templates_dir, redis_facade)
