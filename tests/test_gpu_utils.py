@@ -2,6 +2,8 @@ import sys
 import types
 from unittest import mock
 
+import pytest
+
 import utils.gpu as gpu
 
 
@@ -49,6 +51,7 @@ def _capture_logger():
     return records, handler_id
 
 
+@pytest.mark.gpu
 def test_probe_cuda_success():
     fake_torch = _make_torch(True, device_count=1)
     with mock.patch.object(gpu, "torch", fake_torch):
@@ -58,6 +61,7 @@ def test_probe_cuda_success():
     assert err is None
 
 
+@pytest.mark.gpu
 def test_probe_cuda_name_failure():
     fake_torch = _make_torch(True, device_count=1, name_error=True)
     with mock.patch.object(gpu, "torch", fake_torch):
@@ -67,6 +71,7 @@ def test_probe_cuda_name_failure():
     assert err == "boom"
 
 
+@pytest.mark.gpu
 def test_probe_cuda_no_torch():
     with mock.patch.object(gpu, "torch", None):
         ok, count, err = gpu.probe_cuda()
@@ -74,6 +79,7 @@ def test_probe_cuda_no_torch():
     assert err == "torch missing"
 
 
+@pytest.mark.gpu
 def test_get_device_cpu_fallback(monkeypatch):
     fake_torch = _make_torch(False)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -81,6 +87,7 @@ def test_get_device_cpu_fallback(monkeypatch):
     assert dev.type == "cpu"
 
 
+@pytest.mark.gpu
 def test_get_device_logs_details(monkeypatch):
     fake_torch = _make_torch(False)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -94,6 +101,7 @@ def test_get_device_logs_details(monkeypatch):
     assert "device_count=0" in text
 
 
+@pytest.mark.gpu
 def test_get_device_selects_cuda(monkeypatch):
     fake_torch = _make_torch(True)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -101,6 +109,7 @@ def test_get_device_selects_cuda(monkeypatch):
     assert dev.type == "cuda"
 
 
+@pytest.mark.gpu
 def test_get_device_uses_device_count(monkeypatch):
     fake_torch = _make_torch(False, device_count=1)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -108,6 +117,7 @@ def test_get_device_uses_device_count(monkeypatch):
     assert dev.type == "cuda"
 
 
+@pytest.mark.gpu
 def test_get_device_memory_threshold(monkeypatch):
     fake_torch = _make_torch(True, free_mem=0)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -115,6 +125,7 @@ def test_get_device_memory_threshold(monkeypatch):
     assert dev.type == "cpu"
 
 
+@pytest.mark.gpu
 def test_get_device_name_probe_failure(monkeypatch):
     fake_torch = _make_torch(True, name_error=True)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -128,6 +139,7 @@ def test_get_device_name_probe_failure(monkeypatch):
     assert "probe_error=boom" in text
 
 
+@pytest.mark.gpu
 def test_get_device_logs_onnxruntime(monkeypatch):
     fake_torch = _make_torch(False)
     monkeypatch.setattr(gpu, "torch", fake_torch)
@@ -147,6 +159,7 @@ def test_get_device_logs_onnxruntime(monkeypatch):
     assert "ONNXRuntime running on CPU" in text
 
 
+@pytest.mark.gpu
 def test_configure_onnxruntime_cpu(monkeypatch):
     fake_ort = types.SimpleNamespace(
         set_default_providers=lambda providers: None,
@@ -167,6 +180,7 @@ def test_configure_onnxruntime_cpu(monkeypatch):
     assert "running on CPU" in text
 
 
+@pytest.mark.gpu
 def test_configure_onnxruntime_gpu(monkeypatch):
     fake_ort = types.SimpleNamespace(
         set_default_providers=lambda providers: None,
@@ -189,6 +203,7 @@ def test_configure_onnxruntime_gpu(monkeypatch):
     assert "GPU acceleration enabled" in text
 
 
+@pytest.mark.gpu
 def test_get_device_without_torch_version(monkeypatch):
     fake_torch = _make_torch(False, with_version=False)
     monkeypatch.setattr(gpu, "torch", fake_torch)

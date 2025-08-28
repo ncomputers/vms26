@@ -101,6 +101,10 @@ message including prune counts.
    For HTTPS, pass `--ssl-certfile` and `--ssl-keyfile` or run behind a reverse proxy.
 4. Run the test suite to verify your environment:
    ```bash
-   python3 -m pytest -q
+   python3 -m pytest -q -m "not gpu"
+   ```
+   GPU-dependent tests are marked with `@pytest.mark.gpu` and can be run separately when CUDA is available:
+   ```bash
+   python3 -m pytest -q -m gpu
    ```
 5. See [CONTRIBUTING.md](../CONTRIBUTING.md) for development guidelines.

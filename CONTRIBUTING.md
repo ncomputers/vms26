@@ -17,6 +17,12 @@ pre-commit run --all-files
 bash scripts/run_all_tests.sh
 ```
 
+GPU-dependent tests are marked with `@pytest.mark.gpu` and are skipped by default. Run them separately when CUDA is available:
+
+```bash
+pytest -m gpu
+```
+
 ## Continuous Integration
 
 The GitHub Actions workflow at `.github/workflows/ci.yaml` executes the same test script on every push and pull request.

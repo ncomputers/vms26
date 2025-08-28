@@ -3,7 +3,10 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
 
+
+@pytest.mark.gpu
 def test_stub_loads_real_torch(tmp_path, monkeypatch):
     real = tmp_path / "torch.py"
     real.write_text("flag = 'real'")
@@ -14,13 +17,16 @@ def test_stub_loads_real_torch(tmp_path, monkeypatch):
     assert getattr(mod, "flag") == "real"
 
 
+@pytest.mark.gpu
 def test_stub_handles_case_insensitive_paths(tmp_path, monkeypatch):
     real = tmp_path / "torch.py"
     real.write_text("flag = 'real'")
 
     case_diff = str(Path(__file__).resolve().parents[1]).upper()
 
-    monkeypatch.setattr(os.path, "samefile", lambda a, b: (_ for _ in ()).throw(OSError()))
+    monkeypatch.setattr(
+        os.path, "samefile", lambda a, b: (_ for _ in ()).throw(OSError())
+    )
     monkeypatch.setattr(os.path, "normcase", lambda p: p.lower())
 
     paths = sys.path.copy()

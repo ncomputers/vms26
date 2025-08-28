@@ -437,7 +437,13 @@ python3 app.py
 Then open `http://localhost:5002` in your browser. Use the **Cameras** page to add streams (HTTP, RTSP or local webcams) and **Settings** to adjust options. Tests can be executed with `pytest`:
 
 ```bash
-python3 -m pytest -q tests
+python3 -m pytest -q -m "not gpu" tests
+```
+
+GPU-dependent tests are marked with `@pytest.mark.gpu` and skipped by default. Run them explicitly with:
+
+```bash
+python3 -m pytest -q -m gpu tests
 ```
 
 > **Note:** Features that access the webcam via `getUserMedia` require HTTPS. Run the
