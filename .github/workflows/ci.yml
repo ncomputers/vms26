@@ -23,6 +23,23 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements.txt
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Run Jest tests
+        run: npm test -- --json --outputFile=jest-results.json
+      - name: Upload Jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results
+          path: jest-results.json
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Lint
@@ -72,6 +89,23 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements.txt
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Run Jest tests
+        run: npm test -- --json --outputFile=jest-results.json
+      - name: Upload Jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results
+          path: jest-results.json
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Integration tests
