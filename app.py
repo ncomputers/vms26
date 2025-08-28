@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,21 +11,15 @@ from loguru import logger
 from starlette.middleware.sessions import SessionMiddleware
 
 import logging_config  # noqa: F401
-from app.core.logging import setup_json_logger
+from app.web import api_perf
+from core.config import get_config
+from core.logging import setup_json_logger
 from modules.utils import SNAP_DIR
 from routers import whatsapp
-from app.web import api_perf
-from datetime import datetime
-
-from core.logging import setup_json_logger
-from core.config import get_config
-
 from server.config import _load_secret_key
 from server.startup import handle_unexpected_error
 from server.startup import init_app as _init_app
 from server.startup import lifespan
-from utils.redis import get_sync_client
-
 
 
 def init_app(
