@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from random import random
-from typing import Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable
 
 import numpy as np
 from modules.camera_factory import StreamUnavailable, open_capture
