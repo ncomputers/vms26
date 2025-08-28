@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import re
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -29,12 +30,26 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOGO_DIR = BASE_DIR / "static" / "logos"
 URL_RE = re.compile(r"^https?://")
-templates_dir = str(BASE_DIR / "templates")
-redisfx = None
 
 
-# init_context routine
-def init_context(
+@dataclass
+class SettingsContext:
+    cfg: dict
+    trackers_map: Dict[int, "PersonTracker"]
+    cams: List[dict]
+    redis: Any
+    templates: Jinja2Templates
+    cfg_path: str
+    branding: dict
+    branding_path: str
+    templates_dir: str
+    redisfx: Any | None = None
+
+
+_context: SettingsContext | None = None
+
+
+def create_settings_context(
     config: dict,
     trackers: Dict[int, "PersonTracker"],
     cameras: List[dict],
@@ -43,22 +58,33 @@ def init_context(
     config_path: str,
     branding_file: str,
     redis_facade=None,
-):
-    """Store shared objects for settings routes."""
-    global cfg, trackers_map, cams, redis, templates, cfg_path, branding, branding_path, templates_dir, redisfx
-    cfg = config
-    trackers_map = trackers
-    cams = cameras
-    redis = redis_client
-    redisfx = redis_facade
-    templates_dir = templates_path
+) -> SettingsContext:
+    """Construct and store context for settings routes."""
+    global _context
     templates = Jinja2Templates(directory=templates_path)
     templates.env.add_extension("jinja2.ext.do")
-    cfg_path = config_path
-    branding_path = branding_file
     branding = load_branding(branding_file)
-    if cfg.get("helmet_conf_thresh") is not None and "ppe_conf_thresh" not in cfg:
-        cfg["ppe_conf_thresh"] = cfg.get("helmet_conf_thresh")
+    if config.get("helmet_conf_thresh") is not None and "ppe_conf_thresh" not in config:
+        config["ppe_conf_thresh"] = config.get("helmet_conf_thresh")
+    _context = SettingsContext(
+        cfg=config,
+        trackers_map=trackers,
+        cams=cameras,
+        redis=redis_client,
+        templates=templates,
+        cfg_path=config_path,
+        branding=branding,
+        branding_path=branding_file,
+        templates_dir=templates_path,
+        redisfx=redis_facade,
+    )
+    return _context
+
+
+def get_settings_context() -> SettingsContext:
+    if _context is None:  # pragma: no cover - sanity check
+        raise RuntimeError("Settings context not initialised")
+    return _context
 
 
 @router.get("/static/logos/{filename}")
@@ -70,20 +96,18 @@ async def serve_logo(filename: str):
     return FileResponse(file_path)
 
 
-def set_cfg(new_cfg: dict) -> None:
-    """Replace the global configuration."""
-    global cfg
-    cfg.clear()
-    cfg.update(new_cfg)
+def set_cfg(ctx: SettingsContext, new_cfg: dict) -> None:
+    """Replace the configuration within the context."""
+    ctx.cfg.clear()
+    ctx.cfg.update(new_cfg)
 
 
-def set_branding(new_branding: dict) -> None:
-    """Replace the global branding dictionary."""
-    global branding
-    branding = new_branding
+def set_branding(ctx: SettingsContext, new_branding: dict) -> None:
+    """Replace the branding dictionary within the context."""
+    ctx.branding = new_branding
 
 
-def parse_basic_settings(data: dict) -> dict:
+def parse_basic_settings(data: dict, cfg: dict) -> dict:
     """Return a new configuration with basic settings applied."""
     new_cfg = cfg.copy()
     for key in [
@@ -187,16 +211,17 @@ def parse_email_settings(form: FormData) -> EmailConfig:
 
 
 @router.get("/settings")
-async def settings_page(request: Request):
+async def settings_page(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     # Pull the latest config snapshot each request so tests modifying the global
     # config dictionary see the change in rendered templates.
     from jinja2 import TemplateNotFound
 
     from config import config as current_cfg
 
-    global templates
     try:
-        env = templates
+        env = ctx.templates
         return env.TemplateResponse(
             "settings.html",
             {
@@ -214,9 +239,9 @@ async def settings_page(request: Request):
         # directory that lacks ``settings.html``.  Recreate the templates
         # environment using the original ``templates_dir`` so subsequent
         # requests can still render the built-in templates.
-        templates = Jinja2Templates(directory=templates_dir)
-        templates.env.add_extension("jinja2.ext.do")
-        return templates.TemplateResponse(
+        ctx.templates = Jinja2Templates(directory=ctx.templates_dir)
+        ctx.templates.env.add_extension("jinja2.ext.do")
+        return ctx.templates.TemplateResponse(
             "settings.html",
             {
                 "request": request,
@@ -231,8 +256,9 @@ async def settings_page(request: Request):
 
 
 @router.post("/settings")
-async def update_settings(request: Request):
-    global cfg, branding
+async def update_settings(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     form = await request.form()
     data = dict(form)
     data.update(
@@ -243,23 +269,23 @@ async def update_settings(request: Request):
             "track_objects": form.getlist("track_objects"),
         }
     )
-    if data.get("password") != cfg.get("settings_password"):
+    if data.get("password") != ctx.cfg.get("settings_password"):
         return {"saved": False, "error": "auth"}
     raw_email_enabled = data.get("email_enabled")
     force_email = str(data.pop("force_email_enable", "")).lower() in {"true", "on", "1"}
-    if raw_email_enabled and not cfg.get("email", {}).get("last_test_ts"):
+    if raw_email_enabled and not ctx.cfg.get("email", {}).get("last_test_ts"):
         if not force_email:
             return {"saved": False, "error": "email_test_required"}
         logger.warning("email enabled without successful test")
-    prev_tracking = cfg.get("enable_person_tracking", True)
+    prev_tracking = ctx.cfg.get("enable_person_tracking", True)
     try:
-        new_cfg = parse_basic_settings(data)
+        new_cfg = parse_basic_settings(data, ctx.cfg)
         email_cfg_obj = parse_email_settings(form)
     except ValueError as exc:
         return {"saved": False, "error": str(exc)}
     email_updates = email_cfg_obj.model_dump(exclude_none=True)
     new_cfg.setdefault("email", {}).update(email_updates)
-    branding_updates = branding.copy()
+    branding_updates = ctx.branding.copy()
     branding_updates["company_name"] = data.get(
         "company_name", branding_updates.get("company_name", "")
     )
@@ -315,38 +341,38 @@ async def update_settings(request: Request):
         if URL_RE.match(url):
             branding_updates["footer_logo_url"] = url
             branding_updates["footer_logo"] = ""
-    save_branding(branding_updates, branding_path)
+    save_branding(branding_updates, ctx.branding_path)
     new_cfg["branding"] = branding_updates
     license_feats = new_cfg.get("license_info", {}).get("features", {})
     user_feats = new_cfg.get("features", {})
     new_cfg["features"] = {
         k: bool(user_feats.get(k)) and bool(license_feats.get(k)) for k in user_feats
     }
-    set_branding(branding_updates)
-    set_cfg(new_cfg)
-    save_config(cfg, cfg_path, redis)
-    bump_version(cfg_path)
-    if redisfx:
-        await redisfx.publish("events", json.dumps({"type": events.CONFIG_UPDATED}))
+    set_branding(ctx, branding_updates)
+    set_cfg(ctx, new_cfg)
+    save_config(ctx.cfg, ctx.cfg_path, ctx.redis)
+    bump_version(ctx.cfg_path)
+    if ctx.redisfx:
+        await ctx.redisfx.publish("events", json.dumps({"type": events.CONFIG_UPDATED}))
     from config import set_config as set_global_config
 
-    set_global_config(cfg)
+    set_global_config(ctx.cfg)
     from routers import cameras as cam_routes
 
-    cam_routes.cfg = cfg
-    cam_routes.get_camera_manager().cfg = cfg
-    for tr in trackers_map.values():
-        tr.update_cfg(cfg)
-    if prev_tracking != cfg.get("enable_person_tracking", True):
-        if cfg.get("enable_person_tracking", True):
-            for cam in cams:
+    cam_routes.cfg = ctx.cfg
+    cam_routes.get_camera_manager().cfg = ctx.cfg
+    for tr in ctx.trackers_map.values():
+        tr.update_cfg(ctx.cfg)
+    if prev_tracking != ctx.cfg.get("enable_person_tracking", True):
+        if ctx.cfg.get("enable_person_tracking", True):
+            for cam in ctx.cams:
                 if cam.get("enabled", True):
-                    start_tracker(cam, cfg, trackers_map, redis)
+                    start_tracker(cam, ctx.cfg, ctx.trackers_map, ctx.redis)
         else:
-            for cid in list(trackers_map.keys()):
-                stop_tracker(cid, trackers_map)
+            for cid in list(ctx.trackers_map.keys()):
+                stop_tracker(cid, ctx.trackers_map)
     from modules.profiler import start_profiler
-    start_profiler(cfg)
+    start_profiler(ctx.cfg)
     from routers.config_api import CONFIG_EVENT
 
     CONFIG_EVENT.set()
@@ -358,8 +384,9 @@ async def update_settings(request: Request):
 
 
 @router.post("/settings/email/test")
-async def settings_email_test(request: Request):
-    global cfg
+async def settings_email_test(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     data = await request.json()
     recipient = data.get("recipient")
     if not recipient:
@@ -377,7 +404,7 @@ async def settings_email_test(request: Request):
         ]
         if k in data
     }
-    merged_cfg = {**cfg.get("email", {}), **payload_cfg}
+    merged_cfg = {**ctx.cfg.get("email", {}), **payload_cfg}
     email_cfg = EmailConfig.model_validate(merged_cfg).model_dump(exclude_none=True)
     if not email_cfg.get("smtp_host"):
         return {"sent": False, "error": "missing_smtp_host"}
@@ -393,14 +420,14 @@ async def settings_email_test(request: Request):
         )
     except Exception:  # pragma: no cover - handled gracefully
         logger.exception("Test email send failed")
-        cfg.setdefault("email", {})["last_test_ts"] = 0
-        save_config(cfg, cfg_path, redis)
+        ctx.cfg.setdefault("email", {})["last_test_ts"] = 0
+        save_config(ctx.cfg, ctx.cfg_path, ctx.redis)
         return {"sent": False, "error": "exception"}
     if not success:
         return {"sent": False, "error": err}
-    cfg.setdefault("email", {}).update(email_cfg)
-    cfg["email"]["last_test_ts"] = int(datetime.utcnow().timestamp())
-    save_config(cfg, cfg_path, redis)
+    ctx.cfg.setdefault("email", {}).update(email_cfg)
+    ctx.cfg["email"]["last_test_ts"] = int(datetime.utcnow().timestamp())
+    save_config(ctx.cfg, ctx.cfg_path, ctx.redis)
     return {"sent": True}
 
 
@@ -409,6 +436,7 @@ async def branding_update(
     request: Request,
     company_name: str = Form(""),
     logo: UploadFile | None = File(None),
+    ctx: SettingsContext = Depends(get_settings_context),
 ):
     """Handle branding logo uploads with basic validation."""
     if logo is None:
@@ -422,56 +450,66 @@ async def branding_update(
 
 
 @router.get("/settings/export")
-async def export_settings(request: Request):
+async def export_settings(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     """Download configuration and cameras as a single JSON payload."""
     from fastapi.responses import JSONResponse
 
-    data = {"config": cfg, "cameras": cams}
+    data = {"config": ctx.cfg, "cameras": ctx.cams}
     return JSONResponse(data)
 
 
 @router.post("/settings/import")
-async def import_settings(request: Request):
+async def import_settings(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     """Import configuration and optional camera list."""
     data = await request.json()
     new_cfg = data.get("config", data)
     cams_data = data.get("cameras")
-    cfg.update(new_cfg)
-    save_config(cfg, cfg_path, redis)
+    ctx.cfg.update(new_cfg)
+    save_config(ctx.cfg, ctx.cfg_path, ctx.redis)
     from config import set_config
 
-    set_config(cfg)
-    for tr in trackers_map.values():
-        tr.update_cfg(cfg)
+    set_config(ctx.cfg)
+    for tr in ctx.trackers_map.values():
+        tr.update_cfg(ctx.cfg)
     from modules.profiler import start_profiler
 
-    start_profiler(cfg)
+    start_profiler(ctx.cfg)
     if isinstance(cams_data, list):
         # stop existing trackers
-        for cid in list(trackers_map.keys()):
-            stop_tracker(cid, trackers_map)
-        cams[:] = cams_data
-        save_cameras(cams, redis)
-        for cam in cams:
+        for cid in list(ctx.trackers_map.keys()):
+            stop_tracker(cid, ctx.trackers_map)
+        ctx.cams[:] = cams_data
+        save_cameras(ctx.cams, ctx.redis)
+        for cam in ctx.cams:
             if cam.get("enabled", True):
-                start_tracker(cam, cfg, trackers_map, redis)
+                start_tracker(cam, ctx.cfg, ctx.trackers_map, ctx.redis)
     return {"saved": True}
 
 
 @router.post("/reset")
-async def reset_endpoint():
-    reset_counts(trackers_map)
+async def reset_endpoint(ctx: SettingsContext = Depends(get_settings_context)):
+    reset_counts(ctx.trackers_map)
     return {"reset": True}
 
 
 @router.get("/license")
-async def license_page(request: Request):
+async def license_page(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     """Render a page for entering a license key."""
-    return templates.TemplateResponse("license.html", {"request": request, "cfg": cfg})
+    return ctx.templates.TemplateResponse(
+        "license.html", {"request": request, "cfg": ctx.cfg}
+    )
 
 
 @router.post("/license")
-async def activate_license(request: Request):
+async def activate_license(
+    request: Request, ctx: SettingsContext = Depends(get_settings_context)
+):
     data = await request.json()
     key = data.get("key")
     from modules.license import verify_license
@@ -480,13 +518,13 @@ async def activate_license(request: Request):
     info = verify_license(key)
     if not info.get("valid"):
         return {"error": info.get("error")}
-    cfg["license_key"] = key
-    cfg["license_info"] = info
-    cfg["features"] = info.get("features", cfg.get("features", {}))
-    save_config(cfg, cfg_path, redis)
+    ctx.cfg["license_key"] = key
+    ctx.cfg["license_info"] = info
+    ctx.cfg["features"] = info.get("features", ctx.cfg.get("features", {}))
+    save_config(ctx.cfg, ctx.cfg_path, ctx.redis)
     save_license({"key": key, "info": info})
-    redis.set("license_info", json.dumps(info))
+    ctx.redis.set("license_info", json.dumps(info))
     from config import set_config
 
-    set_config(cfg)
-    return {"activated": True, "features": cfg["features"]}
+    set_config(ctx.cfg)
+    return {"activated": True, "features": ctx.cfg["features"]}

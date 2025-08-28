@@ -7,10 +7,10 @@ Settings management routes.
 Alert and preview settings now use distinct anomaly lists in the template context.
 
 ## Key Classes
-None
+- SettingsContext
 
 ## Key Functions
-- **init_context(config, trackers, cameras, redis_client, templates_path, config_path, branding_file)** - Store shared objects for settings routes.
+- **create_settings_context(config, trackers, cameras, redis_client, templates_path, config_path, branding_file)** - Build and return a `SettingsContext` for settings routes.
 
 ## Inputs and Outputs
 Refer to function signatures above for inputs and outputs.

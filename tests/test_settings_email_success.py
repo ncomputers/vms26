@@ -16,8 +16,8 @@ def _patch_health_loop():
 
 def test_email_test_uses_payload_config(client, monkeypatch):
     from routers import settings
-
-    monkeypatch.setitem(settings.cfg, "email", {})
+    ctx = settings.get_settings_context()
+    monkeypatch.setitem(ctx.cfg, "email", {})
 
     captured = {}
 
@@ -46,9 +46,9 @@ def test_email_test_uses_payload_config(client, monkeypatch):
 
 def test_email_test_sets_last_ts_allows_save(client, monkeypatch):
     from routers import settings
-
-    monkeypatch.setitem(settings.cfg, "email", {})
-    monkeypatch.setitem(settings.cfg, "settings_password", "pass")
+    ctx = settings.get_settings_context()
+    monkeypatch.setitem(ctx.cfg, "email", {})
+    monkeypatch.setitem(ctx.cfg, "settings_password", "pass")
 
     monkeypatch.setattr("routers.settings.save_config", lambda *a, **k: None)
     monkeypatch.setattr("routers.settings.save_branding", lambda *a, **k: None)
@@ -61,7 +61,7 @@ def test_email_test_sets_last_ts_allows_save(client, monkeypatch):
     r = client.post("/settings/email/test", json=payload)
     assert r.status_code == 200
     assert r.json() == {"sent": True}
-    assert settings.cfg["email"]["last_test_ts"] > 0
+    assert ctx.cfg["email"]["last_test_ts"] > 0
 
     resp = client.post(
         "/settings",

@@ -24,6 +24,8 @@ sys.modules.setdefault("ultralytics", type("ultralytics", (), {"YOLO": object}))
 sys.modules.setdefault("deep_sort_realtime", type("ds", (), {}))
 sys.modules["deep_sort_realtime.deepsort_tracker"] = type("t", (), {"DeepSort": object})
 sys.modules.setdefault("cv2", type("cv2", (), {}))
+sys.modules.setdefault("modules.face_db", type("fd", (), {}))
+sys.modules.setdefault("modules.visitor_db", type("vd", (), {}))
 
 from routers import settings, visitor  # noqa: E402
 
@@ -37,7 +39,7 @@ def _create_settings_app(tmp_path):
     }
     r = fakeredis.FakeRedis()
     (tmp_path / "settings.html").write_text("ok")
-    settings.init_context(
+    settings.create_settings_context(
         cfg,
         {},
         [],

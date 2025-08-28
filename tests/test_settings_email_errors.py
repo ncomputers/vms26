@@ -4,6 +4,7 @@ import smtplib
 
 import pytest
 from starlette.requests import Request
+import fakeredis
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -57,11 +58,14 @@ def test_send_email_connection_error(monkeypatch):
     assert result[1] == "ConnectionRefusedError"
 
 
-def test_email_test_missing_host(monkeypatch):
+def test_email_test_missing_host(monkeypatch, tmp_path):
     from routers import settings
 
-    monkeypatch.setattr(settings, "cfg", {}, raising=False)
-    monkeypatch.setitem(settings.cfg.setdefault("email", {}), "smtp_host", "")
+    r = fakeredis.FakeRedis()
+    ctx = settings.create_settings_context(
+        {}, {}, [], r, str(tmp_path), str(tmp_path / "c.json"), str(tmp_path / "b.json")
+    )
+    monkeypatch.setitem(ctx.cfg.setdefault("email", {}), "smtp_host", "")
 
     async def receive():
         return {
@@ -71,7 +75,7 @@ def test_email_test_missing_host(monkeypatch):
         }
 
     req = Request({"type": "http"}, receive)
-    result = asyncio.run(settings.settings_email_test(req))
+    result = asyncio.run(settings.settings_email_test(req, ctx))
     assert result["error"] == "missing_smtp_host"
     assert not result["sent"]
 
