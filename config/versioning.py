@@ -36,8 +36,11 @@ def bump_version(config_path: str | os.PathLike[str] | None = None) -> int:
     vfile = _version_path(path)
     try:
         current = int(vfile.read_text())
-    except Exception:
+    except (FileNotFoundError, ValueError):
         current = 0
+    except OSError:
+        logger.exception("Failed to read version file %s", vfile)
+        raise
     new = current + 1
     vfile.write_text(str(new))
     try:
@@ -65,26 +68,33 @@ async def watch_config(
     last = None
     try:
         last = int(vfile.read_text())
-    except Exception:
+    except (FileNotFoundError, ValueError):
         last = None
+    except OSError:
+        logger.exception("Failed to read version file %s", vfile)
+        raise
     try:
         while True:
             await asyncio.sleep(interval)
             try:
                 cur = int(vfile.read_text())
-            except Exception:
+            except (FileNotFoundError, ValueError):
                 cur = None
+            except OSError:
+                logger.exception("Failed to read version file %s", vfile)
+                raise
             if cur != last:
                 last = cur
                 try:
                     cfg = load_config(str(path), None)
-                except Exception:
+                except (FileNotFoundError, json.JSONDecodeError, OSError):
                     logger.exception("Failed to reload config from %s", path)
                 else:
                     try:
                         callback(cfg)
-                    except Exception:
+                    except Exception as exc:
                         logger.exception("Config callback failed")
+                        raise
     except asyncio.CancelledError:
         logger.info("Config watcher stopped for %s", path)
         raise
