@@ -48,23 +48,38 @@ class AlertWorker:
         """Main worker loop that evaluates rules and reacts to events."""
         register_thread("Alerts")
         logger.info("AlertWorker started")
-        pubsub = self.redis.pubsub()
-        pubsub.subscribe("events")
-        last = mtime()
-        while self.running:
-            try:
-                message = pubsub.get_message(timeout=1)
-                if message and message.get("type") == "message":
-                    self.check_rules()
-                now = mtime()
-                if now - last >= 60:
-                    self.check_rules()
-                    self.check_overdue_gatepasses()
-                    self._log_cycle(now - last)
-                    last = now
-            except (RuntimeError, RedisError, ValueError) as exc:
-                logger.exception("alert loop error: {}", exc)
-        logger.info("AlertWorker stopped")
+        try:
+            with self.redis.pubsub() as pubsub:
+                pubsub.subscribe("events")
+                last = mtime()
+                while self.running:
+                    try:
+                        self._consume_events(pubsub)
+                        now = mtime()
+                        last = self._run_periodic_tasks(now, last)
+                    except (RuntimeError, RedisError, ValueError) as exc:
+                        self._handle_loop_error(exc)
+        finally:
+            logger.info("AlertWorker stopped")
+
+    def _consume_events(self, pubsub) -> None:
+        """Fetch and handle events from Redis."""
+        message = pubsub.get_message(timeout=1)
+        if message and message.get("type") == "message":
+            self.check_rules()
+
+    def _run_periodic_tasks(self, now: float, last: float) -> float:
+        """Execute periodic checks if the interval has elapsed."""
+        if now - last >= 60:
+            self.check_rules()
+            self.check_overdue_gatepasses()
+            self._log_cycle(now - last)
+            return now
+        return last
+
+    def _handle_loop_error(self, exc: Exception) -> None:
+        """Log errors raised during the loop."""
+        logger.exception("alert loop error: {}", exc)
 
     def _log_cycle(self, elapsed: float) -> None:
         """Log completion of a worker cycle."""

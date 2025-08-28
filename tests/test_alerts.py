@@ -168,3 +168,45 @@ def test_update_email_validation(client):
     assert resp.status_code == 400
     ok = client.post("/email", json={"from_addr": "test@example.com"})
     assert ok.status_code == 200 and ok.json()["saved"]
+
+
+def test_consume_events_triggers_check_rules(tmp_path, monkeypatch):
+    worker = alerts_module.AlertWorker({}, None, tmp_path, start=False)
+    called = []
+
+    monkeypatch.setattr(worker, "check_rules", lambda: called.append(True))
+
+    class DummyPubSub:
+        def get_message(self, timeout=1):
+            return {"type": "message"}
+
+    worker._consume_events(DummyPubSub())
+    assert called
+
+
+def test_run_periodic_tasks_executes(tmp_path, monkeypatch):
+    worker = alerts_module.AlertWorker({}, None, tmp_path, start=False)
+    calls = []
+
+    monkeypatch.setattr(worker, "check_rules", lambda: calls.append("rules"))
+    monkeypatch.setattr(worker, "check_overdue_gatepasses", lambda: calls.append("gate"))
+    monkeypatch.setattr(worker, "_log_cycle", lambda elapsed: calls.append(elapsed))
+
+    last = 0
+    now = 61
+    new_last = worker._run_periodic_tasks(now, last)
+    assert calls == ["rules", "gate", 61]
+    assert new_last == now
+
+
+def test_handle_loop_error_logs_exception(tmp_path, monkeypatch):
+    worker = alerts_module.AlertWorker({}, None, tmp_path, start=False)
+    captured = {}
+
+    def fake_exception(msg, exc):
+        captured["exc"] = exc
+
+    monkeypatch.setattr(alerts_module.logger, "exception", fake_exception)
+    err = ValueError("boom")
+    worker._handle_loop_error(err)
+    assert captured["exc"] is err
