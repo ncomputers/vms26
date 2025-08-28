@@ -2,28 +2,22 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
+
+from core.context import AppContext, get_app_context
 
 router = APIRouter()
 
 logger = logger.bind(module="api_identities")
 
-redis_client = None
-redisfx = None
-
-
-def init_context(cfg: dict, redis, redis_facade=None) -> None:
-    """Initialize Redis client."""
-    global redis_client, redisfx
-    redis_client = redis
-    redisfx = redis_facade
-
 
 @router.get("/api/identities/{identity_id}")
-def get_identity(identity_id: str):
-    r = redis_client
+def get_identity(
+    identity_id: str, ctx: AppContext = Depends(get_app_context)
+):
+    r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)
     data = r.hgetall(f"identity:{identity_id}")
@@ -54,8 +48,12 @@ def get_identity(identity_id: str):
 
 
 @router.post("/api/identities/{identity_id}")
-def update_identity(identity_id: str, payload: dict = Body(...)):
-    r = redis_client
+def update_identity(
+    identity_id: str,
+    payload: dict = Body(...),
+    ctx: AppContext = Depends(get_app_context),
+):
+    r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)
     fields: dict[str, str] = {}
@@ -73,8 +71,10 @@ def update_identity(identity_id: str, payload: dict = Body(...)):
 
 
 @router.delete("/api/identities/{identity_id}/faces/{face_id}")
-def remove_face(identity_id: str, face_id: str):
-    r = redis_client
+def remove_face(
+    identity_id: str, face_id: str, ctx: AppContext = Depends(get_app_context)
+):
+    r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)
     r.lrem(f"identity:{identity_id}:faces", 0, face_id)
@@ -85,8 +85,10 @@ def remove_face(identity_id: str, face_id: str):
 
 
 @router.post("/api/identities/{identity_id}/faces/{face_id}/primary")
-def set_primary_face(identity_id: str, face_id: str):
-    r = redis_client
+def set_primary_face(
+    identity_id: str, face_id: str, ctx: AppContext = Depends(get_app_context)
+):
+    r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)
     r.hset(f"identity:{identity_id}", "primary_face_id", face_id)
