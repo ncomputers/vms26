@@ -9,7 +9,7 @@ function cleanup {
 trap cleanup EXIT
 
 ruff check key_gen.py
-pytest -c pytest.ini
+pytest
 
 uvicorn app:app --host 0.0.0.0 --port 5000 &
 UVICORN_PID=$!
