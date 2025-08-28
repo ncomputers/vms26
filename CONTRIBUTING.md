@@ -26,6 +26,7 @@ bash scripts/run_all_tests.sh
 ## Continuous Integration
 
 The GitHub Actions workflow at `.github/workflows/ci.yaml` executes the same test script on every push and pull request.
+If a workflow fails, consult [CI Troubleshooting](docs/ci-troubleshooting.md) for common issues and resolutions.
 
 ## Issues and Pull Requests
 
