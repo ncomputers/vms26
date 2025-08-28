@@ -36,7 +36,7 @@ from routers import settings
 def setup(tmp_path):
     cfg = {"settings_password": "pass", "branding": {}}
     r = fakeredis.FakeRedis()
-    settings.init_context(
+    settings.create_settings_context(
         cfg,
         {},
         [],

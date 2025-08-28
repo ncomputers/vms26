@@ -79,7 +79,7 @@ def init_all(
     redis_facade=None,
 ) -> None:
     """Initialize shared context for all routers."""
-    settings.init_context(
+    settings.create_settings_context(
         cfg,
         trackers,
         cams,

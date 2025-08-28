@@ -98,7 +98,7 @@ def test_update_settings_respects_license(tmp_path, monkeypatch):
         "license_info": {"features": {"visitor_mgmt": False}},
     }
     r = fakeredis.FakeRedis()
-    settings.init_context(
+    ctx = settings.create_settings_context(
         cfg,
         {},
         [],
@@ -122,7 +122,7 @@ def test_update_settings_respects_license(tmp_path, monkeypatch):
     monkeypatch.setattr(global_config, "set_config", fake_set_config)
 
     req = DummyRequest(form={"password": "pass", "visitor_mgmt": "on"})
-    res = asyncio.run(settings.update_settings(req))
+    res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
-    assert cfg["features"]["visitor_mgmt"] is False
+    assert ctx.cfg["features"]["visitor_mgmt"] is False
     assert captured["features"]["visitor_mgmt"] is False

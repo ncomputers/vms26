@@ -60,7 +60,7 @@ def setup_context(tmp_path):
     }
     r = fakeredis.FakeRedis()
     (tmp_path / "settings.html").write_text("{{ cfg.max_capacity }}")
-    settings.init_context(
+    ctx = settings.create_settings_context(
         cfg,
         {},
         [],
@@ -69,43 +69,45 @@ def setup_context(tmp_path):
         str(tmp_path / "cfg.json"),
         str(tmp_path / "branding.json"),
     )
-    return cfg, r
+    return ctx
 
 
 # Test update and export import
 def test_update_and_export_import(tmp_path):
-    cfg, _ = setup_context(tmp_path)
+    ctx = setup_context(tmp_path)
     req = DummyRequest(
         form={"password": "pass", "max_capacity": "50", "enable_face_counting": "on"}
     )
-    res = asyncio.run(settings.update_settings(req))
+    res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
-    assert cfg["max_capacity"] == 50
-    assert cfg["enable_face_counting"] is True
+    assert ctx.cfg["max_capacity"] == 50
+    assert ctx.cfg["enable_face_counting"] is True
 
-    exp_resp = asyncio.run(settings.export_settings(DummyRequest()))
+    exp_resp = asyncio.run(settings.export_settings(DummyRequest(), ctx))
     import json
 
     data = json.loads(exp_resp.body.decode())
     assert "config" in data
 
     imp_req = DummyRequest(json_data={"config": {"max_capacity": 70}, "cameras": []})
-    res2 = asyncio.run(settings.import_settings(imp_req))
+    res2 = asyncio.run(settings.import_settings(imp_req, ctx))
     assert res2["saved"]
-    assert cfg["max_capacity"] == 70
+    assert ctx.cfg["max_capacity"] == 70
 
 
 # Test misc endpoints
 def test_misc_endpoints(tmp_path):
-    cfg, _ = setup_context(tmp_path)
-    assert asyncio.run(settings.reset_endpoint()) == {"reset": True}
+    ctx = setup_context(tmp_path)
+    assert asyncio.run(settings.reset_endpoint(ctx)) == {"reset": True}
 
     lic = generate_license(
         "default_secret", 1, 1, {"face_recognition": True}, client="T"
     )
-    resp = asyncio.run(settings.activate_license(DummyRequest(json_data={"key": lic})))
+    resp = asyncio.run(
+        settings.activate_license(DummyRequest(json_data={"key": lic}), ctx)
+    )
     assert resp["activated"]
-    assert cfg["license_key"] == lic
+    assert ctx.cfg["license_key"] == lic
 
     b_req = DummyRequest(
         form={
@@ -116,37 +118,37 @@ def test_misc_endpoints(tmp_path):
             "watermark": "on",
         }
     )
-    resp2 = asyncio.run(settings.update_settings(b_req))
+    resp2 = asyncio.run(settings.update_settings(b_req, ctx))
     assert resp2["saved"]
-    assert settings.branding["company_name"] == "A"
+    assert ctx.branding["company_name"] == "A"
 
 
 # Test persistence on settings page
 def test_settings_page_persists_values(tmp_path):
-    cfg, _ = setup_context(tmp_path)
+    ctx = setup_context(tmp_path)
     req = DummyRequest(form={"password": "pass", "max_capacity": "25"})
-    asyncio.run(settings.update_settings(req))
-    resp = asyncio.run(settings.settings_page(DummyRequest()))
+    asyncio.run(settings.update_settings(req, ctx))
+    resp = asyncio.run(settings.settings_page(DummyRequest(), ctx))
     assert resp.context["cfg"]["max_capacity"] == 25
 
 
 def test_track_objects_always_include_person(tmp_path):
     from starlette.datastructures import FormData
 
-    cfg, _ = setup_context(tmp_path)
+    ctx = setup_context(tmp_path)
     form = FormData([("password", "pass"), ("track_objects", "vehicle")])
     req = DummyRequest(form=form)
-    res = asyncio.run(settings.update_settings(req))
+    res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
-    assert "person" in cfg["track_objects"]
+    assert "person" in ctx.cfg["track_objects"]
 
 
 def test_vms_requires_license(tmp_path):
-    cfg, _ = setup_context(tmp_path)
-    cfg["license_info"] = {"features": {"visitor_mgmt": False}}
-    cfg["features"] = {"visitor_mgmt": False}
+    ctx = setup_context(tmp_path)
+    ctx.cfg["license_info"] = {"features": {"visitor_mgmt": False}}
+    ctx.cfg["features"] = {"visitor_mgmt": False}
     req = DummyRequest(form={"password": "pass", "visitor_mgmt": "on"})
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(settings.update_settings(req))
+        asyncio.run(settings.update_settings(req, ctx))
     assert exc.value.status_code == 403
-    assert cfg["features"]["visitor_mgmt"] is False
+    assert ctx.cfg["features"]["visitor_mgmt"] is False
