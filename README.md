@@ -1,3 +1,5 @@
+![CI](https://github.com/ncomputers/vms26/actions/workflows/ci.yml/badge.svg)
+
 # Crowd Management System v81
 
 Version 81 separates the person counting and PPE detection logic into two
