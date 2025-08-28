@@ -2,14 +2,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from modules import face_db
 from utils.ids import generate_id
 from utils.image import decode_base64_image
 
 
-def save_base64_to_image(
-    base64_string: str, filename_prefix: str = "", subdir: str = ""
-) -> str:
+def save_base64_to_image(base64_string: str, filename_prefix: str = "", subdir: str = "") -> str:
     """Decode ``base64_string`` and store it under ``face_db`` directory.
 
     Parameters
@@ -49,7 +46,7 @@ def add_face_to_known_db(
 ) -> None:
     """Persist known face metadata so it appears in the Face DB UI."""
     metadata = metadata or {}
-    entry = {
+    _ = {
         "name": name,
         "phone": phone,
         "visitor_type": visitor_type,
@@ -58,7 +55,5 @@ def add_face_to_known_db(
         "created_at": str(int(datetime.now().timestamp())),
         **metadata,
     }
-    if face_db.redis_client:
-        face_db.redis_client.hset(f"face:known:{gate_pass_id}", mapping=entry)
-        face_db.redis_client.sadd("face:known_ids", gate_pass_id)
-        face_db.redis_client.publish("faces_updated", gate_pass_id)
+    # Face DB removed; this is now a no-op placeholder.
+    return None

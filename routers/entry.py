@@ -8,30 +8,19 @@ import time
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Form,
-    HTTPException,
-    Query,
-    Request,
-    UploadFile,
-)
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel
-from config import config as cfg
 
-visitor = None  # will be lazily imported in init_context
+from config import config as cfg
 from modules import export, gatepass_service, visitor_db
 from modules.email_utils import send_email
 from modules.utils import require_roles
 from utils.ids import generate_id
 from utils.image import decode_base64_image
 from utils.redis import trim_sorted_set_async as trim_sorted_set
-
 
 from .entry_stats import (
     collect_logs,
@@ -45,6 +34,8 @@ from .entry_stats import (
     get_total_invites,
 )
 from .visitor_utils import visitor_disabled_response
+
+visitor = None  # will be lazily imported in init_context
 
 router = APIRouter()
 redisfx = None
@@ -87,16 +78,13 @@ class RegisterVisitorForm(BaseModel):
 
 
 # init_context routine
-def init_context(
-    cfg_obj: dict, redis_client, templates_path: str, redis_facade=None
-) -> None:
-    global config_obj, redis, templates, face_app, visitor, redisfx
+def init_context(cfg_obj: dict, redis_client, templates_path: str, redis_facade=None) -> None:
+    global config_obj, redis, templates, visitor, redisfx
     config_obj = cfg_obj
     redis = redis_client
     redisfx = redis_facade
     templates = Jinja2Templates(directory=templates_path)
     templates.env.add_extension("jinja2.ext.do")
-    face_app = None
     visitor_db.init_db(redis_client)
     try:
         import routers.visitor as visitor  # type: ignore
@@ -104,13 +92,6 @@ def init_context(
         visitor.redis = redis_client
     except Exception:  # pragma: no cover - visitor module optional in tests
         visitor = None
-    try:
-        from insightface.app import FaceAnalysis  # type: ignore
-
-        face_app = FaceAnalysis(name=cfg_obj.get("visitor_model", "buffalo_l"))
-        face_app.prepare(ctx_id=0)
-    except Exception:
-        face_app = None
 
 
 @router.get("/vms/recent")
@@ -195,18 +176,14 @@ async def vms_create_page(request: Request, req_id: str | None = None):
     )
 
 
-async def _parse_visitor_form(
-    form: RegisterVisitorForm, photo: Optional[UploadFile]
-) -> dict:
+async def _parse_visitor_form(form: RegisterVisitorForm, photo: Optional[UploadFile]) -> dict:
     b64 = ""
     img_bytes = None
     if form.captured:
         try:
             img_bytes = decode_base64_image(form.captured)
         except ValueError as exc:
-            raise HTTPException(
-                status_code=400, detail="Invalid captured image data"
-            ) from exc
+            raise HTTPException(status_code=400, detail="Invalid captured image data") from exc
     if photo and not img_bytes:
         img_bytes = await photo.read()
     if img_bytes:
@@ -216,9 +193,7 @@ async def _parse_visitor_form(
     valid_from = ts
     try:
         valid_to_ts = (
-            int(datetime.fromisoformat(form.valid_to).timestamp())
-            if form.valid_to
-            else ts
+            int(datetime.fromisoformat(form.valid_to).timestamp()) if form.valid_to else ts
         )
     except Exception:
         valid_to_ts = ts
@@ -249,9 +224,7 @@ async def _parse_visitor_form(
     return {"entry": entry, "img_bytes": img_bytes}
 
 
-async def _update_visit_request(
-    redis_client, form: RegisterVisitorForm, gate_id: str
-) -> None:
+async def _update_visit_request(redis_client, form: RegisterVisitorForm, gate_id: str) -> None:
     reqs = redis_client.zrevrange("visit_requests", 0, -1)
     for r in reqs:
         obj = json.loads(r)
@@ -273,23 +246,10 @@ async def _update_visit_request(
             break
 
 
-def _add_face_to_db(img_bytes: bytes | None, gate_id: str) -> None:
-    if not img_bytes:
-        return
-    try:
-        from modules import face_db
-
-        added = face_db.add_face_if_single_detected(img_bytes, gate_id, threshold=1.1)
-        if not added:
-            logger.warning(f"No face detected for entry {gate_id}")
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.exception("Error adding face for entry {}: {}", gate_id, exc)
-
-
 @router.post("/vms/register")
 async def register_visitor(
-    form: RegisterVisitorForm = Depends(RegisterVisitorForm.as_form),
-    photo: Optional[UploadFile] = File(None),
+    form: RegisterVisitorForm = Depends(RegisterVisitorForm.as_form),  # noqa: B008
+    photo: Optional[UploadFile] = File(None),  # noqa: B008
     **data,
 ):
     if not isinstance(form, RegisterVisitorForm):
@@ -300,9 +260,7 @@ async def register_visitor(
         return visitor_disabled_response()
     parsed = await _parse_visitor_form(form, photo)
     entry = parsed["entry"]
-    img_bytes = parsed["img_bytes"]
     await _update_visit_request(redis, form, entry["gate_id"])
-    _add_face_to_db(img_bytes, entry["gate_id"])
     return {
         "saved": True,
         "gate_id": entry["gate_id"],
@@ -344,9 +302,7 @@ async def export_vms(fmt: str = "csv"):
                     with open(img_path, "wb") as f:
                         f.write(b64.b64decode(r["image"]))
                     r["img_path"] = img_path
-            resp = export.export_excel(
-                rows, columns, "gate_pass_history", image_key="img_path"
-            )
+            resp = export.export_excel(rows, columns, "gate_pass_history", image_key="img_path")
             for r in rows:
                 p = r.get("img_path")
                 if p:
@@ -361,9 +317,7 @@ async def export_vms(fmt: str = "csv"):
                 + "".join(f"<th>{c[1]}</th>" for c in columns)
                 + "</tr>"
                 + "".join(
-                    "<tr>"
-                    + "".join(f"<td>{row.get(c[0],'')}</td>" for c in columns)
-                    + "</tr>"
+                    "<tr>" + "".join(f"<td>{row.get(c[0],'')}</td>" for c in columns) + "</tr>"
                     for row in rows
                 )
                 + "</table>"
@@ -372,9 +326,7 @@ async def export_vms(fmt: str = "csv"):
         return export.export_csv(rows, columns, "gate_pass_history")
     except Exception as exc:
         logger.exception("vms export failed: {}", exc)
-        return JSONResponse(
-            {"status": "error", "reason": "export_failed"}, status_code=500
-        )
+        return JSONResponse({"status": "error", "reason": "export_failed"}, status_code=500)
 
 
 @router.get("/api/vms/stats")
@@ -400,9 +352,7 @@ async def vms_stats(
         else:  # default last 7 days
             start_ts = now - 7 * 86400
 
-        redis_client = (
-            getattr(request.app.state, "redis_client", redis) if request else redis
-        )
+        redis_client = getattr(request.app.state, "redis_client", redis) if request else redis
 
         logs = collect_logs(redis_client, start_ts, now)
         result = {
@@ -421,6 +371,4 @@ async def vms_stats(
         return result
     except Exception as exc:
         logger.exception("vms stats failed: {}", exc)
-        return JSONResponse(
-            {"status": "error", "reason": "stats_failed"}, status_code=500
-        )
+        return JSONResponse({"status": "error", "reason": "stats_failed"}, status_code=500)

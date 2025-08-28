@@ -950,25 +950,6 @@ class PersonTracker:
                 f"Failed to initialize DeepSort: {e}. Disable this feature or use smaller weights.",
             ) from e
         self.face_app = None
-        if cfg.get("features", {}).get("visitor_mgmt"):
-            try:
-                from ..model_registry import get_insightface
-
-                log_mem("Before loading face analysis model")
-                start = time.perf_counter()
-                self.face_app = get_insightface(cfg.get("visitor_model", "buffalo_l"))
-                self.load_durations["face_model"] = time.perf_counter() - start
-                logger.info(
-                    "Face model loaded in {:.2f}s",
-                    self.load_durations["face_model"],
-                )
-            except RuntimeError as e:
-                logger.warning(
-                    f"InsightFace load error: {e}. Visitor management disabled"
-                )
-                self.face_app = None
-            except Exception as e:  # pragma: no cover - model load failure
-                logger.error(f"InsightFace load error: {e}")
         features = cfg.get("features", {})
         self.face_tracking_enabled = False
         self.face_db_enabled = bool(features.get("visitor_mgmt"))
@@ -1230,37 +1211,6 @@ class PersonTracker:
             self.redis.hset(key, mapping=payload)
         except Exception:
             logger.exception("failed to store face track data")
-        if self.face_db_enabled and data.get("img_ref"):
-            try:
-                path = data["img_ref"]
-                img = cv2.imread(path)
-                if img is not None:
-                    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    detector = getattr(self, "_snapshot_detector", None)
-                    if detector is None and FaceDetector:
-                        try:
-                            detector = self._snapshot_detector = FaceDetector()
-                        except Exception:
-                            detector = self._snapshot_detector = None
-                    if detector:
-                        faces = detector.detect(rgb)
-                        if len(faces) != 1:
-                            logger.warning(
-                                f"[{self.cam_id}] track {tid}: expected 1 face, found {len(faces)}; skipping face_db insert"
-                            )
-                            return
-                    else:
-                        logger.warning(
-                            "FaceDetector unavailable; skipping face_db insert"
-                        )
-                        return
-                with open(path, "rb") as f:
-                    buf = f.read()
-                from modules import face_db
-
-                face_db.insert(buf, uid, source="stream", camera_id=str(self.cam_id))
-            except Exception:
-                logger.exception("face_db insert failed")
 
     # _finalize_face_tracks routine
     def _finalize_face_tracks(self) -> None:
