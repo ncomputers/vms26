@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover - torch is optional in tests
 from app.core.perf import PERF
 from core.events import CAPTURE_ERROR, CAPTURE_READ_FAIL, CAPTURE_START, CAPTURE_STOP
 from modules.camera_factory import StreamUnavailable, open_capture
-from modules.camera_manager import LATEST_FRAMES
+from modules.camera_manager import update_latest_frame
 from modules.profiler import register_thread
 from utils.logx import error as log_error
 from utils.logx import event as log_event
@@ -198,10 +198,7 @@ class CaptureWorker:
                         except queue.Empty:
                             pass
                     t.raw_frame = frame
-                    LATEST_FRAMES[t.cam_id] = {
-                        "ts": time.monotonic(),
-                        "bgr": frame.copy(),
-                    }
+                    update_latest_frame(t.cam_id, frame.copy())
                     if (
                         use_gpu
                         and torch is not None

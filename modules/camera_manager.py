@@ -16,8 +16,8 @@ BACKOFF_MAX = 30.0
 JITTER = 0.3
 BREAKER_OPEN_SECS = 15.0
 
-# latest frames shared across capture loops
-LATEST_FRAMES: Dict[int, Dict[str, object]] = {}
+# reference to active manager for cross-module helpers
+_MANAGER: "CameraManager" | None = None
 
 # Types for injected functions
 StartFn = Callable[[dict, dict, Dict[int, object], object], object]
@@ -49,7 +49,11 @@ class CameraManager:
         self.start_face_tracker_fn = start_face_fn
         self.stop_face_tracker_fn = stop_face_fn
         self._state: Dict[int, Dict[str, float | int | str]] = {}
-        self._latest = LATEST_FRAMES
+        self._latest_frames: Dict[int, Dict[str, object]] = {}
+        self._latest_lock = asyncio.Lock()
+        self._loop = asyncio.get_event_loop()
+        global _MANAGER
+        _MANAGER = self
 
     def _get_state(self, cam_id: int) -> Dict[str, float | int | str]:
         return self._state.setdefault(
@@ -116,6 +120,17 @@ class CameraManager:
                 return cam
         return None
 
+    def _build_flags(self, cam: dict) -> dict:
+        return {
+            "enabled": cam.get("enabled", True),
+            "ppe": cam.get("ppe", False),
+            "vms": cam.get("visitor_mgmt", False),
+            "face": cam.get("face_recognition", False),
+            "counting": any(
+                t in cam.get("tasks", []) for t in ("in_count", "out_count")
+            ),
+        }
+
     async def _start_tracker_background(self, cam: dict) -> None:
         """Launch tracker start in a background thread and update status."""
         start = asyncio.get_event_loop().time()
@@ -156,15 +171,7 @@ class CameraManager:
         cam = self._find_cam(camera_id)
         if not cam:
             return
-        flags = {
-            "enabled": cam.get("enabled", True),
-            "ppe": cam.get("ppe", False),
-            "vms": cam.get("visitor_mgmt", False),
-            "face": cam.get("face_recognition", False),
-            "counting": any(
-                t in cam.get("tasks", []) for t in ("in_count", "out_count")
-            ),
-        }
+        flags = self._build_flags(cam)
         logger.info(
             f"[proc:{camera_id}] start type={cam.get('type')} "
             f"transport={cam.get('rtsp_transport')} flags={flags}"
@@ -179,15 +186,7 @@ class CameraManager:
         cam = self._find_cam(camera_id)
         if not cam:
             return
-        flags = {
-            "enabled": cam.get("enabled", True),
-            "ppe": cam.get("ppe", False),
-            "vms": cam.get("visitor_mgmt", False),
-            "face": cam.get("face_recognition", False),
-            "counting": any(
-                t in cam.get("tasks", []) for t in ("in_count", "out_count")
-            ),
-        }
+        flags = self._build_flags(cam)
         logger.info(
             f"[proc:{camera_id}] restart type={cam.get('type')} "
             f"transport={cam.get('rtsp_transport')} flags={flags}"
@@ -228,6 +227,10 @@ class CameraManager:
                 pass
         return frame
 
+    async def _update_latest(self, cam_id: int, frame: np.ndarray) -> None:
+        async with self._latest_lock:
+            self._latest_frames[cam_id] = {"ts": mtime(), "bgr": frame.copy()}
+
     async def snapshot(self, cam_id: int, timeout: float = 0.8):
         """Return a recent frame for ``cam_id``.
 
@@ -236,12 +239,13 @@ class CameraManager:
         served from the cache or via a probe capture.
         """
 
-        info = self._latest.get(cam_id)
         now = mtime()
-        if info and (now - float(info.get("ts", 0.0)) <= 2.0):
-            bgr = info.get("bgr")
-            if isinstance(bgr, np.ndarray):
-                return True, self._cap_frame(bgr.copy()), "from_cache"
+        async with self._latest_lock:
+            info = self._latest_frames.get(cam_id)
+            if info and (now - float(info.get("ts", 0.0)) <= 2.0):
+                bgr = info.get("bgr")
+                if isinstance(bgr, np.ndarray):
+                    return True, self._cap_frame(bgr.copy()), "from_cache"
 
         cam = self._find_cam(cam_id)
         url = cam.get("url", "") if cam else ""
@@ -270,3 +274,10 @@ class CameraManager:
             return False, None, f"unavailable:{e}"
         except Exception as e:
             return False, None, f"error:{e}"
+
+
+def update_latest_frame(cam_id: int, frame: np.ndarray) -> None:
+    mgr = _MANAGER
+    if mgr is None:
+        return
+    asyncio.run_coroutine_threadsafe(mgr._update_latest(cam_id, frame), mgr._loop)
