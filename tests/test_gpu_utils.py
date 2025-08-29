@@ -2,6 +2,8 @@ import sys
 import types
 from unittest import mock
 
+import pytest
+
 import utils.gpu as gpu
 
 
@@ -39,6 +41,12 @@ def _capture_logger():
     records: list[str] = []
     handler_id = gpu.logger.add(lambda msg: records.append(msg), format="{message}")
     return records, handler_id
+
+
+@pytest.fixture(autouse=True)
+def _clear_ort_cache():
+    gpu._configure_onnxruntime.cache_clear()
+    yield
 
 
 def _capture_logger():
