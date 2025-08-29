@@ -4,8 +4,22 @@ import logging
 import math
 from typing import Dict, List, Tuple
 
-import cv2
+_cv2_error: Exception | None = None
+try:
+    import cv2
+except Exception as e:  # pragma: no cover - import-time error for missing libs
+    cv2 = None
+    _cv2_error = e
 from PIL import ImageDraw
+
+
+def _require_cv2() -> None:
+    """Ensure OpenCV is available before using functions that require it."""
+    if cv2 is None:  # pragma: no cover - runtime safety check
+        raise RuntimeError(
+            "OpenCV could not be imported. Install opencv-python-headless or a full"
+            " OpenCV build with GUI support."
+        ) from _cv2_error
 
 
 def abs_line_from_ratio(
@@ -103,11 +117,13 @@ def _sanitize_point(x: float, y: float, w: int, h: int) -> Tuple[int, int] | Non
 
 def _get_text_size(text: str, font, scale: float, thickness: int) -> Tuple[int, int]:
     """Return the width and height of ``text`` for given font settings."""
+    _require_cv2()
     return cv2.getTextSize(text, font, scale, thickness)[0]
 
 
 def _draw_counting_line(frame, line_orientation: str, line_ratio: float) -> None:
     """Draw the counting line on ``frame``."""
+    _require_cv2()
     h, w = frame.shape[:2]
     line_pos = int((h if line_orientation == "horizontal" else w) * line_ratio)
     if line_orientation == "horizontal":
@@ -120,6 +136,7 @@ def _draw_track(
     frame, info: Dict, scale: float, show_ids: bool, show_track_lines: bool
 ) -> None:
     """Render a single track on ``frame``."""
+    _require_cv2()
     h, w = frame.shape[:2]
     bbox_raw = info.get("bbox", (0, 0, 0, 0))
     if scale != 1.0:
@@ -164,6 +181,7 @@ def _draw_track(
 
 def _draw_counts(frame, counts: Dict[str, int]) -> None:
     """Display entry/exit/inside counts on ``frame``."""
+    _require_cv2()
     in_count = int(counts.get("entered", 0))
     out_count = int(counts.get("exited", 0))
     inside = int(counts.get("inside", in_count - out_count))
@@ -244,6 +262,7 @@ def draw_overlays(
         are multiplied by this value before rendering.
 
     """
+    _require_cv2()
     h, w = frame.shape[:2]
     if show_lines:
         _draw_counting_line(frame, line_orientation, line_ratio)
