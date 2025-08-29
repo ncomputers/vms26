@@ -25,7 +25,6 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from starlette.requests import ClientDisconnect
 
 from app.core.utils import getenv_num
-from app.vision.overlay import render_from_legacy
 from config import PPE_PAIRS, PPE_TASKS, UI_CAMERA_TASKS, VEHICLE_LABELS, config
 from core.camera_manager import CameraManager
 from core.config import get_config
@@ -54,6 +53,7 @@ from utils.logx import log_throttled
 from utils.overlay import draw_boxes_np
 from utils.url import get_stream_type, mask_credentials
 from utils.api_errors import stream_error_message
+
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
@@ -181,14 +181,6 @@ manager = camera_manager
 # optional experimental pipeline support
 USE_PIPELINE = os.getenv("VMS21_PIPELINE") == "1"
 pipelines_map: Dict[int, object] = {}
-
-
-def get_pipeline_overlay(camera_id: int) -> bytes | None:
-    """Return latest overlay frame bytes from the optional pipeline."""
-    pipe = pipelines_map.get(camera_id)
-    if pipe and hasattr(pipe, "get_overlay_bytes"):
-        return pipe.get_overlay_bytes()
-    return None
 
 
 def get_camera_manager() -> CameraManager:  # pragma: no cover - simple accessor
@@ -1309,38 +1301,15 @@ async def api_camera_preview(token: str | None = None):
 
 @router.get(
     "/api/cameras/{camera_id}/mjpeg",
-    summary="Stream MJPEG feed with optional overlay",
+    summary="Stream MJPEG feed",
 )
 async def camera_mjpeg(
     camera_id: int,
-    overlay: bool = Query(False, description="Render server-side overlays"),
-    thickness: int = Query(2, ge=1, le=8, description="Box line thickness"),
-    labels: bool = Query(True, description="Draw labels for detections"),
 ):
-    """Stream an MJPEG feed for the given camera.
-
-    Use ``?overlay=1`` to draw detection boxes on the server.
-    """
+    """Stream an MJPEG feed for the given camera."""
     cam = next((c for c in cams if c.get("id") == camera_id), None)
     if not cam or not cam.get("url"):
         raise HTTPException(status_code=404, detail="camera not found")
-
-    if USE_PIPELINE and overlay:
-
-        async def generator():
-            boundary = b"--frame"
-            while True:
-                frame = get_pipeline_overlay(camera_id)
-                if frame:
-                    yield (boundary + b"\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
-                await asyncio.sleep(0.05)
-
-        headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
-        return StreamingResponse(
-            generator(),
-            media_type="multipart/x-mixed-replace; boundary=frame",
-            headers=headers,
-        )
 
     try:
         cap = await _get_preview_cap(cam)
@@ -1362,28 +1331,6 @@ async def camera_mjpeg(
             except FrameSourceError:
                 frame = None
             if frame is not None:
-                if overlay:
-                    try:
-                        dets = tracker.get_latest(camera_id) or []
-                        if not labels:
-                            dets = [{**d, "label": ""} for d in dets]
-                        arr_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        if os.getenv("VMS21_OVERLAY_PURE") == "1":
-                            frame = render_from_legacy(
-                                arr_rgb,
-                                arr_rgb.shape[1],
-                                arr_rgb.shape[0],
-                                {},
-                                dets,
-                                [],
-                                None,
-                                str(camera_id),
-                            )
-                        else:
-                            arr_rgb = draw_boxes_np(arr_rgb, dets, thickness=thickness)
-                            frame = cv2.cvtColor(arr_rgb, cv2.COLOR_RGB2BGR)
-                    except Exception:
-                        pass
                 ok, buf = cv2.imencode(
                     ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), FRAME_JPEG_QUALITY]
                 )
@@ -1463,37 +1410,6 @@ async def camera_health(camera_id: int):
     }
 
 
-@router.get("/api/cameras/{camera_id}/overlays")
-async def camera_overlay_stream(
-    request: Request,
-    camera_id: int,
-    token: str | None = Query(None),
-):
-    secret = cfg.get("secret_key", "secret")
-    expected = sign_token(str(camera_id), secret)
-    if token != expected:
-        logger.warning("[%s] invalid overlay token", camera_id)
-        raise HTTPException(status_code=401, detail="invalid token")
-
-    async def event_gen():
-        while True:
-            if await request.is_disconnected():
-                break
-            cam_cfg = next((c for c in cams if c.get("id") == camera_id), {})
-            tracker_obj = trackers_map.get(camera_id) if trackers_map else None
-            enabled_ppe = set(cfg.get("track_ppe", []))
-            show_lines = bool(cfg.get("show_lines"))
-            payload = await _build_payload(camera_id, tracker_obj, cam_cfg, enabled_ppe, show_lines)
-            yield "data: " + json.dumps(payload) + "\n\n"
-            await asyncio.sleep(0.1)
-
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-    }
-    return StreamingResponse(event_gen(), headers=headers)
 
 
 @router.post("/cameras/test")
