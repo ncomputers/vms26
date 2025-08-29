@@ -2,7 +2,10 @@
 
 import time
 
-import cv2
+try:  # pragma: no cover - optional dependency
+    import cv2
+except Exception:  # pragma: no cover - opencv not available
+    cv2 = None  # type: ignore[assignment]
 import imagehash
 from PIL import Image
 
@@ -25,6 +28,8 @@ class DuplicateFilter:
 
     # is_duplicate routine
     def is_duplicate(self, frame) -> bool:
+        if cv2 is None:
+            return False
         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).resize((64, 64))
         ph = imagehash.phash(img)
         if self.prev is None:

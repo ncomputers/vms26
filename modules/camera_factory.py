@@ -107,7 +107,7 @@ def _build(cam_cfg: dict[str, Any], cam_id: int) -> IFrameSource:
             uri, cam_id=cam_id, max_queue=cam_cfg.get("max_queue", 1)
         )
     if mode == "rtsp":
-        if config.get("use_gstreamer", use_gstreamer):
+        if config.get("use_gstreamer", use_gstreamer) and RtspGstSource is not None:
             return RtspGstSource(uri, tcp=tcp, latency_ms=latency, cam_id=cam_id)
         return RtspFfmpegSource(uri, tcp=tcp, latency_ms=latency, cam_id=cam_id)
     raise StreamUnavailable(f"unknown mode {mode}")
@@ -176,14 +176,18 @@ def open_capture(
 
     # rtsp with optional backend fallback
     if backend_priority is None:
-        if config.get("use_gstreamer", use_gstreamer):
+        if config.get("use_gstreamer", use_gstreamer) and RtspGstSource is not None:
             backend_priority = ["gst", "ffmpeg"]
-        else:
+        elif RtspGstSource is not None:
             backend_priority = ["ffmpeg", "gst"]
+        else:
+            backend_priority = ["ffmpeg"]
     while True:
         last_err = ""
         for be in backend_priority:
             if be == "gst":
+                if RtspGstSource is None:
+                    continue
                 cap = RtspGstSource(
                     str(src),
                     tcp=transport == "tcp",
