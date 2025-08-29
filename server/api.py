@@ -5,6 +5,7 @@ import os
 from contextlib import asynccontextmanager, suppress
 from typing import Any, Callable, Generator, Optional
 
+import yaml
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import StreamingResponse
 
@@ -17,23 +18,50 @@ config: dict[str, Any] = {}
 
 
 def _load_config(path: str) -> dict[str, Any]:
-    """Load configuration from ``path``.
+    """Load configuration from ``path`` with environment overrides.
 
-    Missing or malformed files simply return an empty configuration
-    allowing the server to start with defaults during tests."""
+    Supports JSON or YAML files. Missing or malformed files simply return an
+    empty configuration allowing the server to start with defaults during
+    tests."""
 
     try:
         with open(path) as fh:
-            return json.load(fh)
+            if path.endswith((".yml", ".yaml")):
+                cfg: dict[str, Any] = yaml.safe_load(fh) or {}
+            else:
+                cfg = json.load(fh)
     except Exception:
         return {}
+
+    env_map = {
+        "rtsp_url": "RTSP_URL",
+        "prefer_tcp": "PREFER_TCP",
+        "read_timeout_ms": "READ_TIMEOUT_MS",
+        "pipeline": "PIPELINE",
+        "show_stream": "SHOW_STREAM",
+        "target_width": "TARGET_WIDTH",
+        "target_height": "TARGET_HEIGHT",
+        "force_codec": "FORCE_CODEC",
+    }
+    for key, env in env_map.items():
+        val = os.getenv(env)
+        if val is not None:
+            if key in {"prefer_tcp", "show_stream"}:
+                cfg[key] = val.lower() in {"1", "true", "yes"}
+            elif key in {"read_timeout_ms", "target_width", "target_height"}:
+                with suppress(ValueError):
+                    cfg[key] = int(val)
+            else:
+                cfg[key] = val
+
+    return cfg
 
 
 def _create_pipeline(cfg: dict[str, Any]) -> PipelineType:
     """Create a capture pipeline based on configuration."""
 
-    uri = cfg.get("camera", {}).get("uri") or cfg.get("uri") or ""
-    backend = cfg.get("stream_mode")
+    uri = cfg.get("rtsp_url") or cfg.get("camera", {}).get("uri") or cfg.get("uri") or ""
+    backend = cfg.get("pipeline") or cfg.get("stream_mode")
     if backend is None:
         backend = "gstreamer" if cfg.get("use_gstreamer") else "ffmpeg"
 
@@ -65,7 +93,7 @@ def lifespan(app: FastAPI):
     """Create a single pipeline instance for the application lifetime."""
 
     global pipeline, config
-    config_path = os.getenv("PIPELINE_CONFIG", "config.json")
+    config_path = os.getenv("PIPELINE_CONFIG", "config/default.yaml")
     config = _load_config(config_path)
     pipeline = _create_pipeline(config)
     _start_pipeline(pipeline)

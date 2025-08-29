@@ -44,3 +44,4 @@ ffmpeg-python
 beautifulsoup4
 pydantic
 keyring
+PyYAML
