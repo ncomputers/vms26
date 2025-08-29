@@ -14,13 +14,16 @@ from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 
-from config import config
-from config.constants import ANOMALY_ITEMS
+from config import ANOMALY_ITEMS, config
 from modules.email_utils import send_email
 from modules.report_export import build_ppe_workbook
+from modules.tracker import PersonTracker
 from modules.utils import require_roles
 from schemas.ppe_report import PPEReportQuery
 from utils.redis_json import get_json, set_json
+
+# ruff: noqa: B008
+
 
 router = APIRouter()
 

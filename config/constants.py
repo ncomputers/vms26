@@ -1,7 +1,7 @@
 """Configuration constants for the application."""
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 from app.core.utils import parse_bool
 
@@ -133,11 +133,26 @@ COUNT_GROUPS = {
     "vehicle": ["car", "truck", "bus", "motorcycle", "bicycle", "auto", "van"],
     "other": OTHER_CLASSES,
 }
-VEHICLE_LABELS = {"car", "truck", "bus", "motorbike", "motorcycle", "bicycle", "auto", "van"}
+VEHICLE_LABELS = {
+    "car",
+    "truck",
+    "bus",
+    "motorbike",
+    "motorcycle",
+    "bicycle",
+    "auto",
+    "van",
+}
 AVAILABLE_CLASSES = (
     MODEL_CLASSES + ANOMALY_ITEMS + [c for cl in COUNT_GROUPS.values() for c in cl]
 )
-CAMERA_TASKS = ["in_count", "out_count", "inout_count", "full_monitor", "visitor_mgmt"] + MODEL_CLASSES
+CAMERA_TASKS = [
+    "in_count",
+    "out_count",
+    "inout_count",
+    "full_monitor",
+    "visitor_mgmt",
+] + MODEL_CLASSES
 UI_CAMERA_TASKS = ["in_out_counting", "visitor_mgmt"] + PPE_TASKS
 
 CONFIG_DEFAULTS = {
@@ -243,6 +258,7 @@ __all__ = [
     "AVAILABLE_CLASSES",
     "CAMERA_TASKS",
     "UI_CAMERA_TASKS",
+    "VEHICLE_LABELS",
     "CONFIG_DEFAULTS",
     "BRANDING_DEFAULTS",
 ]

@@ -1,24 +1,22 @@
-"""Application configuration loader.
-
-This module exposes a :class:`Config` settings model backed by a JSON file.
-The helper :func:`get_config` returns a singleton instance that callers may
-use to access configuration values.  Existing configuration mechanisms are
-unchanged; this module is provided for optional use.
-"""
+"""Application configuration loader and watcher."""
 
 from __future__ import annotations
 
-import os
+import json
 import threading
 import time
-from typing import Any, Callable, Optional
-import json
 from pathlib import Path
-from typing import Any, Optional
-
+from typing import Any, Callable, Optional
 
 from loguru import logger
 from pydantic_settings import BaseSettings
+from redis import Redis, RedisError
+
+import utils.redis as redis_utils
+from config import config as _CONFIG
+from config import set_config
+
+from .redis_keys import CFG_UI_VMS, CFG_VERSION
 
 
 class Config(BaseSettings):
@@ -31,18 +29,9 @@ class Config(BaseSettings):
     target_fps: int = 15
     jpeg_quality: int = 80
 
-import utils.redis as redis_utils
-from config import load_config, set_config, config as _CONFIG
-from .redis_keys import CFG_UI_VMS, CFG_VERSION
-
 
 def load_config(path: str = "./config.json") -> Config:
-    """Load configuration from *path*.
-
-    The file is parsed as JSON if it exists, otherwise defaults are used.  A
-    single informational log line is emitted indicating the number of cameras
-    loaded.
-    """
+    """Load configuration from *path*."""
 
     cfg_path = Path(path)
     data: dict[str, Any] = {}
@@ -52,7 +41,6 @@ def load_config(path: str = "./config.json") -> Config:
         except json.JSONDecodeError:
             logger.warning("Invalid JSON in %s; using defaults", cfg_path)
             data = {}
-
     cfg = Config.model_validate(data)
     logger.info("Loaded configuration with %d cameras", len(cfg.cameras))
     return cfg
@@ -70,14 +58,17 @@ def get_config() -> Config:
     return _CONFIG
 
 
-__all__ = ["Config", "get_config", "load_config"]
+def watch_config(client: Redis, callback: Callable[[Config], None]) -> threading.Thread:
+    """Watch ``CFG_VERSION`` in Redis and invoke ``callback`` on changes."""
+
+    key = CFG_VERSION
 
     def _worker() -> None:
-        last = client.get(_CFG_VERSION_KEY)
+        last = client.get(key)
         pubsub = None
         try:
             db = client.connection_pool.connection_kwargs.get("db", 0)
-            channel = f"__keyspace@{db}__:{_CFG_VERSION_KEY}"
+            channel = f"__keyspace@{db}__:{key}"
             pubsub = client.pubsub(ignore_subscribe_messages=True)
             pubsub.subscribe(channel)
         except RedisError:
@@ -91,14 +82,15 @@ __all__ = ["Config", "get_config", "load_config"]
                     if message:
                         changed = True
                 else:
-                    current = client.get(_CFG_VERSION_KEY)
+                    current = client.get(key)
                     if current != last:
                         last = current
                         changed = True
                     time.sleep(2)
 
                 if changed:
-                    cfg = _reload(client)
+                    cfg = load_config()
+                    set_config(cfg.model_dump())
                     try:
                         callback(cfg)
                     except Exception:
@@ -112,11 +104,9 @@ __all__ = ["Config", "get_config", "load_config"]
     return t
 
 
-__all__ = ["bump_version", "watch_config", "_CONFIG"]
-
-
 def get_vms_ui(redis: Optional[Redis] = None) -> dict:
     """Return stored VMS UI configuration."""
+
     client = redis or redis_utils.get_sync_client()
     data = client.hgetall(CFG_UI_VMS)
     config: dict[str, dict[str, str]] = {"tiles": {}, "alerts": {}}
@@ -140,6 +130,7 @@ def _flatten(prefix: str, data: dict, out: dict) -> None:
 
 def set_vms_ui(patch: dict, redis: Optional[Redis] = None) -> dict:
     """Patch VMS UI configuration and bump version."""
+
     client = redis or redis_utils.get_sync_client()
     flat: dict[str, Any] = {}
     _flatten("", patch, flat)
@@ -149,5 +140,11 @@ def set_vms_ui(patch: dict, redis: Optional[Redis] = None) -> dict:
     return get_vms_ui(client)
 
 
-__all__.extend(["get_vms_ui", "set_vms_ui"])
-
+__all__ = [
+    "Config",
+    "get_config",
+    "load_config",
+    "watch_config",
+    "get_vms_ui",
+    "set_vms_ui",
+]

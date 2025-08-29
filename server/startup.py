@@ -16,19 +16,13 @@ from redis import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import logging_config  # noqa: F401
-from config import (
-    load_branding,
-    load_config,
-    save_branding,
-    save_config,
-)
+from config import load_branding, load_config, save_config
+from config.license_storage import get as load_license
+from config.license_storage import set as save_license
+from core.tracker_manager import count_log_loop
 from modules.license import verify_license
-from config.license_storage import get as load_license, set as save_license
-
-from core.tracker_manager import count_log_loop, get_tracker_status
-from modules.profiler import start_profiler
+from modules.profiler import profiler_manager
 from modules.tracker import PersonTracker
-from modules.utils import SNAP_DIR
 from routers import blueprints
 from routers.health import monitor_readiness
 from startup import start_background_workers
@@ -38,12 +32,7 @@ from utils.gstreamer import probe_gstreamer
 from utils.preflight import DependencyError, check_dependencies
 from utils.redis_facade import make_facade_from_url
 
-from .config import (
-    _apply_license,
-    _connect_redis,
-    _load_camera_profiles,
-    _read_initial_config,
-)
+from .config import _apply_license, _connect_redis, _load_camera_profiles, _read_initial_config
 from .hardware import _early_cpu_setup
 
 logger = logger.bind(module="startup")
@@ -51,8 +40,8 @@ logger = logger.bind(module="startup")
 # perform CPU setup before heavy imports
 _early_cpu_setup()
 
-import cv2  # noqa: F401
-from fastapi.templating import Jinja2Templates
+import cv2  # noqa: F401,E402
+from fastapi.templating import Jinja2Templates  # noqa: E402
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = BASE_DIR / "templates"
@@ -142,9 +131,9 @@ async def stop_all(app: FastAPI) -> None:
         except (RuntimeError, OSError) as e:
             logger.exception(f"Task {task.get_name() or id(task)} error: {e}")
 
-    from modules.profiler import stop_profiler
+    from modules.profiler import profiler_manager
 
-    stop_profiler()
+    profiler_manager.stop()
     logger.info("All workers stopped")
 
 
@@ -175,7 +164,7 @@ def init_app(
         )
     except (OSError, json.JSONDecodeError, RuntimeError) as e:
         logger.exception("Configuration load failed: {}", e)
-        raise SystemExit(1)
+        raise SystemExit(1) from e
     cfg["secret_key"] = os.getenv("CSRF_SECRET_KEY", cfg.get("secret_key", ""))
 
     logging_config.set_log_level(cfg.get("log_level", logging_config.LOG_LEVEL))
@@ -200,7 +189,7 @@ def init_app(
         check_dependencies(cfg, BASE_DIR)
     except DependencyError as e:
         logger.error(str(e))
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
     configure_onnxruntime(cfg)
 
@@ -277,7 +266,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting profiler")
     try:
-        start_profiler(cfg)
+        profiler_manager.start(cfg)
         logger.info("Profiler started")
     except (RuntimeError, OSError) as e:
         logger.exception("Profiler start failed: {}", e)

@@ -14,10 +14,9 @@ from loguru import logger
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 
-from config import config
-from core import events
-from config.constants import ANOMALY_ITEMS
+from config import ANOMALY_ITEMS, config
 from config.storage import save_config
+from core import events
 from modules.utils import require_roles
 from schemas.alerts import AlertRule
 from utils.deps import get_redis

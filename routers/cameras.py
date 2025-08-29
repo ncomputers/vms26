@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 import os
 import re
@@ -14,17 +13,12 @@ import time
 import uuid
 from datetime import datetime
 from typing import Dict, List
-from urllib.parse import urlparse, urlsplit, urlunsplit
+from urllib.parse import urlparse, urlsplit
 
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import (
-    JSONResponse,
-    RedirectResponse,
-    Response,
-    StreamingResponse,
-)
+from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -32,15 +26,7 @@ from starlette.requests import ClientDisconnect
 
 from app.core.utils import getenv_num
 from app.vision.overlay import render_from_legacy
-from config import config
-from config.constants import (
-    CAMERA_TASKS,
-    PPE_PAIRS,
-    PPE_TASKS,
-    UI_CAMERA_TASKS,
-    VEHICLE_LABELS,
-)
-from core.camera_manager import CameraManager as CoreCameraManager
+from config import PPE_PAIRS, PPE_TASKS, UI_CAMERA_TASKS, VEHICLE_LABELS, config
 from core.config import get_config
 from core.tracker_manager import save_cameras, start_tracker, stop_tracker
 from models.camera import Camera, Orientation, Transport, create_camera
@@ -51,7 +37,6 @@ from modules.capture import RtspFfmpegSource, RtspGstSource
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
-from modules.stream_probe import check_rtsp
 from modules.tracker import start_face_tracker, stop_face_tracker, tracker
 
 # Import role helpers directly so tests can monkeypatch ``require_roles`` on
@@ -70,6 +55,13 @@ from utils.url import get_stream_type
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
+
+# ruff: noqa
+
+
+
+
+
 
 _CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
 

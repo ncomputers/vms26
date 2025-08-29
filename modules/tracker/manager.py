@@ -23,8 +23,7 @@ import psutil
 from loguru import logger
 from redis.exceptions import RedisError
 
-from config import config
-from config.constants import ANOMALY_ITEMS
+from config import ANOMALY_ITEMS, config
 from core import events
 from utils import logx
 
@@ -287,12 +286,12 @@ def process_frame(
             scale = getattr(tracker, "scale", 1.0)
             pad_x = getattr(tracker, "pad_x", 0)
             pad_y = getattr(tracker, "pad_y", 0)
-            l = int((l_raw - pad_x) / scale)  # noqa: E741
-            t1 = int((t_raw - pad_y) / scale)
-            r = int((r_raw - pad_x) / scale)
-            b = int((b_raw - pad_y) / scale)
-            cx = (l + r) // 2
-            cy = (t1 + b) // 2
+            left = int((l_raw - pad_x) / scale)
+            top = int((t_raw - pad_y) / scale)
+            right = int((r_raw - pad_x) / scale)
+            bottom = int((b_raw - pad_y) / scale)
+            cx = (left + right) // 2
+            cy = (top + bottom) // 2
             if tracker.line_orientation == "horizontal":
                 line_start = (0.0, float(line_pos))
                 line_end = (float(w - 1), float(line_pos))
@@ -330,14 +329,14 @@ def process_frame(
                 for pid, pdata in new_tracks.items():
                     if pdata.get("group") == "person":
                         pl, pt, pr, pb = pdata["bbox"]
-                        if l >= pl and t1 >= pt and r <= pr and b <= pb:
+                        if left >= pl and top >= pt and right <= pr and bottom <= pb:
                             pdata.setdefault("ppe", []).append(group)
                             associated = True
                             break
                 if associated:
                     continue
             new_tracks[tid] = {
-                "bbox": (l, t1, r, b),
+                "bbox": (left, top, right, bottom),
                 "zone": zone,
                 "last_side": cur_side_sign,
                 "trail": trail,
@@ -386,7 +385,7 @@ def process_frame(
                         ts = int(now)
                         path = None
                         try:
-                            crop = frame[t1:b, l:r]
+                            crop = frame[top:bottom, left:right]
                             fname = f"{ts}_{tracker.cam_id}_{tid}.jpg"
                             img_path = tracker.snap_dir / fname
                             cv2.imwrite(str(img_path), crop)
@@ -421,7 +420,12 @@ def process_frame(
                         and faces
                     ):
                         for fl, ft, fr, fb, emb in faces:
-                            if fl >= l and ft >= t1 and fr <= r and fb <= b:
+                            if (
+                                fl >= left
+                                and ft >= top
+                                and fr <= right
+                                and fb <= bottom
+                            ):
                                 if tracker.unique_counter.is_new(emb):
                                     if entered:
                                         tracker.in_counts["face"] = (
@@ -1102,18 +1106,18 @@ class PersonTracker:
             for trk in ds_tracks:
                 if not trk.is_confirmed():
                     continue
-                l, t1, r, b = map(int, trk.to_ltrb())  # noqa: E741
+                left, top, right, bottom = map(int, trk.to_ltrb())
                 conf = float(getattr(trk, "det_conf", 0.0) or 0.0)
                 emb = None
                 dq = conf
                 best_iou = 0.0
                 for x1, y1, x2, y2, q, e in dets:
-                    i = _iou((l, t1, r, b), (x1, y1, x2, y2))
+                    i = _iou((left, top, right, bottom), (x1, y1, x2, y2))
                     if i > best_iou:
                         best_iou = i
                         emb = e
                         dq = q
-                tracks.append((trk.track_id, (l, t1, r, b), dq, emb))
+                tracks.append((trk.track_id, (left, top, right, bottom), dq, emb))
 
         h, w = frame.shape[:2]
         self.last_frame_shape = (h, w)

@@ -9,8 +9,8 @@ from loguru import logger
 from redis import Redis
 from redis.exceptions import RedisError
 
-from .redis_keys import EVENT_STREAM, CAM_STATE
 from .redis_guard import ensure_ttl, wrap_pipeline
+from .redis_keys import CAM_STATE, EVENT_STREAM
 
 _redis_client: Redis | None = None
 
@@ -48,6 +48,7 @@ def set_cam_state(camera_id: int, state_dict: Dict, ttl: int = 15) -> None:
     """Store ``state_dict`` under the camera's state hash with a TTL."""
 
     key = CAM_STATE.format(id=camera_id)
+    client: Redis | None = None
     try:
         client = get_redis()
         wrap_pipeline(
@@ -57,9 +58,11 @@ def set_cam_state(camera_id: int, state_dict: Dict, ttl: int = 15) -> None:
                 lambda p: p.expire(key, ttl),
             ],
         )
+        ensure_ttl(client, key, ttl)
     except RedisError as exc:  # pragma: no cover - network failure
         logger.warning("set_cam_state failed for {}: {}", key, exc)
-    ensure_ttl(client, key, ttl)
+    if client is None:
+        logger.debug("Redis unavailable; skipped TTL refresh for {}", key)
 
 
 __all__ = ["get_redis", "xadd_event", "set_cam_state"]

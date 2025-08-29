@@ -1,6 +1,23 @@
 """Unified configuration package."""
 
-from .constants import *  # noqa: F401,F403
+from .constants import (
+    ANOMALY_ITEMS,
+    AVAILABLE_CLASSES,
+    BRANDING_DEFAULTS,
+    CAMERA_TASKS,
+    CONFIG_DEFAULTS,
+    COUNT_GROUPS,
+    DEFAULT_CONFIG,
+    DEFAULT_MODULES,
+    FACE_THRESHOLDS,
+    MODEL_CLASSES,
+    OTHER_CLASSES,
+    PPE_ITEMS,
+    PPE_PAIRS,
+    PPE_TASKS,
+    UI_CAMERA_TASKS,
+    VEHICLE_LABELS,
+)
 from .storage import (
     _sanitize_track_ppe,
     load_branding,
@@ -59,4 +76,21 @@ __all__ = [
     "use_gstreamer",
     "watch_config",
     "bump_version",
-] + [name for name in globals().keys() if name.isupper()]
+    # re-exported constants
+    "ANOMALY_ITEMS",
+    "AVAILABLE_CLASSES",
+    "BRANDING_DEFAULTS",
+    "CAMERA_TASKS",
+    "CONFIG_DEFAULTS",
+    "COUNT_GROUPS",
+    "DEFAULT_CONFIG",
+    "DEFAULT_MODULES",
+    "FACE_THRESHOLDS",
+    "MODEL_CLASSES",
+    "OTHER_CLASSES",
+    "PPE_ITEMS",
+    "PPE_PAIRS",
+    "PPE_TASKS",
+    "VEHICLE_LABELS",
+    "UI_CAMERA_TASKS",
+]

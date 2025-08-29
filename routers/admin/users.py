@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from config.constants import DEFAULT_MODULES
+from config import DEFAULT_MODULES
 from config.storage import save_config
 from modules.utils import hash_password, require_admin
 from schemas.user import UserCreate, UserUpdate
