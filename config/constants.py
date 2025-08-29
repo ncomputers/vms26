@@ -14,9 +14,6 @@ class FaceThresholds:
     db_duplicate: float = 0.95
     duplicate_suppression: float = 0.5
     blur_detection: float = 100.0
-    face_count_conf: float = 0.85
-    face_count_similarity: float = 0.6
-    face_count_min_size: float = 80.0
 
 
 FACE_THRESHOLDS = FaceThresholds()
@@ -33,9 +30,6 @@ DEFAULT_CONFIG = {
     "license_info": {"features": {"visitor_mgmt": True}},
     "features": {"visitor_mgmt": True},
     "blur_detection_thresh": FACE_THRESHOLDS.blur_detection,
-    "face_count_conf": FACE_THRESHOLDS.face_count_conf,
-    "face_count_similarity": FACE_THRESHOLDS.face_count_similarity,
-    "face_count_min_size": FACE_THRESHOLDS.face_count_min_size,
     "local_buffer_size": 1,
     "model_version": 1,
     "preview_scale": 1.0,
@@ -188,12 +182,7 @@ CONFIG_DEFAULTS = {
         "ppe_detection": True,
         "visitor_mgmt": False,
     },
-    "show_face_boxes": False,
     "debug_logs": False,
-    "enable_face_counting": False,
-    "face_count_conf": FACE_THRESHOLDS.face_count_conf,
-    "face_count_similarity": FACE_THRESHOLDS.face_count_similarity,
-    "face_count_min_size": FACE_THRESHOLDS.face_count_min_size,
     "count_cooldown": 2.0,
     "cross_hysteresis": 15,
     "cross_min_travel_px": 10,

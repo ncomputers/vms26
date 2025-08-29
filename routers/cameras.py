@@ -39,7 +39,7 @@ from modules.capture.base import FrameSourceError
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
-from modules.tracker import start_face_tracker, stop_face_tracker, tracker
+from modules.tracker import tracker
 
 # Import role helpers directly so tests can monkeypatch ``require_roles`` on
 # this module and affect the admin dependency used below.
@@ -162,27 +162,19 @@ async def _restart_preview_cap(cam_id: int) -> None:
 cfg = config
 cams: List[dict] = []
 trackers_map: Dict[int, object] = {}
-face_trackers_map: Dict[int, object] = {}
 redis = None
 redisfx = None
 
 # camera manager instance for API routes
 start_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_tracker(cam, cfg, trackers, r, cb)
 stop_tracker_fn = lambda cid, trackers: stop_tracker(cid, trackers)
-start_face_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_face_tracker(
-    cam, cfg, trackers, r
-)
-stop_face_tracker_fn = lambda cid, trackers: stop_face_tracker(cid, trackers)
 camera_manager = CameraManager(
     cfg,
     trackers_map,
-    face_trackers_map,
     redis,
     lambda: cams,
     start_tracker_fn,
     stop_tracker_fn,
-    start_face_tracker_fn,
-    stop_face_tracker_fn,
 )
 manager = camera_manager
 
@@ -290,14 +282,13 @@ def init_context(
     templates_path,
     redis_facade=None,
 ):
-    global cfg, cams, trackers_map, face_trackers_map, redis, templates, cams_lock, camera_manager, redisfx
+    global cfg, cams, trackers_map, redis, templates, cams_lock, camera_manager, redisfx
     from config import config as global_config
 
     cfg = global_config
     cfg = get_config()
     cams = cameras
     trackers_map = trackers
-    face_trackers_map = {}
     redis = redis_client
     redisfx = redis_facade
     templates = Jinja2Templates(directory=templates_path)
@@ -307,13 +298,10 @@ def init_context(
     camera_manager = CameraManager(
         cfg,
         trackers_map,
-        face_trackers_map,
         redis,
         lambda: cams,
         start_tracker_fn,
         stop_tracker_fn,
-        start_face_tracker_fn,
-        stop_face_tracker_fn,
     )
     if USE_PIPELINE:
         try:
@@ -582,7 +570,6 @@ async def cameras_page(request: Request):
             cam_copy.setdefault("ppe", False)
             cam_copy.setdefault("visitor_mgmt", False)
             cam_copy.setdefault("face_recognition", False)
-            cam_copy.setdefault("enable_face_counting", cam_copy.get("face_recognition", False))
             cam_copy.setdefault("enabled", True)
             cam_copy.setdefault("orientation", "vertical")
             cam_copy.setdefault("rtsp_transport", "auto")
@@ -765,7 +752,6 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
             "ppe": ppe,
             "visitor_mgmt": visitor,
             "face_recognition": face_rec,
-            "enable_face_counting": face_rec,
             "enabled": enabled,
             "show": show,
             "reverse": reverse,
@@ -854,8 +840,6 @@ async def delete_camera(cam_id: int, request: Request):
         )
 
     await asyncio.to_thread(camera_manager.stop_tracker_fn, cam_id, trackers_map)
-    if getattr(camera_manager, "stop_face_tracker_fn", None):
-        await asyncio.to_thread(camera_manager.stop_face_tracker_fn, cam_id, face_trackers_map)
     return {"deleted": True}
 
 
@@ -1008,7 +992,6 @@ async def update_camera(
                     cam["visitor_mgmt"] = bool(visitor)
                 if "face_recognition" in data or "face_recog" in data:
                     cam["face_recognition"] = bool(face_rec)
-                    cam["enable_face_counting"] = bool(face_rec)
                 if "enabled" in data:
                     cam["enabled"] = bool(data["enabled"])
                 if "latitude" in data:

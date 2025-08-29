@@ -262,22 +262,6 @@ def test_post_process_worker_error(monkeypatch):
     tr.post_worker = worker
     worker.run()
     assert tr.debug_stats.get("last_process_ts") is not None
-
-
-def test_post_process_worker_face_boxes(monkeypatch):
-    frame = np.zeros((30, 30, 3), dtype=np.uint8)
-    tr = make_tracker(monkeypatch, [frame])
-    tr.show_face_boxes = True
-    tr.running = False
-    tr.det_queue.put((frame, []))
-
-    class DummyDetector:
-        def detect_boxes(self, img):
-            return [(5, 5, 20, 20)]
-
-    monkeypatch.setattr(manager_mod, "FaceDetector", lambda: DummyDetector())
-    worker = PostProcessWorker(tr)
-    tr.post_worker = worker
     worker.run()
     assert tr.output_frame[5, 5].any()
 

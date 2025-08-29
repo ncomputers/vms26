@@ -33,7 +33,6 @@ def _create_settings_app(tmp_path):
     cfg = {
         "settings_password": "pass",
         "branding": {},
-        "enable_face_counting": False,
         "max_capacity": 0,
     }
     r = fakeredis.FakeRedis()

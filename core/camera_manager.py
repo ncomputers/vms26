@@ -25,23 +25,17 @@ class CameraManager:
         self,
         cfg: dict,
         trackers: Dict[int, object],
-        face_trackers: Dict[int, object],
         redis_client,
         cams_getter: Callable[[], Iterable[dict]],
         start_fn: StartFn,
         stop_fn: StopFn,
-        start_face_fn: StartFn | None = None,
-        stop_face_fn: StopFn | None = None,
     ) -> None:
         self.cfg = cfg
         self.trackers = trackers
-        self.face_trackers = face_trackers
         self.redis = redis_client
         self._get_cams = cams_getter
         self.start_tracker_fn = start_fn
         self.stop_tracker_fn = stop_fn
-        self.start_face_tracker_fn = start_face_fn
-        self.stop_face_tracker_fn = stop_face_fn
         self._state: Dict[int, RetryState] = {}
         self._latest_frames: Dict[int, Dict[str, object]] = {}
         self._latest_lock = asyncio.Lock()
@@ -95,7 +89,6 @@ class CameraManager:
             "enabled": cam.get("enabled", True),
             "ppe": cam.get("ppe", False),
             "vms": cam.get("visitor_mgmt", False),
-            "face": cam.get("face_recognition", False),
             "counting": any(t in cam.get("tasks", []) for t in ("in_count", "out_count")),
         }
 
@@ -111,15 +104,6 @@ class CameraManager:
                 self.redis,
                 self.update_latest_frame,
             )
-            if self.start_face_tracker_fn and cam.get("face_recognition"):
-                await asyncio.to_thread(
-                    self.start_face_tracker_fn,
-                    cam,
-                    self.cfg,
-                    self.face_trackers,
-                    self.redis,
-                    None,
-                )
             if self.redis:
                 status = "online" if tr and getattr(tr, "online", False) else "offline"
                 self.redis.hset(f"camera:{cam.get('id')}:health", mapping={"status": status})
@@ -162,8 +146,6 @@ class CameraManager:
 
         async def _do_restart() -> None:
             await asyncio.to_thread(self.stop_tracker_fn, camera_id, self.trackers)
-            if self.stop_face_tracker_fn:
-                await asyncio.to_thread(self.stop_face_tracker_fn, camera_id, self.face_trackers)
             if cam.get("enabled", True) and self.cfg.get("enable_person_tracking", True):
                 await self._attempt_start(cam)
 

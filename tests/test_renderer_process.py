@@ -22,12 +22,10 @@ def test_renderer_writes_overlay():
                 "show_track_lines": True,
                 "show_lines": False,
                 "show_counts": False,
-                "show_face_boxes": False,
             },
             "line_orientation": "vertical",
             "line_ratio": 0.5,
             "counts": {"entered": 0, "exited": 0, "inside": 0},
-            "face_boxes": None,
         }
     )
     renderer.queue.put(None)

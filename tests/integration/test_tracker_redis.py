@@ -57,10 +57,7 @@ def test_person_tracker_logs_to_redis(redis_client, monkeypatch, tmp_path):
     tracker.debug_stats = {}
     tracker.device = None
     tracker.count_cooldown = 2
-    tracker._counted = {}
     tracker.detector_fps = 0
-    tracker.enable_face_counting = False
-    tracker.unique_counter = None
 
     frame = np.zeros((100, 100, 3), dtype=np.uint8)
     for _ in range(3):

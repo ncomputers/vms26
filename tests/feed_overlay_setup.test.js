@@ -18,9 +18,9 @@ function mount(html){
 
 beforeEach(() => {
   document.body.innerHTML = '';
-  Object.assign(defaults, { show_lines: true, show_track_lines: true, show_counts: true, show_face_boxes: true, show_ids: true });
+  Object.assign(defaults, { show_lines: true, show_track_lines: true, show_counts: true, show_ids: true });
   overlayState.key = 'test';
-  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_face_boxes:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
+  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
   MockWebSocket.instances = [];
   global.fetch = jest.fn().mockResolvedValue({ok:true,json:async()=>({})});
   applyOverlay();

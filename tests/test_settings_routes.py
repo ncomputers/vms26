@@ -54,7 +54,6 @@ class DummyRequest:
 def setup_context(tmp_path):
     cfg = {
         "settings_password": "pass",
-        "enable_face_counting": False,
         "max_capacity": 0,
         "branding": {},
     }
@@ -75,13 +74,10 @@ def setup_context(tmp_path):
 # Test update and export import
 def test_update_and_export_import(tmp_path):
     ctx = setup_context(tmp_path)
-    req = DummyRequest(
-        form={"password": "pass", "max_capacity": "50", "enable_face_counting": "on"}
-    )
+    req = DummyRequest(form={"password": "pass", "max_capacity": "50"})
     res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
     assert ctx.cfg["max_capacity"] == 50
-    assert ctx.cfg["enable_face_counting"] is True
 
     exp_resp = asyncio.run(settings.export_settings(DummyRequest(), ctx))
     import json

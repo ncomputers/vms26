@@ -11,10 +11,6 @@ PPE_VIOLATION = "ppe_violation"
 # Authentication events
 FAILED_LOGIN = "failed_login"
 
-# Face recognition events
-FACE_UNRECOGNIZED = "face_unrecognized"
-FACE_BLURRY = "face_blurry"
-
 # Gate pass events
 GATEPASS_CREATED = "gatepass_created"
 GATEPASS_APPROVED = "gatepass_approved"
@@ -46,22 +42,16 @@ PERSON_EXIT = "person_exit"
 VEHICLE_ENTRY = "vehicle_entry"
 VEHICLE_EXIT = "vehicle_exit"
 VEHICLE_DETECTED = "vehicle_detected"
-FACE_IN = "face_in"
-FACE_OUT = "face_out"
 
 # All events set for easy validation
 ALL_EVENTS = {
     PPE_VIOLATION,
     FAILED_LOGIN,
-    FACE_UNRECOGNIZED,
-    FACE_BLURRY,
     PERSON_ENTRY,
     PERSON_EXIT,
     VEHICLE_ENTRY,
     VEHICLE_EXIT,
     VEHICLE_DETECTED,
-    FACE_IN,
-    FACE_OUT,
     GATEPASS_CREATED,
     GATEPASS_APPROVED,
     GATEPASS_REJECTED,
@@ -82,15 +72,11 @@ ALL_EVENTS = {
 __all__ = [
     "PPE_VIOLATION",
     "FAILED_LOGIN",
-    "FACE_UNRECOGNIZED",
-    "FACE_BLURRY",
     "PERSON_ENTRY",
     "PERSON_EXIT",
     "VEHICLE_ENTRY",
     "VEHICLE_EXIT",
     "VEHICLE_DETECTED",
-    "FACE_IN",
-    "FACE_OUT",
     "GATEPASS_CREATED",
     "GATEPASS_APPROVED",
     "GATEPASS_REJECTED",

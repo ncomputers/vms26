@@ -229,7 +229,6 @@ def draw_overlays(
     line_ratio: float,
     show_counts: bool,
     counts: Dict[str, int],
-    face_boxes: List[Tuple[int, int, int, int]] | None = None,
     *,
     scale: float = 1.0,
 ) -> None:
@@ -249,8 +248,6 @@ def draw_overlays(
         Position of the counting line as a ratio of the frame size.
     counts: Dict[str, int]
         Mapping of "entered", "exited", and "inside" counts.
-    face_boxes: List[Tuple[int, int, int, int]] | None, optional
-        Bounding boxes of detected faces to draw when provided.
     scale: float, optional
         Factor to apply when drawing on a resized frame. Coordinate inputs
         are multiplied by this value before rendering.
@@ -267,12 +264,3 @@ def draw_overlays(
 
     if show_counts:
         _draw_counts(frame, counts)
-
-    if face_boxes:
-        for box in face_boxes:
-            if scale != 1.0:
-                box = tuple(v * scale for v in box)
-            bbox = _sanitize_bbox(box, w, h)
-            if bbox:
-                x1, y1, x2, y2 = bbox
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2, lineType=cv2.LINE_8)

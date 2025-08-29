@@ -44,7 +44,6 @@ def _render_loop(
             msg.get("line_ratio", 0.5),
             flags.get("show_counts", False),
             msg.get("counts", {}),
-            msg.get("face_boxes"),
         )
     shm_in.close()
     shm_out.close()

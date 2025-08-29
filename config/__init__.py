@@ -41,13 +41,6 @@ def set_config(cfg: dict) -> None:
     FACE_THRESHOLDS.blur_detection = config.get(
         "blur_detection_thresh", FACE_THRESHOLDS.blur_detection
     )
-    FACE_THRESHOLDS.face_count_conf = config.get("face_count_conf", FACE_THRESHOLDS.face_count_conf)
-    FACE_THRESHOLDS.face_count_similarity = config.get(
-        "face_count_similarity", FACE_THRESHOLDS.face_count_similarity
-    )
-    FACE_THRESHOLDS.face_count_min_size = config.get(
-        "face_count_min_size", FACE_THRESHOLDS.face_count_min_size
-    )
     global use_gstreamer
     use_gstreamer = config.get("use_gstreamer", False)
 
