@@ -22,7 +22,7 @@ Camera Streams --> PersonTracker --> Redis --> Dashboard
 Event data is persisted in Redis. The `storage_backend` setting in
 `config.json` selects the backend and currently supports only `redis`.
 Historical crossing events are stored in the sorted sets
-`person_logs`, `vehicle_logs`, and `face_logs` using the event timestamp as the
+`person_logs` and `vehicle_logs` using the event timestamp as the
 score. Older deployments that used `events.db` can delete the SQLite file after
 migrating.
 

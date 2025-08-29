@@ -6,6 +6,7 @@ import base64
 import json
 import time
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 
@@ -30,7 +31,6 @@ from modules import gatepass_service, visitor_db
 from modules.email_utils import send_email, sign_token
 from routers.visitor_utils import visitor_disabled_response
 from schemas.gatepass import GatepassBase
-from utils.face_db_utils import save_base64_to_image
 from utils.ids import generate_id
 from utils.image import decode_base64_image
 from utils.redis import publish_event, trim_sorted_set_async as trim_sorted_set
@@ -50,6 +50,19 @@ from . import (
 )
 
 router = APIRouter()
+
+
+def save_base64_to_image(base64_string: str, filename_prefix: str = "", subdir: str = "") -> str:
+    """Decode ``base64_string`` and store it under ``visitor_photos`` directory."""
+    if "," in base64_string:
+        base64_string = base64_string.split(",", 1)[1]
+    folder = Path("visitor_photos") / subdir / datetime.now().strftime("%Y-%m-%d")
+    folder.mkdir(parents=True, exist_ok=True)
+    filename = f"{filename_prefix}_{generate_id()}.jpg"
+    file_path = folder / filename
+    with open(file_path, "wb") as f:
+        f.write(decode_base64_image(base64_string))
+    return str(file_path)
 
 
 async def _extract_photo(photo: UploadFile | None, captured: str) -> bytes:

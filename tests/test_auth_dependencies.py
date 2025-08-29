@@ -24,7 +24,6 @@ sys.modules.setdefault("ultralytics", type("ultralytics", (), {"YOLO": object}))
 sys.modules.setdefault("deep_sort_realtime", type("ds", (), {}))
 sys.modules["deep_sort_realtime.deepsort_tracker"] = type("t", (), {"DeepSort": object})
 sys.modules.setdefault("cv2", type("cv2", (), {}))
-sys.modules.setdefault("modules.face_db", type("fd", (), {}))
 sys.modules.setdefault("modules.visitor_db", type("vd", (), {}))
 
 from routers import settings, visitor  # noqa: E402

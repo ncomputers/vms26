@@ -10,8 +10,6 @@ Redis events using constants from `core.events` and PPE status strings. The
 |------------|------------|-------------|
 | `ppe_violation` | `modules.ppe_worker` | `{ "metric": "ppe_violation", "type": "event", "value": 1, "recipients": "safety@example.com" }` |
 | `failed_login` | `routers.auth` | `{ "metric": "failed_login", "type": "event", "value": 1, "recipients": "admin@example.com" }` |
-| `face_unrecognized` | `modules.visitor_worker` | `{ "metric": "face_unrecognized", "type": "event", "value": 1, "recipients": "security@example.com" }` |
-| `face_blurry` | `modules.visitor_worker` | `{ "metric": "face_blurry", "type": "event", "value": 1, "recipients": "security@example.com" }` |
 | `gatepass_created` | `routers.gatepass.create` | `{ "metric": "gatepass_created", "type": "event", "value": 1, "recipients": "security@example.com" }` |
 | `gatepass_approved` | `routers.gatepass.approval` | `{ "metric": "gatepass_approved", "type": "event", "value": 1, "recipients": "host@example.com" }` |
 | `gatepass_rejected` | `routers.gatepass.approval` | `{ "metric": "gatepass_rejected", "type": "event", "value": 1, "recipients": "host@example.com" }` |

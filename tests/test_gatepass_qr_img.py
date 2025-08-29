@@ -26,12 +26,6 @@ def test_gatepass_create_returns_qr_img(tmp_path, monkeypatch):
         gatepass, "save_base64_to_image", lambda *a, **k: str(tmp_path / "img.jpg")
     )
     monkeypatch.setattr(gatepass, "add_face_to_known_db", lambda **k: None)
-    monkeypatch.setattr(
-        gatepass,
-        "face_db",
-        types.SimpleNamespace(insert=lambda *a, **k: None),
-        raising=False,
-    )
     monkeypatch.setattr(gatepass.visitor_db, "init_db", lambda r: None)
     monkeypatch.setattr(gatepass.visitor_db, "save_host", lambda *a, **k: None)
     gatepass.create.visitor = types.SimpleNamespace(invalidate_host_cache=lambda: None)

@@ -48,7 +48,6 @@ app.add_exception_handler(Exception, handle_unexpected_error)
 app.mount("/snapshots", StaticFiles(directory=str(SNAP_DIR)), name="snapshots")
 static_mounts = [
     ("/static", "static"),
-    ("/faces", "public/faces"),
     ("/invite_photos", "public/invite_photos"),
     ("/logos", "uploads/logos"),
 ]

@@ -17,8 +17,7 @@
   "features": {
     "in_out_counting": true,
     "ppe_detection": false,
-    "visitor_mgmt": true,
-    "face_recognition": true
+    "visitor_mgmt": true
   },
   "fps": 15,
   "capture_buffer": 3,
@@ -160,9 +159,7 @@
     "bicycle"
   ],
   "capture_buffer_seconds": 15,
-  "show_face_boxes": false,
   "debug_logs": false,
-  "enable_face_recognition": true,
   "enable_face_counting": true,
   "branding": {
     "company_name": "Workspace Metal Solutions",
@@ -184,8 +181,7 @@
     "features": {
       "in_out_counting": true,
       "ppe_detection": false,
-      "visitor_mgmt": true,
-      "face_recognition": true
+      "visitor_mgmt": true
     },
     "client": "demo"
   },

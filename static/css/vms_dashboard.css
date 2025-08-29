@@ -45,7 +45,7 @@ footer{
 /* Buttons */
 .btn{font-weight:500}
 .btn+.btn{margin-left:.5rem}
-#stepTabs,#reportTabs,#faceTabs,#inviteTabs{flex-wrap:nowrap;overflow-x:auto;font-size:.9rem}
+#stepTabs,#reportTabs,#inviteTabs{flex-wrap:nowrap;overflow-x:auto;font-size:.9rem}
 
 /* TomSelect adjustments */
 .ts-wrapper{width:100%;}

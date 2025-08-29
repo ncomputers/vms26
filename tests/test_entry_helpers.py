@@ -66,16 +66,3 @@ async def test_update_visit_request(monkeypatch):
     assert updated["gate_id"] == "GP1"
     assert sent["to"] == ["a@b"]
 
-
-def test_add_face_to_db(monkeypatch):
-    calls = {}
-
-    def fake_add_face(img, gid, threshold=1.1):
-        calls["args"] = (img, gid, threshold)
-        return True
-
-    from modules import face_db
-
-    monkeypatch.setattr(face_db, "add_face_if_single_detected", fake_add_face)
-    entry._add_face_to_db(b"data", "GP1")
-    assert calls["args"][1] == "GP1"

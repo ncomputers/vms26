@@ -29,8 +29,6 @@ The diagnostics overlay page (`/diagnostics/overlay/{id}`) provides a button gro
 - **Person Count** – shows person entry/exit counts.
 - **Face Count** – shows the number of detected faces.
 - **ID** – labels tracks with their numeric IDs.
-- **Face Recognition** – draws face detection boxes.
-- **Face ID** – displays face boxes with associated IDs.
 
 Display preference settings no longer expose these toggles; choose the desired overlay directly from the diagnostics overlay page.
 

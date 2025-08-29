@@ -38,16 +38,6 @@ def set_config(cfg: dict) -> None:
     config.clear()
     config.update(DEFAULT_CONFIG)
     config.update(cfg)
-
-    FACE_THRESHOLDS.recognition_match = config.get(
-        "face_match_thresh", FACE_THRESHOLDS.recognition_match
-    )
-    FACE_THRESHOLDS.db_duplicate = config.get(
-        "face_db_dup_thresh", FACE_THRESHOLDS.db_duplicate
-    )
-    FACE_THRESHOLDS.duplicate_suppression = config.get(
-        "face_duplicate_thresh", FACE_THRESHOLDS.duplicate_suppression
-    )
     FACE_THRESHOLDS.blur_detection = config.get(
         "blur_detection_thresh", FACE_THRESHOLDS.blur_detection
     )

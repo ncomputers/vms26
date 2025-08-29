@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const transportEl = getEl("transport", "camStreamType");
   const ppeEl = getEl("ppe", "setPPE");
   const vmsEl = getEl("vms", "setVms");
-  const faceRecogEl = getEl("face_recog", "setFr");
   const inoutCountEl = getEl("inout_count", "setCount");
   const reverseEl = getEl("reverse");
   const showEl = getEl("show");
@@ -114,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
         show: !!showEl?.checked,
         ppe: !!ppeEl?.checked,
         vms: !!vmsEl?.checked,
-        face_recog: !!faceRecogEl?.checked,
         inout_count: !!inoutCountEl?.checked,
         reverse: !!reverseEl?.checked,
         latitude: latEl?.value ? parseFloat(latEl.value) : undefined,
