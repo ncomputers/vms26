@@ -13,6 +13,7 @@ import time
 import uuid
 from datetime import datetime
 from typing import Dict, List
+import base64
 from urllib.parse import urlparse, urlsplit
 
 import cv2
@@ -39,6 +40,7 @@ from models.camera import Camera, Orientation, Transport, create_camera
 from models.camera import delete_camera as delete_camera_model
 from models.camera import get_camera, update_camera
 from modules.capture import RtspFfmpegSource, RtspGstSource
+from modules.capture.base import FrameSourceError
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
@@ -67,6 +69,12 @@ from utils.video import async_get_stream_resolution
 _CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
 
 TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
+FRAME_JPEG_QUALITY = getenv_num("FRAME_JPEG_QUALITY", 80, int)
+NO_FRAME_TIMEOUT_MS = getenv_num("NO_FRAME_TIMEOUT_MS", 2000, int)
+HEARTBEAT_INTERVAL_MS = getenv_num("HEARTBEAT_INTERVAL_MS", 1500, int)
+HEARTBEAT_JPEG = base64.b64decode(
+    b"/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5/ooooA//2Q=="
+)
 
 
 def mask_credentials(text: str) -> str:
@@ -97,6 +105,9 @@ TOKEN_TTL = 60
 PREVIEW_TOKENS: dict[str, dict[str, float | str]] = {}
 preview_semaphore = asyncio.Semaphore(3)
 
+# persistent capture workers for MJPEG preview
+PREVIEW_CAPS: Dict[int, object] = {}
+
 
 def _cleanup_tokens() -> None:
     now = time.time()
@@ -118,6 +129,32 @@ def _consume_preview_token(token: str) -> str | None:
     if not info or time.time() - float(info.get("ts", 0)) > TOKEN_TTL:
         return None
     return str(info.get("url"))
+
+
+async def _get_preview_cap(cam: dict) -> object:
+    cap = PREVIEW_CAPS.get(cam["id"])
+    if cap is None:
+        if cfg.get("use_gstreamer") and RtspGstSource is not None:
+            cap = RtspGstSource(cam["url"], cam_id=cam["id"])
+        else:
+            cap = RtspFfmpegSource(cam["url"], cam_id=cam["id"])
+        await asyncio.to_thread(cap.open)
+        PREVIEW_CAPS[cam["id"]] = cap
+    return cap
+
+
+async def _restart_preview_cap(cam_id: int) -> None:
+    cap = PREVIEW_CAPS.get(cam_id)
+    if not cap:
+        return
+    try:
+        await asyncio.to_thread(cap.close)
+    except Exception:
+        pass
+    try:
+        await asyncio.to_thread(cap.open)
+    except Exception:
+        pass
 
 
 # default runtime context
@@ -1358,117 +1395,94 @@ async def camera_mjpeg(
                     )
                 await asyncio.sleep(0.05)
 
+        headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
         return StreamingResponse(
             generator(),
             media_type="multipart/x-mixed-replace; boundary=frame",
+            headers=headers,
         )
 
-    rtsp_url = cam["url"]
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning"]
-    if rtsp_url.startswith("rtsp://"):
-        cmd += [
-            "-rtsp_transport",
-            "tcp",
-            "-rtsp_flags",
-            "prefer_tcp",
-        ]
-    cmd += [
-        "-probesize",
-        "5000000",
-        "-analyzeduration",
-        "2000000",
-        "-i",
-        rtsp_url,
-        "-an",
-        "-vf",
-        "fps=15",
-        "-f",
-        "mjpeg",
-        "-q:v",
-        "5",
-        "pipe:1",
-    ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=0)
+    cap = await _get_preview_cap(cam)
 
     async def generator():
-        buffer = b""
-        boundary = b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
-        last_frame: bytes | None = None
-        last_sent = 0.0
+        boundary = b"--frame"
         interval = 1 / TARGET_FPS if TARGET_FPS > 0 else 0
-        try:
-            while True:
-                chunk = await asyncio.to_thread(proc.stdout.read, 1024)
-                if not chunk:
-                    break
-                buffer += chunk
-                sent = False
-                while True:
-                    start = buffer.find(b"\xff\xd8")
-                    end = buffer.find(b"\xff\xd9", start + 2)
-                    if start != -1 and end != -1:
-                        frame = buffer[start : end + 2]
-                        buffer = buffer[end + 2 :]
-                        frame_out = frame
-                        if overlay:
-                            try:
-                                dets = tracker.get_latest(camera_id) or []
-                                if not labels:
-                                    dets = [{**d, "label": ""} for d in dets]
-                                arr_bgr = cv2.imdecode(
-                                    np.frombuffer(frame, dtype=np.uint8),
-                                    cv2.IMREAD_COLOR,
-                                )
-                                if arr_bgr is not None:
-                                    arr_rgb = cv2.cvtColor(arr_bgr, cv2.COLOR_BGR2RGB)
-                                    if os.getenv("VMS21_OVERLAY_PURE") == "1":
-                                        frame_out = render_from_legacy(
-                                            arr_rgb,
-                                            arr_rgb.shape[1],
-                                            arr_rgb.shape[0],
-                                            {},
-                                            dets,
-                                            [],
-                                            None,
-                                            str(camera_id),
-                                        )
-                                    else:
-                                        arr_rgb = draw_boxes_np(
-                                            arr_rgb, dets, thickness=thickness
-                                        )
-                                        frame_out = encode_jpeg(
-                                            cv2.cvtColor(arr_rgb, cv2.COLOR_RGB2BGR)
-                                        )
-                            except Exception:
-                                frame_out = frame
-                        last_frame = frame_out
-                        now = time.time()
-                        if interval > 0:
-                            wait = interval - (now - last_sent)
-                            if wait > 0:
-                                await asyncio.sleep(wait)
-                        try:
-                            yield boundary + frame_out + b"\r\n"
-                        except Exception as exc:
-                            log_throttled(
-                                logger.warning,
-                                f"[{camera_id}] mjpeg broken pipe: {exc}",
-                                key=f"mjpeg:{camera_id}:broken_pipe",
-                                interval=5,
-                            )
-                            return
-                        last_sent = time.time()
-                        sent = True
-                    else:
-                        break
-                if not sent and last_frame is not None:
-                    now = time.time()
-                    if interval > 0:
-                        wait = interval - (now - last_sent)
-                        if wait > 0:
-                            await asyncio.sleep(wait)
+        last_sent = 0.0
+        last_frame: bytes | None = None
+        last_hb = 0.0
+        no_frame_timeout = NO_FRAME_TIMEOUT_MS / 1000
+        heartbeat_iv = HEARTBEAT_INTERVAL_MS / 1000
+        while True:
+            try:
+                frame = await asyncio.to_thread(cap.read, 0.5)
+            except FrameSourceError:
+                frame = None
+            if frame is not None:
+                if overlay:
                     try:
-                        yield boundary + last_frame + b"\r\n"
+                        dets = tracker.get_latest(camera_id) or []
+                        if not labels:
+                            dets = [{**d, "label": ""} for d in dets]
+                        arr_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        if os.getenv("VMS21_OVERLAY_PURE") == "1":
+                            frame = render_from_legacy(
+                                arr_rgb,
+                                arr_rgb.shape[1],
+                                arr_rgb.shape[0],
+                                {},
+                                dets,
+                                [],
+                                None,
+                                str(camera_id),
+                            )
+                        else:
+                            arr_rgb = draw_boxes_np(arr_rgb, dets, thickness=thickness)
+                            frame = cv2.cvtColor(arr_rgb, cv2.COLOR_RGB2BGR)
+                    except Exception:
+                        pass
+                ok, buf = cv2.imencode(
+                    ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), FRAME_JPEG_QUALITY]
+                )
+                if not ok:
+                    continue
+                data = buf.tobytes()
+                last_frame = data
+                part = (
+                    boundary
+                    + b"\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                    + str(len(data)).encode()
+                    + b"\r\n\r\n"
+                    + data
+                    + b"\r\n"
+                )
+                try:
+                    yield part
+                except Exception as exc:
+                    log_throttled(
+                        logger.warning,
+                        f"[{camera_id}] mjpeg broken pipe: {exc}",
+                        key=f"mjpeg:{camera_id}:broken_pipe",
+                        interval=5,
+                    )
+                    return
+                last_sent = time.time()
+            else:
+                now = time.time()
+                age = now - getattr(cap, "last_frame_ts", 0)
+                if age > no_frame_timeout:
+                    asyncio.create_task(_restart_preview_cap(camera_id))
+                if last_frame is None or now - last_hb > heartbeat_iv:
+                    hb = HEARTBEAT_JPEG
+                    part = (
+                        boundary
+                        + b"\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                        + str(len(hb)).encode()
+                        + b"\r\n\r\n"
+                        + hb
+                        + b"\r\n"
+                    )
+                    try:
+                        yield part
                     except Exception as exc:
                         log_throttled(
                             logger.warning,
@@ -1477,19 +1491,30 @@ async def camera_mjpeg(
                             interval=5,
                         )
                         return
-                    last_sent = time.time()
-        except asyncio.CancelledError:
-            proc.kill()
-            raise
-        except Exception:
-            proc.kill()
-            raise
-        finally:
-            proc.kill()
+                    last_hb = now
+                    last_sent = now
+            if interval > 0:
+                wait = interval - (time.time() - last_sent)
+                if wait > 0:
+                    await asyncio.sleep(wait)
 
+    headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
     return StreamingResponse(
-        generator(), media_type="multipart/x-mixed-replace; boundary=frame"
+        generator(), media_type="multipart/x-mixed-replace; boundary=frame", headers=headers
     )
+
+
+@router.get("/api/cameras/{camera_id}/health")
+async def camera_health(camera_id: int):
+    cap = PREVIEW_CAPS.get(camera_id)
+    if not cap:
+        return {"capturing": False, "last_frame_age_ms": -1, "restarts": 0}
+    age_ms = int((time.time() - getattr(cap, "last_frame_ts", 0)) * 1000)
+    return {
+        "capturing": True,
+        "last_frame_age_ms": age_ms,
+        "restarts": getattr(cap, "restarts", 0),
+    }
 
 
 @router.get("/api/cameras/{camera_id}/overlays")

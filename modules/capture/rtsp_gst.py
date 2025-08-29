@@ -3,6 +3,7 @@ from __future__ import annotations
 """RTSP capture via GStreamer pipelines."""
 
 import os
+import time
 
 import cv2
 import numpy as np
@@ -28,7 +29,7 @@ class RtspGstSource(IFrameSource):
         uri: str,
         *,
         tcp: bool = True,
-        latency_ms: int = 100,
+        latency_ms: int = 200,
         use_nv: bool = False,
         cam_id: int | str | None = None,
     ) -> None:
@@ -38,16 +39,19 @@ class RtspGstSource(IFrameSource):
         self.latency_ms = latency_ms
         self.use_nv = use_nv
         self.cap: cv2.VideoCapture | None = None
+        self.restarts = 0
+        self.last_frame_ts = 0.0
 
     def _build_pipeline(self) -> str:
         proto = "tcp" if self.tcp else "udp"
         if self.use_nv:
-            decode = "nvv4l2decoder ! videoconvert"
+            decode = "rtph264depay ! h264parse ! nvv4l2decoder ! videoconvert"
         else:
             decode = "rtph264depay ! h264parse ! avdec_h264 ! videoconvert"
         pipeline = (
-            f"rtspsrc location={self.uri} protocols={proto} latency={self.latency_ms} ! "
-            f"{decode} ! appsink sync=false drop=true max-buffers=1"
+            "rtspsrc location="
+            f"{self.uri} protocols={proto} do-rtsp-keep-alive=true latency=200 ! "
+            f"{decode} ! appsink drop=true max-buffers=1 sync=false"
         )
         return pipeline
 
@@ -69,7 +73,14 @@ class RtspGstSource(IFrameSource):
         ret, frame = self.cap.read()
         if not ret:
             log_capture_event(self.cam_id, "read_timeout", backend="gst")
-            raise FrameSourceError("READ_TIMEOUT")
+            self.restarts += 1
+            self.close()
+            time.sleep(0.1)
+            self.open()
+            ret, frame = self.cap.read()
+            if not ret:
+                raise FrameSourceError("READ_TIMEOUT")
+        self.last_frame_ts = time.time()
         return frame
 
     def info(self) -> dict[str, int | float]:
