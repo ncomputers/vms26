@@ -66,9 +66,11 @@ def make_tracker(monkeypatch, frames, once=True):
         output_frame=None,
         preview_scale=1.0,
         _purge_counted=lambda: None,
+        first_frame_ok=False,
+        frame_callback=None,
     )
 
-    def oc(src, cam_id, src_type, resolution, *a, **k):
+    def oc(cfg, src, cam_id, src_type, resolution, *a, **k):
         assert resolution == "640x480"
         return DummyCap(tracker, frames), "tcp"
 
@@ -298,6 +300,7 @@ def test_capture_worker_device_update(monkeypatch):
             return False, None
 
     def oc(
+        cfg,
         src,
         cam_id,
         src_type,
@@ -397,7 +400,7 @@ def test_apply_debug_pipeline_resolution(monkeypatch):
 
     resolutions: list[str] = []
 
-    def oc(src, cam_id, src_type, resolution, *a, **k):
+    def oc(cfg, src, cam_id, src_type, resolution, *a, **k):
         resolutions.append(resolution)
         class Cap:
             def __init__(self):

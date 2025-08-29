@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.core.utils import mtime
 from core.retry_state import RetryState
-from modules.camera_factory import StreamUnavailable, open_capture
+from modules.camera_factory import StreamUnavailable, async_open_capture
 
 # Types for injected functions
 StartFn = Callable[
@@ -230,8 +230,8 @@ class CameraManager:
         cam = self._find_cam(cam_id)
         url = cam.get("url", "") if cam else ""
         try:
-            cap, _ = await asyncio.to_thread(
-                open_capture, url, cam_id, cam.get("type") if cam else None
+            cap, _ = await async_open_capture(
+                self.cfg, url, cam_id, cam.get("type") if cam else None
             )
             try:
                 res = await asyncio.to_thread(cap.read, timeout)

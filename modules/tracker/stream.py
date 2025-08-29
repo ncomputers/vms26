@@ -76,6 +76,7 @@ class CaptureWorker:
                     use_gpu = getattr(dev, "type", "") == "cuda"
 
                 cap, t.rtsp_transport = open_capture(
+                    t.cfg,
                     t.src,
                     t.cam_id,
                     t.src_type,
