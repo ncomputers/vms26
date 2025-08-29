@@ -51,7 +51,6 @@ from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.jpeg import encode_jpeg
 from utils.logx import log_throttled
-from utils.overlay import draw_boxes_np
 from utils.url import get_stream_type, mask_credentials
 
 # utility for resolving stream dimensions
