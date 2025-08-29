@@ -109,7 +109,12 @@ class RtspFfmpegSource(IFrameSource):
         opts = [(15_000_000, 3_000_000), (30_000_000, 6_000_000)]
         for probesize, analyzeduration in opts:
             try:
-                info = ffmpeg.probe(self.uri, probesize=probesize, analyzeduration=analyzeduration)
+                info = ffmpeg.probe(
+                    self.uri,
+                    probesize=probesize,
+                    analyzeduration=analyzeduration,
+                    rtsp_transport="tcp" if self.tcp else "udp",
+                )
                 stream = next(s for s in info.get("streams", []) if s.get("codec_type") == "video")
                 self.width = self.width or int(stream.get("width", 0) or 0)
                 self.height = self.height or int(stream.get("height", 0) or 0)
