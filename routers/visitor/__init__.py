@@ -15,8 +15,6 @@ from config import config
 from modules import visitor_db
 from utils.redis import trim_sorted_set
 
-from .face_loader import load_faces
-
 # Proxies for shared context attributes
 redis = None
 templates = None
@@ -124,70 +122,6 @@ def get_host_names_cached() -> list[str]:
 
 def invalidate_host_cache() -> None:
     _ctx.redis.delete(_HOST_CACHE_KEY)
-
-
-# ---------------------------------------------------------------------------
-# face utilities
-# ---------------------------------------------------------------------------
-
-
-def _load_known_faces(
-    limit: int = 50,
-    cursor: int | None = None,
-    q: str | None = None,
-    camera_id: str | None = None,
-    last_seen_after: int | None = None,
-) -> tuple[list[dict], int | None]:
-    fields_map = {
-        "prefix": "face:known:",
-        "fields": {
-            "id": lambda fid, f, ts, d, img: fid,
-            "name": lambda fid, f, ts, d, img: f.get("name", ""),
-            "image": lambda fid, f, ts, d, img: img,
-            "gate_pass_id": lambda fid, f, ts, d, img: f.get("gate_pass_id", fid),
-            "visitor_type": lambda fid, f, ts, d, img: f.get("visitor_type", ""),
-            "date": lambda fid, f, ts, d, img: d,
-            "confidence": lambda fid, f, ts, d, img: float(f.get("confidence") or 0.0),
-            "camera_id": lambda fid, f, ts, d, img: f.get("camera_id", ""),
-            "device_id": lambda fid, f, ts, d, img: f.get("device_id", ""),
-            "source_platform": lambda fid, f, ts, d, img: f.get("source_platform", ""),
-        },
-    }
-    return load_faces(
-        "face:known_ids",
-        fields_map,
-        limit=limit,
-        cursor=cursor,
-        q=q,
-        camera_id=camera_id,
-        last_seen_after=last_seen_after,
-    )
-
-
-def _load_unregistered_faces(
-    limit: int = 50,
-    cursor: int | None = None,
-    q: str | None = None,
-    camera_id: str | None = None,
-    last_seen_after: int | None = None,
-) -> tuple[list[dict], int | None]:
-    fields_map = {
-        "prefix": "face:unregistered:",
-        "fields": {
-            "face_id": lambda fid, f, ts, d, img: fid,
-            "image": lambda fid, f, ts, d, img: img,
-            "name": lambda fid, f, ts, d, img: f.get("name", ""),
-        },
-    }
-    return load_faces(
-        "face:unregistered_ids",
-        fields_map,
-        limit=limit,
-        cursor=cursor,
-        q=q,
-        camera_id=camera_id,
-        last_seen_after=last_seen_after,
-    )
 
 
 # ---------------------------------------------------------------------------
