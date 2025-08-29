@@ -37,7 +37,6 @@ from app.core.perf import PERF
 from app.core.redis_guard import ensure_ttl, wrap_pipeline
 from modules.profiler import register_thread
 from utils.gpu import get_device
-from utils.overlay import OverlayThrottler
 from utils.redis import (
     EVENTS_STREAM,
     get_sync_client,
@@ -49,8 +48,6 @@ from utils.time import format_ts
 from utils.url import get_stream_type
 
 from ..duplicate_filter import DuplicateFilter
-from ..overlay import draw_overlays
-from ..renderer import RendererProcess
 from ..utils import SNAP_DIR, lock
 from .detector import Detector
 from .stream import CaptureWorker
@@ -471,13 +468,6 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
                 if rgb is None:
                     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 face_boxes = tracker.face_detector.detect_boxes(rgb)
-        if getattr(tracker, "renderer", None):
-            if tracker.renderer.frame.shape != frame.shape:
-                tracker.renderer.close()
-                tracker.renderer = None
-        if not getattr(tracker, "renderer", None):
-            tracker.renderer = RendererProcess(frame.shape)
-            tracker.output_frame = tracker.renderer.output
         counts = {
             k: int(v)
             for k, v in {
@@ -487,42 +477,8 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
             }.items()
         }
         counts["inside"] = max(0, counts["inside"])
-        if getattr(tracker, "renderer", None):
-            try:
-                while True:
-                    tracker.renderer.queue.get_nowait()
-            except queue.Empty:
-                pass
-            tracker.renderer.frame[:] = frame
-            tracker.renderer.queue.put(
-                {
-                    "tracks": tracker.tracks,
-                    "flags": debug_flags,
-                    "line_orientation": tracker.line_orientation,
-                    "line_ratio": tracker.line_ratio,
-                    "counts": counts,
-                    "face_boxes": face_boxes,
-                }
-            )
-        else:
-            draw_overlays(
-                processed,
-                tracker.tracks,
-                debug_flags["show_ids"],
-                debug_flags["show_track_lines"],
-                debug_flags["show_lines"],
-                tracker.line_orientation,
-                tracker.line_ratio,
-                debug_flags["show_counts"],
-                counts,
-                face_boxes,
-            )
         with lock:
             tracker.output_frame = processed
-        tracker.debug_stats["last_overlay_ts"] = time.time()
-        tracker.debug_stats["overlay_match"] = (
-            tracker.output_frame is not None and tracker.output_frame.shape == frame.shape
-        )
 
     else:
         with lock:
@@ -570,7 +526,7 @@ class InferWorker:
 
 
 class PostProcessWorker:
-    """Consume detections, run tracking and overlay, and publish frames."""
+    """Consume detections, run tracking, and publish frames."""
 
     def __init__(self, tracker: "PersonTracker") -> None:
         self.tracker = tracker
@@ -809,31 +765,8 @@ class PersonTracker:
         self.restart_capture = False
         self.first_frame_ok = False
 
-        if any(
-            [
-                self.show_lines,
-                self.show_ids,
-                self.show_track_lines,
-                self.show_counts,
-                self.show_face_boxes,
-            ]
-        ):
-            shape = None
-            if resolution != "original":
-                try:
-                    w, h = map(int, str(resolution).split("x"))
-                    shape = (h, w, 3)
-                except Exception:
-                    shape = None
-            if shape is not None:
-                self.renderer = RendererProcess(shape)
-                self.output_frame = self.renderer.output
-            else:
-                self.renderer = None
-                self.output_frame = None
-        else:
-            self.renderer = None
-            self.output_frame = None
+        self.renderer = None
+        self.output_frame = None
 
         self.dup_filter = (
             DuplicateFilter(self.duplicate_filter_threshold, self.duplicate_bypass_seconds)
@@ -1003,8 +936,6 @@ class PersonTracker:
             "last_frame_ts": None,
             "jitter_ms": 0.0,
             "dropped_frames": 0,
-            "last_overlay_ts": None,
-            "overlay_match": True,
             "det_in": 0,
             "ppe_in": 0,
         }
@@ -1228,12 +1159,6 @@ class PersonTracker:
             self.detector_fps = cfg["detector_fps"]
         if "adaptive_skip" in cfg:
             self.adaptive_skip = cfg["adaptive_skip"]
-        if "overlay_every_n" in cfg:
-            self.overlay_every_n = cfg["overlay_every_n"]
-        if "overlay_min_ms" in cfg:
-            self.overlay_min_ms = cfg["overlay_min_ms"]
-        if "overlay_every_n" in cfg or "overlay_min_ms" in cfg:
-            self.overlay_throttler = OverlayThrottler(self.overlay_every_n, self.overlay_min_ms)
         if "debug_logs" in cfg:
             self.debug_logs = cfg["debug_logs"]
         if "duplicate_filter_enabled" in cfg:

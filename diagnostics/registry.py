@@ -64,7 +64,6 @@ def list_tests() -> "OrderedDict[str, Callable[..., Awaitable[dict]]]":
         "mjpeg_probe",
         "snapshot_fresh",
         "stream_metrics",
-        "overlay_health",
         "detector_warm",
         "inference_latency",
         "queues_depth",

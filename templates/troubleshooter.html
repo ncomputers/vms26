@@ -23,7 +23,7 @@
             {% for cam in cameras %}
             <tr data-id="{{ cam.id }}">
                 <td>{{ cam.name }}</td>
-                <td><img src="/api/cameras/{{ cam.id }}/mjpeg?overlay=false" class="img-fluid"/></td>
+                <td><img src="/api/cameras/{{ cam.id }}/mjpeg" class="img-fluid"/></td>
                 <td><button class="btn btn-sm btn-outline-primary run-btn">Run diagnostics</button></td>
                 <td><ul class="list-unstyled results small mb-0"></ul></td>
             </tr>
