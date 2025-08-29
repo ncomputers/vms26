@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import queue
 import time
-import uuid
 from collections import deque
 from collections.abc import Iterable
 from datetime import date
@@ -158,8 +157,6 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
     purge = getattr(tracker, "_purge_counted", None)
     if purge:
         purge()
-    if getattr(tracker, "face_tracking_enabled", False):
-        tracker._process_faces(frame)
     updated = False
     if getattr(tracker, "tracker", None):
         if not detections:
@@ -479,8 +476,6 @@ class PostProcessWorker:
             logger.info(f"[proc:{t.cam_id}] post-process loop stopped")
             if getattr(t, "renderer", None):
                 t.renderer.close()
-            if getattr(t, "face_tracking_enabled", False):
-                t._finalize_face_tracks()
 
 
 # ProcessingWorker class encapsulates a simplified processing loop
@@ -628,7 +623,6 @@ class PersonTracker:
             setattr(self, k, v)
         self.load_durations: dict[str, float] = {}
         self.pipeline = cfg.get("pipeline", "")
-        self.face_detector = None
         self.cam_id = cam_id
         self.src = src
         self.src_type = src_type or cfg.get("type") or get_stream_type(src)
@@ -774,14 +768,6 @@ class PersonTracker:
             raise RuntimeError(
                 f"Failed to initialize DeepSort: {e}. Disable this feature or use smaller weights.",
             ) from e
-        self.face_app = None
-        features = cfg.get("features", {})
-        self.face_tracking_enabled = False
-        self.face_db_enabled = bool(features.get("visitor_mgmt"))
-        self.face_tracker = None
-        self.face_detector = None
-        self.face_tracks: dict[int, dict[str, Any]] = {}
-        self.face_active_ids: set[int] = set()
         self.tracks = {}
         self._counted: dict[tuple[int, str], float] = {}
         self.count_cooldown = cfg.get("count_cooldown", 2)
@@ -892,140 +878,6 @@ class PersonTracker:
         now = now or time.time()
         cutoff = now - self.count_cooldown
         self._counted = {k: ts for k, ts in self._counted.items() if ts >= cutoff}
-
-    # _process_faces routine
-    def _process_faces(self, frame: np.ndarray) -> None:
-        if not (self.face_tracker and self.face_detector):
-            return
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        faces = self.face_detector.detect(rgb)
-        dets: list[tuple[int, int, int, int, float, Any]] = []
-        for f in faces:
-            x1, y1, x2, y2 = [int(v) for v in f.bbox]
-            q = float(getattr(f, "det_score", 0.0))
-            emb = getattr(f, "embedding", None)
-            dets.append((x1, y1, x2, y2, q, emb))
-        prev_ids = set(self.face_active_ids)
-        self.face_active_ids = set()
-        tracks: list[tuple[int, tuple[int, int, int, int], float, Any]] = []
-
-        if isinstance(self.face_tracker, LightweightFaceTracker):
-            raw = self.face_tracker.update([(x1, y1, x2, y2, q) for x1, y1, x2, y2, q, _ in dets])
-            for (tid, bbox, _), (_, _, _, _, dq, emb) in zip(raw, dets):
-                tracks.append((tid, bbox, dq, emb))
-        else:
-            ds_dets = [((x1, y1, x2 - x1, y2 - y1), q, "face") for x1, y1, x2, y2, q, _ in dets]
-            ds_tracks = self.face_tracker.update_tracks(ds_dets, frame=frame)
-            for trk in ds_tracks:
-                if not trk.is_confirmed():
-                    continue
-                left, top, right, bottom = map(int, trk.to_ltrb())
-                conf = float(getattr(trk, "det_conf", 0.0) or 0.0)
-                emb = None
-                dq = conf
-                best_iou = 0.0
-                for x1, y1, x2, y2, q, e in dets:
-                    i = _iou((left, top, right, bottom), (x1, y1, x2, y2))
-                    if i > best_iou:
-                        best_iou = i
-                        emb = e
-                        dq = q
-                tracks.append((trk.track_id, (left, top, right, bottom), dq, emb))
-
-        h, w = frame.shape[:2]
-        self.last_frame_shape = (h, w)
-        line_pos = int((h if self.line_orientation == "horizontal" else w) * self.line_ratio)
-        now = time.time()
-        for tid, bbox, q, emb in tracks:
-            self.face_active_ids.add(tid)
-
-            x1, y1, x2, y2 = bbox
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
-            zone = (
-                "top"
-                if cy < line_pos
-                else (
-                    "bottom"
-                    if self.line_orientation == "horizontal"
-                    else "left" if cx < line_pos else "right"
-                )
-            )
-            state = self.face_tracks.get(tid)
-            prev_zone = state.get("zone") if state else None
-            if not state:
-                state = {
-                    "bbox": bbox,
-                    "zone": zone,
-                    "embed": emb.tolist() if isinstance(emb, np.ndarray) else emb,
-                    "best_q": q,
-                    "img_ref": None,
-                    "first_seen": now,
-                    "last_seen": now,
-                }
-                self.face_tracks[tid] = state
-            else:
-                state.update({"bbox": bbox, "zone": zone, "last_seen": now})
-            if q >= state.get("best_q", 0.0) or not state.get("img_ref"):
-
-                crop = frame[y1:y2, x1:x2]
-                fname = f"{int(now)}_{self.cam_id}_{tid}.jpg"
-                path = self.snap_dir / fname
-                try:
-                    cv2.imwrite(str(path), crop)
-                    state["img_ref"] = str(path)
-                    state["best_q"] = q
-                    if emb is not None:
-                        state["embed"] = emb.tolist() if isinstance(emb, np.ndarray) else emb
-                except Exception:
-                    pass
-            if prev_zone and prev_zone != zone:
-                entered = (
-                    prev_zone == "top" and zone == "bottom"
-                    if self.line_orientation == "horizontal"
-                    else prev_zone == "left" and zone == "right"
-                )
-                if self.reverse:
-                    entered = not entered
-                direction = "in" if entered else "out"
-                key = (tid, direction)
-                last = self._counted.get(key)
-                if not last or now - last >= self.count_cooldown:
-                    if entered:
-                        self.in_counts["face"] = self.in_counts.get("face", 0) + 1
-                    else:
-                        self.out_counts["face"] = self.out_counts.get("face", 0) + 1
-                    self._counted[key] = now
-            state["zone"] = zone
-        ended_ids = prev_ids - self.face_active_ids
-        for tid in list(ended_ids):
-            self._finalize_face_track(tid)
-
-    # _finalize_face_track routine
-    def _finalize_face_track(self, tid: int) -> None:
-        data = self.face_tracks.pop(tid, None)
-        if not data:
-            return
-        uid = str(uuid.uuid4())
-        payload = {
-            "embed": json.dumps(data.get("embed")),
-            "best_q": data.get("best_q"),
-            "img_ref": data.get("img_ref"),
-            "camera_id": self.cam_id,
-            "first_seen": data.get("first_seen"),
-            "last_seen": data.get("last_seen"),
-        }
-        key = f"face:temp:{uid}"
-        try:
-            self.redis.hset(key, mapping=payload)
-        except Exception:
-            logger.exception("failed to store face track data")
-
-    # _finalize_face_tracks routine
-    def _finalize_face_tracks(self) -> None:
-        for tid in list(self.face_tracks.keys()):
-            self._finalize_face_track(tid)
-        self.face_active_ids.clear()
 
     # update_cfg routine
     def update_cfg(self, cfg: dict):
