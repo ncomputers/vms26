@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from modules.camera_manager import CameraManager
+from core.camera_manager import CameraManager
 
 pytestmark = pytest.mark.anyio
 
@@ -15,8 +15,12 @@ async def test_frame_cache_is_instance_scoped():
     cams = [{"id": 1, "url": "", "tasks": []}]
     trackers1 = {}
     trackers2 = {}
-    start = lambda cam, cfg, trackers, r: None
-    stop = lambda cid, tr: None
+
+    def start(cam, cfg, trackers, r, cb=None):
+        return None
+
+    def stop(cid, tr):
+        return None
 
     mgr1 = CameraManager({}, trackers1, {}, None, lambda: cams, start, stop)
     mgr2 = CameraManager({}, trackers2, {}, None, lambda: cams, start, stop)
@@ -31,8 +35,13 @@ async def test_frame_cache_is_instance_scoped():
 async def test_build_flags():
     cams = []
     trackers = {}
-    start = lambda cam, cfg, trackers, r: None
-    stop = lambda cid, tr: None
+
+    def start(cam, cfg, trackers, r, cb=None):
+        return None
+
+    def stop(cid, tr):
+        return None
+
     mgr = CameraManager({}, trackers, {}, None, lambda: cams, start, stop)
 
     cam = {
@@ -55,8 +64,13 @@ async def test_build_flags():
 async def test_snapshot_uses_cached_frame():
     cams = [{"id": 1, "url": "", "tasks": []}]
     trackers = {}
-    start = lambda cam, cfg, trackers, r: None
-    stop = lambda cid, tr: None
+
+    def start(cam, cfg, trackers, r, cb=None):
+        return None
+
+    def stop(cid, tr):
+        return None
+
     mgr = CameraManager({}, trackers, {}, None, lambda: cams, start, stop)
 
     frame = np.ones((2, 2, 3), dtype=np.uint8)

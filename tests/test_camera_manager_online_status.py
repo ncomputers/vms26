@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import fakeredis
 
-from modules.camera_manager import CameraManager
+from core.camera_manager import CameraManager
 
 
 def test_start_tracker_sets_redis_online():
@@ -11,7 +11,7 @@ def test_start_tracker_sets_redis_online():
     trackers = {}
     cams = [{"id": 1, "url": "", "type": "http", "tasks": []}]
 
-    def start_tracker(cam, cfg, trackers_map, redis):
+    def start_tracker(cam, cfg, trackers_map, redis, cb=None):
         tr = SimpleNamespace(online=True)
         trackers_map[cam["id"]] = tr
         return tr

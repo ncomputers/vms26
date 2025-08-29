@@ -256,7 +256,11 @@ def _broadcast(trackers: Dict[int, PersonTracker], r: redis.Redis) -> None:
 
 # start_tracker routine
 def start_tracker(
-    cam: dict, cfg: dict, trackers: Dict[int, PersonTracker], r: redis.Redis
+    cam: dict,
+    cfg: dict,
+    trackers: Dict[int, PersonTracker],
+    r: redis.Redis,
+    frame_callback=None,
 ) -> PersonTracker | None:
     if not cfg.get("enable_person_tracking", True):
         logger.info("Person tracking disabled, not starting tracker")
@@ -322,6 +326,7 @@ def start_tracker(
         resolution=cam.get("resolution", "original"),
         rtsp_transport=cam.get("rtsp_transport", "tcp"),
         update_callback=lambda: _broadcast(trackers, r),
+        frame_callback=frame_callback,
     )
     trackers[cam["id"]] = tr
     threads = _spawn_threads(tr)
@@ -499,7 +504,7 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
             url=getattr(tr, "src", None),
         )
 
-        def _do_restart():
+        def _do_restart(tr=tr, cam_id=cam_id, attempt=attempt):
             logger.info(f"Restarting tracker {cam_id} (attempt {attempt})")
             tr.running = True
             _restart_threads(cam_id, tr)

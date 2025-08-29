@@ -3,6 +3,7 @@
 
 ## Purpose
 Service layer for starting, restarting and flagging camera tracking pipelines.
+The implementation lives in ``core.camera_manager``.
 
 ## Key Classes
 - **CameraManager** – coordinates tracker and face tracker start/stop operations.

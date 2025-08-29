@@ -18,7 +18,12 @@ from urllib.parse import urlparse, urlsplit
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import (
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -27,12 +32,12 @@ from starlette.requests import ClientDisconnect
 from app.core.utils import getenv_num
 from app.vision.overlay import render_from_legacy
 from config import PPE_PAIRS, PPE_TASKS, UI_CAMERA_TASKS, VEHICLE_LABELS, config
+from core.camera_manager import CameraManager
 from core.config import get_config
 from core.tracker_manager import save_cameras, start_tracker, stop_tracker
 from models.camera import Camera, Orientation, Transport, create_camera
 from models.camera import delete_camera as delete_camera_model
 from models.camera import get_camera, update_camera
-from modules.camera_manager import CameraManager
 from modules.capture import RtspFfmpegSource, RtspGstSource
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
@@ -57,10 +62,6 @@ from utils.url import get_stream_type
 from utils.video import async_get_stream_resolution
 
 # ruff: noqa
-
-
-
-
 
 
 _CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
@@ -128,9 +129,11 @@ redis = None
 redisfx = None
 
 # camera manager instance for API routes
-start_tracker_fn = lambda cam, cfg, trackers, r: start_tracker(cam, cfg, trackers, r)
+start_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_tracker(
+    cam, cfg, trackers, r, cb
+)
 stop_tracker_fn = lambda cid, trackers: stop_tracker(cid, trackers)
-start_face_tracker_fn = lambda cam, cfg, trackers, r: start_face_tracker(
+start_face_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_face_tracker(
     cam, cfg, trackers, r
 )
 stop_face_tracker_fn = lambda cid, trackers: stop_face_tracker(cid, trackers)
