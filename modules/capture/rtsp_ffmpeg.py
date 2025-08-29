@@ -89,6 +89,7 @@ class RtspFfmpegSource(IFrameSource):
         self.stimeout_usec = stimeout_usec
         self.extra_flags = extra_flags or []
         self.proc: subprocess.Popen[bytes] | None = None
+        self._proc_lock = threading.Lock()
         self._stderr_buffer: deque[str] = deque(maxlen=20)
         self._stderr_thread: threading.Thread | None = None
         self._frame_queue: queue.Queue[np.ndarray] | None = None
@@ -101,6 +102,7 @@ class RtspFfmpegSource(IFrameSource):
         self.restarts = 0
         self.last_frame_ts = 0.0
         self._udp_fallback = False
+        self._ffmpeg_supports_rw_timeout: bool | None = None
 
     def _probe_resolution(self) -> None:
         """Fill ``self.width`` and ``self.height`` from stream metadata."""
@@ -133,79 +135,87 @@ class RtspFfmpegSource(IFrameSource):
             self._reader_thread.start()
 
     def _start_proc(self) -> None:
-        self._probe_resolution()
-        transport = "tcp" if self.tcp else "udp"
-        rw_timeout = (
-            self.rw_timeout_usec
-            if self.rw_timeout_usec is not None
-            else getenv_num("RTSP_RW_TIMEOUT_USEC", 2_000_000, int)
-        )
-        stimeout = (
-            self.stimeout_usec
-            if self.stimeout_usec is not None
-            else getenv_num("RTSP_STIMEOUT_USEC", 20_000_000, int)
-        )
-        cmd = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-nostdin",
-            "-rtsp_transport",
-            transport,
-        ]
-        if self.tcp:
-            cmd.extend(["-rtsp_flags", "prefer_tcp"])
-        cmd.extend(
-            [
-                "-stimeout",
-                str(stimeout),
-                "-rw_timeout",
-                str(rw_timeout),
-                "-fflags",
-                "nobuffer",
-                "-flags",
-                "low_delay",
-                "-probesize",
-                "1000000",
-                "-analyzeduration",
-                "0",
-                "-max_delay",
-                "500000",
-                "-reorder_queue_size",
-                "0",
-                "-avioflags",
-                "direct",
-                "-an",
-                "-i",
-                self.uri,
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "bgr24",
-                "-",
+        with self._proc_lock:
+            self._probe_resolution()
+            transport = "tcp" if self.tcp else "udp"
+            rw_timeout = (
+                self.rw_timeout_usec
+                if self.rw_timeout_usec is not None
+                else getenv_num("RTSP_RW_TIMEOUT_USEC", 2_000_000, int)
+            )
+            stimeout = (
+                self.stimeout_usec
+                if self.stimeout_usec is not None
+                else getenv_num("RTSP_STIMEOUT_USEC", 20_000_000, int)
+            )
+            if self._ffmpeg_supports_rw_timeout is None:
+                try:
+                    res = subprocess.run(["ffmpeg", "-h"], capture_output=True, text=True)
+                    self._ffmpeg_supports_rw_timeout = "-rw_timeout" in res.stdout
+                except Exception:
+                    self._ffmpeg_supports_rw_timeout = False
+                if not self._ffmpeg_supports_rw_timeout:
+                    logger.warning("ffmpeg does not support -rw_timeout; continuing without it")
+            cmd = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-nostdin",
+                "-rtsp_transport",
+                transport,
             ]
-        )
-        flags: list[str] = []
-        env_flags = os.getenv("FFMPEG_EXTRA_FLAGS")
-        if env_flags:
-            flags.extend(shlex.split(env_flags))
-        if self.extra_flags:
-            flags.extend(self.extra_flags)
-        if flags:
-            insert_pos = cmd.index("-i")
-            cmd[insert_pos:insert_pos] = flags
-        self.proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=10**7,
-        )
-        self._stderr_buffer.clear()
-        self._stderr_thread = threading.Thread(target=self._drain_stderr, daemon=True)
-        self._stderr_thread.start()
-        log_capture_event(self.cam_id, "opened", backend="ffmpeg", uri=self.uri)
-        self._short_reads = 0
+            if self.tcp:
+                cmd.extend(["-rtsp_flags", "prefer_tcp"])
+            cmd.extend(["-stimeout", str(stimeout)])
+            if self._ffmpeg_supports_rw_timeout:
+                cmd.extend(["-rw_timeout", str(rw_timeout)])
+            cmd.extend(
+                [
+                    "-fflags",
+                    "nobuffer",
+                    "-flags",
+                    "low_delay",
+                    "-probesize",
+                    "1000000",
+                    "-analyzeduration",
+                    "0",
+                    "-max_delay",
+                    "500000",
+                    "-reorder_queue_size",
+                    "0",
+                    "-avioflags",
+                    "direct",
+                    "-an",
+                    "-i",
+                    self.uri,
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "bgr24",
+                    "-",
+                ]
+            )
+            flags: list[str] = []
+            env_flags = os.getenv("FFMPEG_EXTRA_FLAGS")
+            if env_flags:
+                flags.extend(shlex.split(env_flags))
+            if self.extra_flags:
+                flags.extend(self.extra_flags)
+            if flags:
+                insert_pos = cmd.index("-i")
+                cmd[insert_pos:insert_pos] = flags
+            self.proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=10**7,
+            )
+            self._stderr_buffer.clear()
+            self._stderr_thread = threading.Thread(target=self._drain_stderr, daemon=True)
+            self._stderr_thread.start()
+            log_capture_event(self.cam_id, "opened", backend="ffmpeg", uri=self.uri)
+            self._short_reads = 0
 
     def read(self, timeout: float | None = None) -> np.ndarray:
         """Return the latest decoded frame from the internal queue."""
@@ -303,19 +313,28 @@ class RtspFfmpegSource(IFrameSource):
         log_capture_event(self.cam_id, "closed", backend="ffmpeg")
 
     def _stop_proc(self) -> None:
-        if self.proc:
-            try:
-                self.proc.terminate()
-            except Exception:
-                pass
-            if self.proc.stdout:
-                self.proc.stdout.close()
-            if self.proc.stderr:
-                self.proc.stderr.close()
-            if self._stderr_thread:
-                self._stderr_thread.join(timeout=1)
+        proc: subprocess.Popen[bytes] | None = None
+        stderr_thread: threading.Thread | None = None
+        with self._proc_lock:
+            if self.proc:
+                proc = self.proc
+                stderr_thread = self._stderr_thread
+                self.proc = None
                 self._stderr_thread = None
-            self.proc = None
+        if not proc:
+            self._stderr_buffer.clear()
+            return
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+        if proc.stdout:
+            proc.stdout.close()
+        if proc.stderr:
+            proc.stderr.close()
+        if stderr_thread:
+            stderr_thread.join(timeout=1)
+        self._stderr_buffer.clear()
 
     def _drain_stderr(self) -> None:
         if not self.proc or not self.proc.stderr:
