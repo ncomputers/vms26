@@ -6,9 +6,10 @@ from typing import Any, Dict
 from urllib.parse import urlparse
 
 from app.core.utils import now_ms
-from .registry import register, get_source_mode, app_config
-from utils.redis import get_client
 from utils.gpu import probe_cuda
+from utils.redis import get_client
+
+from .registry import app_config, get_source_mode, register
 
 
 async def _wrap(test_id: str, fn, suggestion_default: str = "") -> Dict[str, Any]:
@@ -192,7 +193,12 @@ async def snapshot_fresh(cam_id: int, *_: Any, **__: Any) -> Dict[str, Any]:
         if not ts:
             return "fail", "missing", "", "ensure stream running"
         age = int(time.time()) - int(ts)
-        return ("ok" if age < 10 else "fail"), "", f"age_s:{age}", "restart camera" if age >= 10 else ""
+        return (
+            ("ok" if age < 10 else "fail"),
+            "",
+            f"age_s:{age}",
+            "restart camera" if age >= 10 else "",
+        )
 
     return await _wrap("snapshot_fresh", inner, "verify frame ingestion")
 

@@ -25,9 +25,7 @@ sys.modules.setdefault(
     "google.auth.transport",
     types.SimpleNamespace(requests=types.SimpleNamespace(Request=object)),
 )
-sys.modules.setdefault(
-    "google.auth.transport.requests", types.SimpleNamespace(Request=object)
-)
+sys.modules.setdefault("google.auth.transport.requests", types.SimpleNamespace(Request=object))
 google_sa = types.SimpleNamespace(Credentials=object)
 google_creds = types.SimpleNamespace(Credentials=object)
 sys.modules.setdefault("google.oauth2.service_account", google_sa)
@@ -40,9 +38,7 @@ sys.modules.setdefault(
     "google_auth_oauthlib",
     types.SimpleNamespace(flow=types.SimpleNamespace(InstalledAppFlow=object)),
 )
-sys.modules.setdefault(
-    "google_auth_oauthlib.flow", types.SimpleNamespace(InstalledAppFlow=object)
-)
+sys.modules.setdefault("google_auth_oauthlib.flow", types.SimpleNamespace(InstalledAppFlow=object))
 sys.modules.setdefault("cv2", types.SimpleNamespace())
 
 from routers import visitor

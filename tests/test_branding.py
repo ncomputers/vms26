@@ -70,25 +70,18 @@ def test_logo_upload(tmp_path, monkeypatch):
 
     buf = make_image()
     files = {"logo": ("logo.png", buf, "image/png")}
-    resp = client.post(
-        "/settings", data={"password": "pass", "company_name": "A"}, files=files
-    )
+    resp = client.post("/settings", data={"password": "pass", "company_name": "A"}, files=files)
     assert resp.status_code == 200
     filename = cfg["branding"]["company_logo"]
     assert filename.endswith(".png")
     url1 = cfg["branding"]["company_logo_url"]
     assert url1.startswith("/static/logos/")
-    assert (
-        json.loads(Path(tmp_path / "branding.json").read_text())["company_logo"]
-        == filename
-    )
+    assert json.loads(Path(tmp_path / "branding.json").read_text())["company_logo"] == filename
     assert client.get(url1.split("?")[0]).status_code == 200
 
     buf.seek(0)
     time.sleep(1)
-    resp2 = client.post(
-        "/settings", data={"password": "pass", "company_name": "A"}, files=files
-    )
+    resp2 = client.post("/settings", data={"password": "pass", "company_name": "A"}, files=files)
     url2 = cfg["branding"]["company_logo_url"]
     assert url1 != url2
 

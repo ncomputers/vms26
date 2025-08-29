@@ -15,9 +15,7 @@ from modules import stream_probe
         "Unsupported codec",
     ],
 )
-def test_rtsp_probe_error_codes(
-    client: TestClient, monkeypatch, error_msg: str
-) -> None:
+def test_rtsp_probe_error_codes(client: TestClient, monkeypatch, error_msg: str) -> None:
     def fake_probe(url, sample_seconds=6, enable_hwaccel=True):
         raise RuntimeError(error_msg)
 

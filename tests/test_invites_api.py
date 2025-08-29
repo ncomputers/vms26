@@ -2,6 +2,7 @@ import io
 import json
 from pathlib import Path
 
+
 def _payload():
     return {
         "name": "Alice",

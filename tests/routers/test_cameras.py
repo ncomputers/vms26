@@ -41,4 +41,3 @@ def test_camera_create_name_unique_uses_context() -> None:
             {"name": "Cam1", "url": "rtsp://example"},
             context={"cams": cams, "cfg": cfg},
         )
-

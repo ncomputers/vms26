@@ -44,9 +44,7 @@ async def visit_requests_page(request: Request, user=Depends(require_admin)):
         obj = json.loads(e)
         if obj.get("status") != "pending":
             continue
-        obj["time"] = datetime.fromtimestamp(obj["ts"]).isoformat(
-            sep=" ", timespec="seconds"
-        )
+        obj["time"] = datetime.fromtimestamp(obj["ts"]).isoformat(sep=" ", timespec="seconds")
         rows.append(obj)
     return templates.TemplateResponse(
         "visit_requests.html", {"request": request, "rows": rows, "cfg": config}
@@ -184,9 +182,7 @@ async def visit_request_export(status: str = ""):
         obj = json.loads(e)
         if status and obj.get("status") != status:
             continue
-        obj["time"] = datetime.fromtimestamp(obj["ts"]).isoformat(
-            sep=" ", timespec="seconds"
-        )
+        obj["time"] = datetime.fromtimestamp(obj["ts"]).isoformat(sep=" ", timespec="seconds")
         rows.append(obj)
     columns = [
         ("id", "ID"),
@@ -215,6 +211,4 @@ async def approve_request_link(req_id: str):
             [obj["email"]],
             config_obj.get("email", {}),
         )
-    return HTMLResponse(
-        "approved" if obj else "invalid", status_code=200 if obj else 404
-    )
+    return HTMLResponse("approved" if obj else "invalid", status_code=200 if obj else 404)

@@ -58,48 +58,66 @@ def _worker(url: str, queue: mp.Queue) -> None:
     def ping() -> None:
         if not host:
             raise RuntimeError("no_host")
-        subprocess.run([
-            "ping",
-            "-c",
-            "1",
-            "-W",
-            "1",
-            host,
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=2)
+        subprocess.run(
+            [
+                "ping",
+                "-c",
+                "1",
+                "-W",
+                "1",
+                host,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=2,
+        )
 
     def ffprobe() -> None:
         if shutil.which("ffprobe") is None:
             raise RuntimeError("ffprobe_missing")
-        subprocess.run([
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=codec_name,width,height,r_frame_rate",
-            "-of",
-            "json",
-            url,
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=5)
+        subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=codec_name,width,height,r_frame_rate",
+                "-of",
+                "json",
+                url,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=5,
+        )
 
     def decode() -> None:
         if shutil.which("ffmpeg") is None:
             raise RuntimeError("ffmpeg_missing")
-        subprocess.run([
-            "ffmpeg",
-            "-v",
-            "error",
-            "-rtsp_transport",
-            "tcp",
-            "-i",
-            url,
-            "-frames:v",
-            "30",
-            "-f",
-            "null",
-            "-",
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=10)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-rtsp_transport",
+                "tcp",
+                "-i",
+                url,
+                "-frames:v",
+                "30",
+                "-f",
+                "null",
+                "-",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=10,
+        )
 
     def detector() -> None:
         time.sleep(0.1)

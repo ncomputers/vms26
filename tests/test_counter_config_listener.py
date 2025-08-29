@@ -3,9 +3,9 @@ from contextlib import suppress
 
 import fakeredis
 
+from config import set_config
 from core.tracker_manager import counter_config_listener
 from modules.tracker import PersonTracker
-from config import set_config
 
 
 def test_counter_config_updates_tracker():

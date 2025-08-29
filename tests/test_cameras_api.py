@@ -85,9 +85,7 @@ async def test_add_camera_persists_and_activates(api_client, monkeypatch):
 
     monkeypatch.setattr(cameras.camera_manager, "start", fake_start)
 
-    resp = await client.post(
-        "/api/cameras", json={"name": "Cam", "url": "rtsp://example"}
-    )
+    resp = await client.post("/api/cameras", json={"name": "Cam", "url": "rtsp://example"})
     assert resp.status_code == 200
     cam_id = resp.json()["id"]
     assert len(cams) == 1

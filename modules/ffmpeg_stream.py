@@ -64,9 +64,7 @@ class FFmpegCameraStream(BaseStream):
             f"scale={self.width}:{self.height}",
             "pipe:1",
         ]
-        self.proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-        )
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self._buf = b""
 
     def _read_frame(self) -> Optional[np.ndarray]:
@@ -79,9 +77,7 @@ class FFmpegCameraStream(BaseStream):
             self._buf += chunk
         if len(self._buf) != self.frame_size:
             return None
-        frame = np.frombuffer(self._buf, dtype=np.uint8).reshape(
-            self.height, self.width, 3
-        )
+        frame = np.frombuffer(self._buf, dtype=np.uint8).reshape(self.height, self.width, 3)
         self._buf = b""
         return frame
 

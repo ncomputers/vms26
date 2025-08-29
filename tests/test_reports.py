@@ -82,9 +82,7 @@ def test_report_page_no_data(redis_client, cfg):
     import config as config_mod
 
     config_mod.set_config(cfg)
-    reports.init_context(
-        config_mod.config, {}, redis_client, str(ROOT / "templates"), []
-    )
+    reports.init_context(config_mod.config, {}, redis_client, str(ROOT / "templates"), [])
     req = DummyRequest()
     resp = asyncio.run(reports.report_page(req))
     assert b"No report data available" in resp.body
@@ -95,9 +93,7 @@ def test_ppe_report_page_no_data(redis_client, cfg):
     import config as config_mod
 
     config_mod.set_config(cfg)
-    ppe_reports.init_context(
-        config_mod.config, {}, redis_client, str(ROOT / "templates")
-    )
+    ppe_reports.init_context(config_mod.config, {}, redis_client, str(ROOT / "templates"))
     req = DummyRequest()
     resp = asyncio.run(ppe_reports.ppe_report_page(req, ""))
     assert b"No PPE report data available" in resp.body
@@ -262,9 +258,7 @@ def test_ppe_report_data(redis_client, cfg):
     redis_client.zadd("ppe_logs", {json.dumps(entry): entry["ts"]})
     start = datetime.fromtimestamp(now - 60).isoformat()
     end = datetime.fromtimestamp(now).isoformat()
-    query = PPEReportQuery(
-        start=start, end=end, status=["no_helmet"], min_conf=None, color=None
-    )
+    query = PPEReportQuery(start=start, end=end, status=["no_helmet"], min_conf=None, color=None)
     res = asyncio.run(ppe_reports.ppe_report_data(query))
     assert len(res["rows"]) == 1
     assert res["rows"][0]["status"] == "no_helmet"
@@ -285,9 +279,7 @@ def test_ppe_report_cache(redis_client):
     redis_client.zadd("ppe_logs", {json.dumps(entry1): entry1["ts"]})
     start = datetime.fromtimestamp(now - 120).isoformat()
     end = datetime.fromtimestamp(now).isoformat()
-    query = PPEReportQuery(
-        start=start, end=end, status=["no_helmet"], min_conf=None, color=None
-    )
+    query = PPEReportQuery(start=start, end=end, status=["no_helmet"], min_conf=None, color=None)
     res1 = asyncio.run(ppe_reports.ppe_report_data(query))
     entry2 = {
         "ts": now - 30,

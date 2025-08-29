@@ -1,10 +1,11 @@
 import io
 import logging
 import subprocess
+
 import pytest
 
-from modules.capture.rtsp_ffmpeg import RtspFfmpegSource
 from modules.capture import FrameSourceError
+from modules.capture.rtsp_ffmpeg import RtspFfmpegSource
 
 
 def test_stderr_capture_and_close(monkeypatch, caplog):

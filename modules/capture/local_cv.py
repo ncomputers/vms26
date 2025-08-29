@@ -17,9 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover - optional dependency
 class LocalCvSource(IFrameSource):
     """Capture frames from a local camera using OpenCV."""
 
-    def __init__(
-        self, device: int | str = 0, *, cam_id: int | str | None = None
-    ) -> None:
+    def __init__(self, device: int | str = 0, *, cam_id: int | str | None = None) -> None:
         super().__init__(str(device), cam_id=cam_id)
         self.cap: "cv2.VideoCapture | None" = None
 

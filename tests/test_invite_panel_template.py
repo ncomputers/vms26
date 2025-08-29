@@ -7,8 +7,8 @@ import fakeredis
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from routers import visitor
 from config import set_config
+from routers import visitor
 
 
 class DummyRequest:
@@ -32,8 +32,6 @@ def test_invite_panel_template_renders():
     visitor.init_context(cfg, r, str(ROOT / "templates"), [])
     req = DummyRequest()
     ctx = visitor.get_context()
-    resp = asyncio.run(
-        visitor.invites.invite_panel(req, user={"role": "admin"}, ctx=ctx)
-    )
+    resp = asyncio.run(visitor.invites.invite_panel(req, user={"role": "admin"}, ctx=ctx))
     assert resp.status_code == 200 and resp.template.name == "invite_panel.html"
     assert "Visitor Type" in resp.body.decode()

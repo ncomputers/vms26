@@ -40,4 +40,3 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
     mfa_enabled: Optional[bool] = None
     last_login: Optional[datetime] = None
-

@@ -4,8 +4,8 @@ import multiprocessing as mp
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from loguru import logger
-import routers.troubleshooter as ts
 
+import routers.troubleshooter as ts
 from modules.troubleshooter_runner import _run_stage
 
 

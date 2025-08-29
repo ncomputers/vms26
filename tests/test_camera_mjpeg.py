@@ -1,13 +1,13 @@
 import asyncio
-import asyncio
 import sys
-import types
 import time
+import types
+
 import numpy as np
 
 sys.modules.setdefault("cv2", types.SimpleNamespace())
-from routers import cameras
 from modules.capture.base import FrameSourceError
+from routers import cameras
 
 
 def setup_function():
@@ -50,10 +50,7 @@ def test_mjpeg_stream(monkeypatch):
     async def _run():
         resp = await cameras.camera_mjpeg(1)
         assert resp.status_code == 200
-        assert (
-            resp.headers["content-type"]
-            == "multipart/x-mixed-replace; boundary=frame"
-        )
+        assert resp.headers["content-type"] == "multipart/x-mixed-replace; boundary=frame"
         gen = resp.body_iterator
         first = await gen.__anext__()
         second = await gen.__anext__()

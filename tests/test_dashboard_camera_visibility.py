@@ -34,9 +34,7 @@ def _run_index(cams):
     req = DummyRequest()
     redis = DummyRedis()
     return asyncio.run(
-        dashboard.index(
-            req, cfg=cfg, trackers_map={}, cams=cams, redis=redis, templates=templates
-        )
+        dashboard.index(req, cfg=cfg, trackers_map={}, cams=cams, redis=redis, templates=templates)
     )
 
 

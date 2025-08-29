@@ -27,6 +27,7 @@ def get_redis_client():
     """Return a cached Redis client."""
     return get_sync_client()
 
+
 # required field map for known events
 _REQUIRED: dict[str, list[str]] = {
     "capture_start": ["camera_id", "mode", "url"],

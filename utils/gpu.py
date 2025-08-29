@@ -31,9 +31,7 @@ def probe_cuda() -> tuple[bool, int, str | None]:
         logger.warning(f"torch.cuda.device_count() failed: {exc}")
         return False, 0, str(exc)
 
-    logger.info(
-        f"CUDA probe: is_available={cuda_available}, device_count={device_count}"
-    )
+    logger.info(f"CUDA probe: is_available={cuda_available}, device_count={device_count}")
 
     has_cuda = cuda_available or device_count > 0
     error = None

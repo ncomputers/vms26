@@ -49,19 +49,16 @@ async def suggest_names(q: str = "", field: str = "host") -> list[str]:
         return []
     if field == "host":
         names = [
-            (n.decode() if isinstance(n, bytes) else n)
-            for n in entry.redis.hkeys("host_master")
+            (n.decode() if isinstance(n, bytes) else n) for n in entry.redis.hkeys("host_master")
         ]
     else:
         names = [
-            (n.decode() if isinstance(n, bytes) else n)
-            for n in entry.redis.hkeys("visitor:master")
+            (n.decode() if isinstance(n, bytes) else n) for n in entry.redis.hkeys("visitor:master")
         ]
     scored = [
         (SequenceMatcher(None, query, name.lower()).ratio(), name)
         for name in names
-        if query in name.lower()
-        or SequenceMatcher(None, query, name.lower()).ratio() > 0.6
+        if query in name.lower() or SequenceMatcher(None, query, name.lower()).ratio() > 0.6
     ]
     scored.sort(reverse=True)
     return [name for _, name in scored][:10]

@@ -8,8 +8,8 @@ from typing import Any, List, Sequence
 import numpy as np
 
 try:  # optional heavy dependency
-    from deep_sort_realtime.deepsort_tracker import DeepSort  # type: ignore
     from deep_sort_realtime.deep_sort.track import Track  # type: ignore
+    from deep_sort_realtime.deepsort_tracker import DeepSort  # type: ignore
 except Exception:  # pragma: no cover - optional in tests
     DeepSort = None  # type: ignore[assignment]
     Track = Any  # type: ignore

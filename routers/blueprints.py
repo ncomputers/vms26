@@ -4,12 +4,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from . import (
-    alerts,
-    api_identities,
-    api_summary,
-    auth,
-)
+from . import alerts, api_identities, api_summary, auth
 from . import cameras as cam_routes
 from . import (
     config_api,
@@ -23,17 +18,7 @@ from . import (
     health,
 )
 from . import help as help_pages
-from . import (
-    logs,
-    mcp,
-    ppe_reports,
-    profile,
-    reports,
-    rtsp,
-    settings,
-    troubleshooter,
-    vms,
-)
+from . import logs, mcp, ppe_reports, profile, reports, rtsp, settings, troubleshooter, vms
 from .admin import users as admin_users
 
 # Ordered registry of router modules

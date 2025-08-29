@@ -1,7 +1,7 @@
 from starlette.requests import Request
 
-from modules import gatepass_service
 from config import config as cfg
+from modules import gatepass_service
 
 
 def test_build_qr_link_uses_request_base(monkeypatch):

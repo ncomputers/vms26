@@ -37,4 +37,3 @@ def test_gatepass_view_handles_string_timestamps(tmp_path):
     r.hset(f"gatepass:pass:{rec['gate_id']}", mapping=rec)
     resp = asyncio.run(gatepass.gatepass_view("GPX", DummyRequest()))
     assert resp.status_code == 200
-

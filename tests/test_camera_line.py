@@ -1,7 +1,7 @@
-import pytest
 import fakeredis
+import pytest
 from fastapi import FastAPI
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from routers import cameras
 
@@ -56,6 +56,7 @@ async def client(tmp_path, monkeypatch):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac, cams
+
 
 async def test_keeps_line_when_omitted(client):
     ac, cams = client

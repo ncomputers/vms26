@@ -74,11 +74,7 @@ class PPEAdapter(_BaseAdapter):
 
     def infer(self, bgr: np.ndarray, conf: float = 0.25) -> List[Dict]:
         res = self.model.predict(bgr[:, :, ::-1], conf=conf, verbose=False)[0]
-        names = (
-            self.model.model.names
-            if hasattr(self.model.model, "names")
-            else self.model.names
-        )
+        names = self.model.model.names if hasattr(self.model.model, "names") else self.model.names
         out: List[Dict] = []
         for box in res.boxes:
             cid = int(box.cls.item())

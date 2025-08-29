@@ -6,7 +6,7 @@ import re
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, model_validator, ValidationInfo
+from pydantic import BaseModel, ValidationInfo, model_validator
 
 
 class CameraType(str, Enum):
@@ -121,7 +121,8 @@ class CameraBase(BaseModel):
                 cfg = info.context.get("cfg") or {}
             else:
                 try:
-                    from routers.cameras import cams as rcams, cfg as rcfg
+                    from routers.cameras import cams as rcams
+                    from routers.cameras import cfg as rcfg
                 except ImportError:
                     # During validation in isolation, routers.cameras may not be available
                     rcams, rcfg = [], {}

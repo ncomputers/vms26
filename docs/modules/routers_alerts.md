@@ -5,7 +5,7 @@
 Email and alert rule management routes.
 
 ## Key Classes
-- **CsrfSettings** - 
+- **CsrfSettings** -
 
 ## Key Functions
 - **get_csrf_config()** - Provide CSRF settings using environment or config values.

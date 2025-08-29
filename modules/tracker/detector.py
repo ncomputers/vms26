@@ -12,8 +12,8 @@ try:  # optional heavy dependency
 except ModuleNotFoundError:  # pragma: no cover - torch is optional in tests
     torch = None
 
-from modules.profiler import profile_predict
 from app.core.prof import profiled
+from modules.profiler import profile_predict
 
 try:  # pragma: no cover - Redis optional in tests
     from redis.exceptions import RedisError
@@ -25,9 +25,7 @@ except Exception:  # pragma: no cover - fallback when redis missing
 
 # Mapping of alias names to sets of YOLO labels. ``track_objects`` may include
 # these aliases so the detector will match any of the corresponding labels.
-GROUP_ALIASES = {
-    "vehicle": {"car", "truck", "bus", "motorbike", "motorcycle", "bicycle"}
-}
+GROUP_ALIASES = {"vehicle": {"car", "truck", "bus", "motorbike", "motorcycle", "bicycle"}}
 
 
 def resolve_group(label: str, groups: List[str]) -> str | None:
@@ -78,15 +76,9 @@ class Detector:
             boxes = np.asarray(boxes)
             tensor_mode = False
         if (boxes.numel() if tensor_mode else boxes.size) > 0:
-            cls_idx = (
-                boxes[:, 5].long().cpu().numpy()
-                if tensor_mode
-                else boxes[:, 5].astype(int)
-            )
+            cls_idx = boxes[:, 5].long().cpu().numpy() if tensor_mode else boxes[:, 5].astype(int)
             names = [self.model.names[i] for i in range(len(self.model.names))]
-            label_groups = np.array(
-                [resolve_group(n, groups) for n in names], dtype=object
-            )
+            label_groups = np.array([resolve_group(n, groups) for n in names], dtype=object)
             groups_arr = label_groups[cls_idx]
             mask = groups_arr != None
             if mask.any():
@@ -102,7 +94,7 @@ class Detector:
                 detections = [
                     (tuple(bb), cf, gr)
                     for bb, cf, gr in zip(
-                        xywh.tolist(), conf.tolist(), groups_arr[mask].tolist()
+                        xywh.tolist(), conf.tolist(), groups_arr[mask].tolist(), strict=False
                     )
                     if bb[2] >= 12 and bb[3] >= 12
                 ]
@@ -141,14 +133,10 @@ class Detector:
                 tensor_mode = False
             if (boxes.numel() if tensor_mode else boxes.size) > 0:
                 cls_idx = (
-                    boxes[:, 5].long().cpu().numpy()
-                    if tensor_mode
-                    else boxes[:, 5].astype(int)
+                    boxes[:, 5].long().cpu().numpy() if tensor_mode else boxes[:, 5].astype(int)
                 )
                 names = [self.model.names[i] for i in range(len(self.model.names))]
-                label_groups = np.array(
-                    [resolve_group(n, groups) for n in names], dtype=object
-                )
+                label_groups = np.array([resolve_group(n, groups) for n in names], dtype=object)
                 groups_arr = label_groups[cls_idx]
                 mask = groups_arr != None
                 if mask.any():
@@ -164,7 +152,7 @@ class Detector:
                     dets = [
                         (tuple(bb), cf, gr)
                         for bb, cf, gr in zip(
-                            xywh.tolist(), conf.tolist(), groups_arr[mask].tolist()
+                            xywh.tolist(), conf.tolist(), groups_arr[mask].tolist(), strict=False
                         )
                         if bb[2] >= 12 and bb[3] >= 12
                     ]

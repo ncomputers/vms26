@@ -48,9 +48,7 @@ def register_thread(tag: str, state: ProfilerState = default_state) -> None:
 
 
 # log_inference routine
-def log_inference(
-    tag: str, duration: float, state: ProfilerState = default_state
-) -> None:
+def log_inference(tag: str, duration: float, state: ProfilerState = default_state) -> None:
     """Record a YOLOv8 inference duration for the given tag."""
     state.last_inference[tag] = duration
     state.latency_hist.append(duration)
@@ -78,9 +76,7 @@ def profile_predict(model, tag: str, *args, **kwargs):
 
 
 # _calc_cpu_percent routine
-def _calc_cpu_percent(
-    state: ProfilerState, tid: int, cpu_time: float, now: float
-) -> float:
+def _calc_cpu_percent(state: ProfilerState, tid: int, cpu_time: float, now: float) -> float:
     last = state.last_cpu_times.get(tid)
     if not last:
         state.last_cpu_times[tid] = (cpu_time, now)

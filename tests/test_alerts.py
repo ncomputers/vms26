@@ -70,11 +70,7 @@ def test_alert_worker_vms(tmp_path, monkeypatch):
     worker.redis = r
     r.zadd(
         "vms_logs",
-        {
-            json.dumps(
-                {"ts": 1, "name": "A", "gate_id": "GP1", "host": "H", "phone": "1"}
-            ): 1
-        },
+        {json.dumps({"ts": 1, "name": "A", "gate_id": "GP1", "host": "H", "phone": "1"}): 1},
     )
     worker.check_rules()
     assert calls
@@ -125,11 +121,7 @@ def test_save_alerts_validation(client):
     assert resp.status_code == 400
     resp = client.post(
         "/alerts",
-        json={
-            "rules": [
-                {"metric": "no_helmet", "value": 0, "recipients": "a@example.com"}
-            ]
-        },
+        json={"rules": [{"metric": "no_helmet", "value": 0, "recipients": "a@example.com"}]},
     )
     assert resp.status_code == 400
     resp = client.post(
@@ -154,11 +146,7 @@ def test_save_alerts_validation(client):
     assert resp.status_code == 400
     ok = client.post(
         "/alerts",
-        json={
-            "rules": [
-                {"metric": "no_helmet", "value": 1, "recipients": "a@example.com"}
-            ]
-        },
+        json={"rules": [{"metric": "no_helmet", "value": 1, "recipients": "a@example.com"}]},
     )
     assert ok.status_code == 200 and ok.json()["saved"]
 

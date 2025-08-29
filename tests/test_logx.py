@@ -4,9 +4,9 @@ import json
 import types
 
 import pytest
+from redis.exceptions import RedisError
 
 from utils import logx
-from redis.exceptions import RedisError
 
 
 def test_push_redis_masks_and_trims(monkeypatch):

@@ -23,7 +23,9 @@ def test_register_signal_handlers_idempotent(monkeypatch):
 
 def test_watchdog_start_stop():
     mgr = LifecycleManager()
-    dummy = types.SimpleNamespace(process=types.SimpleNamespace(last_processed_ts=time.time()), cam_cfg={})
+    dummy = types.SimpleNamespace(
+        process=types.SimpleNamespace(last_processed_ts=time.time()), cam_cfg={}
+    )
     mgr.register_pipeline(dummy)
     assert mgr._watchdog is not None
     mgr.unregister_pipeline(dummy)

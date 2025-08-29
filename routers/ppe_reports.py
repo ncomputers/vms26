@@ -101,9 +101,7 @@ async def ppe_report_data(query: PPEReportQuery = Depends()):
     entries = [json.loads(e) for e in redis.zrangebyscore("ppe_logs", start_ts, end_ts)]
     rows = []
     thresh = (
-        float(query.min_conf)
-        if query.min_conf is not None
-        else cfg.get("ppe_conf_thresh", 0.5)
+        float(query.min_conf) if query.min_conf is not None else cfg.get("ppe_conf_thresh", 0.5)
     )
     statuses = set(query.status)
 
@@ -157,9 +155,7 @@ async def ppe_report_export(query: PPEReportQuery = Depends()):
         )
     except Exception as exc:
         logger.exception("ppe export failed: {}", exc)
-        return JSONResponse(
-            {"status": "error", "reason": "export_failed"}, status_code=500
-        )
+        return JSONResponse({"status": "error", "reason": "export_failed"}, status_code=500)
 
 
 @router.post("/ppe_report/email")
@@ -172,9 +168,7 @@ async def ppe_report_email(query: PPEReportQuery = Depends(), to: str | None = N
     wb.save(bio)
     bio.seek(0)
     recipients = [
-        a.strip()
-        for a in (to or cfg.get("email", {}).get("from_addr", "")).split(",")
-        if a.strip()
+        a.strip() for a in (to or cfg.get("email", {}).get("from_addr", "")).split(",") if a.strip()
     ]
     send_email(
         "PPE Report",

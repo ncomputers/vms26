@@ -73,9 +73,7 @@ def _save_visitor_master(
         if not redis_client:
             raise RuntimeError("redis not initialized")
         redis_client.hset("visitor:master", name, data)
-        vid = visitor_db.get_or_create_visitor(
-            name, phone, email, company_name, photo_url
-        )
+        vid = visitor_db.get_or_create_visitor(name, phone, email, company_name, photo_url)
         return vid
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("failed to save visitor master {}: {}", name, exc)

@@ -90,9 +90,7 @@ builtins.CsrfProtect = _DummyCsrf
 builtins.CsrfProtectMiddleware = _DummyMiddleware
 sys.modules.setdefault(
     "fastapi_csrf_protect",
-    types.SimpleNamespace(
-        CsrfProtect=_DummyCsrf, CsrfProtectMiddleware=_DummyMiddleware
-    ),
+    types.SimpleNamespace(CsrfProtect=_DummyCsrf, CsrfProtectMiddleware=_DummyMiddleware),
 )
 
 import utils.preflight as _preflight

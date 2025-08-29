@@ -20,9 +20,9 @@ class RedisFacade:
         self.max_workers = max_workers
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        self.is_async = hasattr(
-            client, "__aenter__"
-        ) or client.__class__.__module__.endswith(".asyncio.client")
+        self.is_async = hasattr(client, "__aenter__") or client.__class__.__module__.endswith(
+            ".asyncio.client"
+        )
 
     async def call(self, func_name: str, *args, **kwargs):
         timeout = kwargs.pop("timeout", self.default_timeout)

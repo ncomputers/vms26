@@ -11,10 +11,10 @@ import numpy as np
 import requests
 from PIL import Image
 
-from .base import IFrameSource, FrameSourceError, Backoff
 from utils.logging import log_capture_event
 from utils.logx import log_throttled
 
+from .base import Backoff, FrameSourceError, IFrameSource
 
 logger = logging.getLogger(__name__)
 

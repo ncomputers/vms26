@@ -75,9 +75,7 @@ def _apply_license(cfg: dict, license_info: dict) -> dict:
     return cfg
 
 
-def _load_camera_profiles(
-    redis_client, cfg: dict, stream_url: str | None
-) -> list[dict]:
+def _load_camera_profiles(redis_client, cfg: dict, stream_url: str | None) -> list[dict]:
     """Fetch camera configurations or override with CLI stream."""
     lc = load_cameras
     if lc is None:  # pragma: no cover

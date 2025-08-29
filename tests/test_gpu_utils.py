@@ -28,9 +28,7 @@ def _make_torch(
     attrs = {
         "cuda": cuda_ns,
         "device": lambda d: types.SimpleNamespace(type=str(d).split(":")[0]),
-        "backends": types.SimpleNamespace(
-            cudnn=types.SimpleNamespace(version=lambda: "test")
-        ),
+        "backends": types.SimpleNamespace(cudnn=types.SimpleNamespace(version=lambda: "test")),
     }
     if with_version:
         attrs["version"] = types.SimpleNamespace(cuda="test")

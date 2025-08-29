@@ -19,6 +19,7 @@ from config import load_branding, load_config, save_config
 from config.license_storage import get as load_license
 from config.license_storage import set as save_license
 from core.tracker_manager import count_log_loop
+from logging_config import LOG_LEVEL, set_log_level, setup_json_logger
 from modules.license import verify_license
 from modules.profiler import profiler_manager
 from modules.tracker import PersonTracker
@@ -30,7 +31,6 @@ from utils.gpu import configure_onnxruntime
 from utils.gstreamer import probe_gstreamer
 from utils.preflight import DependencyError, check_dependencies
 from utils.redis_facade import make_facade_from_url
-from logging_config import LOG_LEVEL, set_log_level, setup_json_logger
 
 from .config import _apply_license, _connect_redis, _load_camera_profiles, _read_initial_config
 from .hardware import _early_cpu_setup
@@ -82,9 +82,7 @@ async def handle_unexpected_error(request: Request, exc: Exception):
 def silent_exception_handler(loop: asyncio.AbstractEventLoop, context: dict):
     exception = context.get("exception")
     if isinstance(exception, ConnectionResetError):
-        logger.warning(
-            "\U0001f507 Suppressed harmless ConnectionResetError (WinError 10054)"
-        )
+        logger.warning("\U0001f507 Suppressed harmless ConnectionResetError (WinError 10054)")
         return
     loop.default_exception_handler(context)
 
@@ -145,9 +143,7 @@ def init_app(
     workers: int | None = None,
 ) -> dict[str, Any]:
     """Configure application state and services."""
-    config_path_local = (
-        config_path if os.path.isabs(config_path) else str(BASE_DIR / config_path)
-    )
+    config_path_local = config_path if os.path.isabs(config_path) else str(BASE_DIR / config_path)
     info = _read_initial_config(config_path_local)
 
     redis_url = info.get("redis_url")
@@ -160,9 +156,7 @@ def init_app(
 
     logger.info("Loading full configuration")
     try:
-        cfg: dict[str, Any] = load_config(
-            config_path_local, redis_client_local, data=temp_cfg
-        )
+        cfg: dict[str, Any] = load_config(config_path_local, redis_client_local, data=temp_cfg)
     except (OSError, json.JSONDecodeError, RuntimeError) as e:
         logger.exception("Configuration load failed: {}", e)
         raise SystemExit(1) from e

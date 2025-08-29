@@ -2,9 +2,9 @@ import asyncio
 import json
 import smtplib
 
+import fakeredis
 import pytest
 from starlette.requests import Request
-import fakeredis
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -78,4 +78,3 @@ def test_email_test_missing_host(monkeypatch, tmp_path):
     result = asyncio.run(settings.settings_email_test(req, ctx))
     assert result["error"] == "missing_smtp_host"
     assert not result["sent"]
-

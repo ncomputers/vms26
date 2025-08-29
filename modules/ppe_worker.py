@@ -197,9 +197,7 @@ class PPEDetector(threading.Thread):
                     entry["cfg"] = self.cfg
                     for item in self.cfg.get("track_ppe", []):
                         status, conf = determine_status(scores, item, thresh)
-                        if not self._should_log(
-                            entry.get("track_id"), status, int(time.time())
-                        ):
+                        if not self._should_log(entry.get("track_id"), status, int(time.time())):
                             continue
                         _log_status(self.redis, entry, status, conf, self.snap_dir)
                         if self.update_callback:

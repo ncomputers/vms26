@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.testclient import TestClient
 from fastapi.templating import Jinja2Templates
+from fastapi.testclient import TestClient
+from starlette.middleware.sessions import SessionMiddleware
 
 from core.context import AppContext, get_app_context
 from routers import reports

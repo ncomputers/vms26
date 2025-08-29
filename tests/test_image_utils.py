@@ -1,4 +1,5 @@
 import base64
+
 import pytest
 
 from utils.image import decode_base64_image

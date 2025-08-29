@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -219,11 +220,7 @@ def render_from_legacy(
 
     line = None
     if line_cfg:
-        ori = (
-            line_cfg.get("orientation")
-            or line_cfg.get("line_orientation")
-            or "vertical"
-        )
+        ori = line_cfg.get("orientation") or line_cfg.get("line_orientation") or "vertical"
         ratio = (
             line_cfg.get("ratio")
             or line_cfg.get("line_ratio")

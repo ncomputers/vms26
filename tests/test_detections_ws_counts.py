@@ -1,5 +1,5 @@
-import sys
 import asyncio
+import sys
 import types
 
 tracker_mod = types.ModuleType("modules.tracker")
@@ -17,6 +17,7 @@ sys.modules.setdefault("modules.tracker", tracker_mod)
 sys.modules.setdefault("cv2", types.ModuleType("cv2"))
 
 from routers.detections import _build_payload
+
 
 class FakeTracker:
     def __init__(self, in_count=0, out_count=0, in_counts=None, out_counts=None):

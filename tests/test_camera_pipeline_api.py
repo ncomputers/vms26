@@ -11,9 +11,7 @@ from config import config as shared_config
 
 
 def test_pipeline_crud(client):
-    shared_config.setdefault("pipeline_profiles", {})["recording"] = {
-        "backend": "ffmpeg"
-    }
+    shared_config.setdefault("pipeline_profiles", {})["recording"] = {"backend": "ffmpeg"}
     payload = {
         "pipeline": "videoconvert",
         "url": "rtsp://example.com",

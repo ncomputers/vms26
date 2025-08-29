@@ -46,9 +46,7 @@ async def login(
 ):
     try:
         for user in cfg.get("users", []):
-            if user["username"] == username and verify_password(
-                password, user["password"]
-            ):
+            if user["username"] == username and verify_password(password, user["password"]):
                 request.session["user"] = {
                     "name": username,
                     "role": user.get("role", "viewer"),

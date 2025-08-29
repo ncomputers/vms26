@@ -658,4 +658,3 @@ The mobile build reads metadata from `config/mobile_app.json`. To create a white
 5. `permissions` lists required runtime permissions.
 
 After updating the JSON, run the usual Capacitor or Cordova build steps; the configuration is picked up automatically.
-

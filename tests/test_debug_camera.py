@@ -111,9 +111,7 @@ def test_debug_camera_update_camid(cam_id):
     trackers = {1: tr}
     req = DummyRequest({"cam_id": cam_id, "rtsp_transport": "udp"})
     resp = asyncio.run(
-        debug.debug_camera_update(
-            req, trackers_map=trackers, redisfx=RedisFacade(DummyRedisHSet())
-        )
+        debug.debug_camera_update(req, trackers_map=trackers, redisfx=RedisFacade(DummyRedisHSet()))
     )
     assert tr.rtsp_transport == "udp"
     assert tr.cfg["pipeline"] == "orig"
@@ -128,9 +126,7 @@ def test_debug_camera_update_pipeline():
     trackers = {1: tr}
     req = DummyRequest({"cam_id": 1, "rtsp_transport": "udp", "pipeline": "pipe1"})
     resp = asyncio.run(
-        debug.debug_camera_update(
-            req, trackers_map=trackers, redisfx=RedisFacade(DummyRedisHSet())
-        )
+        debug.debug_camera_update(req, trackers_map=trackers, redisfx=RedisFacade(DummyRedisHSet()))
     )
     assert tr.rtsp_transport == "udp"
     assert tr.pipeline == "pipe1"
@@ -147,9 +143,7 @@ def test_debug_camera_update_resolution():
     redis = DummyRedisHSet()
     req = DummyRequest({"cam_id": 1, "resolution": "800x600"})
     resp = asyncio.run(
-        debug.debug_camera_update(
-            req, trackers_map=trackers, redisfx=RedisFacade(redis)
-        )
+        debug.debug_camera_update(req, trackers_map=trackers, redisfx=RedisFacade(redis))
     )
     assert tr.resolution == "800x600"
     assert tr.cfg["resolution"] == "800x600"

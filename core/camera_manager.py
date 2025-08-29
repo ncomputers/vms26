@@ -96,9 +96,7 @@ class CameraManager:
             "ppe": cam.get("ppe", False),
             "vms": cam.get("visitor_mgmt", False),
             "face": cam.get("face_recognition", False),
-            "counting": any(
-                t in cam.get("tasks", []) for t in ("in_count", "out_count")
-            ),
+            "counting": any(t in cam.get("tasks", []) for t in ("in_count", "out_count")),
         }
 
     async def _start_tracker_background(self, cam: dict) -> None:
@@ -124,24 +122,18 @@ class CameraManager:
                 )
             if self.redis:
                 status = "online" if tr and getattr(tr, "online", False) else "offline"
-                self.redis.hset(
-                    f"camera:{cam.get('id')}:health", mapping={"status": status}
-                )
+                self.redis.hset(f"camera:{cam.get('id')}:health", mapping={"status": status})
                 self.redis.hset(f"camera:{cam.get('id')}", "status", status)
         except Exception:
             logger.exception(f"[{cam.get('id')}] tracker start failed")
             if self.redis:
-                self.redis.hset(
-                    f"camera:{cam.get('id')}:health", mapping={"status": "offline"}
-                )
+                self.redis.hset(f"camera:{cam.get('id')}:health", mapping={"status": "offline"})
                 self.redis.hset(f"camera:{cam.get('id')}", "status", "offline")
             raise
         else:
             duration = asyncio.get_event_loop().time() - start
             if duration > 5.0:
-                logger.warning(
-                    f"[proc:{cam.get('id')}] start_tracker took {duration:.2f}s"
-                )
+                logger.warning(f"[proc:{cam.get('id')}] start_tracker took {duration:.2f}s")
 
     async def start(self, camera_id: int) -> None:
         cam = self._find_cam(camera_id)
@@ -171,12 +163,8 @@ class CameraManager:
         async def _do_restart() -> None:
             await asyncio.to_thread(self.stop_tracker_fn, camera_id, self.trackers)
             if self.stop_face_tracker_fn:
-                await asyncio.to_thread(
-                    self.stop_face_tracker_fn, camera_id, self.face_trackers
-                )
-            if cam.get("enabled", True) and self.cfg.get(
-                "enable_person_tracking", True
-            ):
+                await asyncio.to_thread(self.stop_face_tracker_fn, camera_id, self.face_trackers)
+            if cam.get("enabled", True) and self.cfg.get("enable_person_tracking", True):
                 await self._attempt_start(cam)
 
         asyncio.create_task(_do_restart())

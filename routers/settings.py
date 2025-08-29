@@ -174,11 +174,7 @@ def parse_basic_settings(data: dict, cfg: dict) -> dict:
         new_cfg[field] = items
     if "visitor_mgmt" in data:
         enable = str(data["visitor_mgmt"]).lower() in {"on", "true", "1"}
-        licensed = (
-            new_cfg.get("license_info", {})
-            .get("features", {})
-            .get("visitor_mgmt", True)
-        )
+        licensed = new_cfg.get("license_info", {}).get("features", {}).get("visitor_mgmt", True)
         if enable and not licensed:
             logger.warning("visitor management not licensed; ignoring enable request")
             raise HTTPException(status_code=403)
@@ -213,9 +209,7 @@ def parse_email_settings(form: FormData) -> EmailConfig:
 
 
 @router.get("/settings")
-async def settings_page(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def settings_page(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     # Pull the latest config snapshot each request so tests modifying the global
     # config dictionary see the change in rendered templates.
     from jinja2 import TemplateNotFound
@@ -258,9 +252,7 @@ async def settings_page(
 
 
 @router.post("/settings")
-async def update_settings(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def update_settings(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     form = await request.form()
     data = dict(form)
     data.update(
@@ -291,19 +283,11 @@ async def update_settings(
     branding_updates["company_name"] = data.get(
         "company_name", branding_updates.get("company_name", "")
     )
-    branding_updates["site_name"] = data.get(
-        "site_name", branding_updates.get("site_name", "")
-    )
-    branding_updates["website"] = data.get(
-        "website", branding_updates.get("website", "")
-    )
-    branding_updates["address"] = data.get(
-        "address", branding_updates.get("address", "")
-    )
+    branding_updates["site_name"] = data.get("site_name", branding_updates.get("site_name", ""))
+    branding_updates["website"] = data.get("website", branding_updates.get("website", ""))
+    branding_updates["address"] = data.get("address", branding_updates.get("address", ""))
     branding_updates["phone"] = data.get("phone", branding_updates.get("phone", ""))
-    branding_updates["tagline"] = data.get(
-        "tagline", branding_updates.get("tagline", "")
-    )
+    branding_updates["tagline"] = data.get("tagline", branding_updates.get("tagline", ""))
     branding_updates["print_layout"] = data.get(
         "print_layout", branding_updates.get("print_layout", "A5")
     )
@@ -317,9 +301,7 @@ async def update_settings(
         with path.open("wb") as f:
             f.write(await logo.read())
         branding_updates["company_logo"] = path.name
-        branding_updates["company_logo_url"] = (
-            f"/static/logos/{path.name}?v={int(time.time())}"
-        )
+        branding_updates["company_logo_url"] = f"/static/logos/{path.name}?v={int(time.time())}"
     elif data.get("company_logo_url_input"):
         url = data["company_logo_url_input"].strip()
         if URL_RE.match(url):
@@ -335,9 +317,7 @@ async def update_settings(
         with path.open("wb") as f:
             f.write(await footer_logo.read())
         branding_updates["footer_logo"] = path.name
-        branding_updates["footer_logo_url"] = (
-            f"/static/logos/{path.name}?v={int(time.time())}"
-        )
+        branding_updates["footer_logo_url"] = f"/static/logos/{path.name}?v={int(time.time())}"
     elif data.get("footer_logo_url_input"):
         url = data["footer_logo_url_input"].strip()
         if URL_RE.match(url):
@@ -453,9 +433,7 @@ async def branding_update(
 
 
 @router.get("/settings/export")
-async def export_settings(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def export_settings(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     """Download configuration and cameras as a single JSON payload."""
 
     data = {"config": ctx.cfg, "cameras": ctx.cams}
@@ -463,9 +441,7 @@ async def export_settings(
 
 
 @router.post("/settings/import")
-async def import_settings(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def import_settings(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     """Import configuration and optional camera list."""
     data = await request.json()
     new_cfg = data.get("config", data)
@@ -499,19 +475,13 @@ async def reset_endpoint(ctx: SettingsContext = Depends(get_settings_context)):
 
 
 @router.get("/license")
-async def license_page(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def license_page(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     """Render a page for entering a license key."""
-    return ctx.templates.TemplateResponse(
-        "license.html", {"request": request, "cfg": ctx.cfg}
-    )
+    return ctx.templates.TemplateResponse("license.html", {"request": request, "cfg": ctx.cfg})
 
 
 @router.post("/license")
-async def activate_license(
-    request: Request, ctx: SettingsContext = Depends(get_settings_context)
-):
+async def activate_license(request: Request, ctx: SettingsContext = Depends(get_settings_context)):
     data = await request.json()
     key = data.get("key")
     from config.license_storage import set as save_license

@@ -112,9 +112,7 @@ def test_person_tracker_logs_to_redis(redis_client, monkeypatch, tmp_path):
 
     import modules.tracker.manager as manager_mod
 
-    monkeypatch.setattr(
-        manager_mod.cv2, "imwrite", lambda path, img: True, raising=False
-    )
+    monkeypatch.setattr(manager_mod.cv2, "imwrite", lambda path, img: True, raising=False)
 
     inf = InferWorker(tracker)
     post = PostProcessWorker(tracker)

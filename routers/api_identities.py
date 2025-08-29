@@ -26,9 +26,7 @@ def init_context(*_args, **_kwargs) -> None:
 
 
 @router.get("/api/identities/{identity_id}")
-def get_identity(
-    identity_id: str, ctx: AppContext = Depends(get_app_context)  # noqa: B008
-):
+def get_identity(identity_id: str, ctx: AppContext = Depends(get_app_context)):  # noqa: B008
     r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)

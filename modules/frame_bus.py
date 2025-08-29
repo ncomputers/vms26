@@ -1,4 +1,5 @@
 """Thread-safe ring buffer for camera frames."""
+
 from __future__ import annotations
 
 import threading
@@ -13,6 +14,7 @@ import numpy as np
 @dataclass
 class FrameInfo:
     """Lightweight structure with frame metadata."""
+
     w: int = 0
     h: int = 0
     fps: float = 0.0

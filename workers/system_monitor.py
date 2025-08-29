@@ -16,9 +16,7 @@ from utils.redis import publish_event
 class SystemMonitor:
     """Periodically sample system metrics and publish alerts."""
 
-    def __init__(
-        self, cfg: dict, redis_client, interval: int = 5, start: bool = True
-    ) -> None:
+    def __init__(self, cfg: dict, redis_client, interval: int = 5, start: bool = True) -> None:
         self.cfg = cfg
         self.redis = redis_client
         self.interval = interval

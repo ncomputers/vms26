@@ -1,8 +1,8 @@
+import importlib
 import json
 import os
-import importlib
-import types
 import sys
+import types
 
 import pytest
 

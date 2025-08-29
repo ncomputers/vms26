@@ -44,7 +44,5 @@ def test_renderer_no_resource_tracker_warning():
             pass
         """
     )
-    proc = subprocess.run(
-        [sys.executable, "-Wdefault", "-c", code], capture_output=True, text=True
-    )
+    proc = subprocess.run([sys.executable, "-Wdefault", "-c", code], capture_output=True, text=True)
     assert "resource_tracker" not in proc.stderr

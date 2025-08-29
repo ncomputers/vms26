@@ -37,9 +37,7 @@ class DummyRedis:
 
 async def test_create_and_update_user(tmp_path):
     cfg = {}
-    admin_users.init_context(
-        cfg, DummyRedis(), str(tmp_path), str(tmp_path / "cfg.json")
-    )
+    admin_users.init_context(cfg, DummyRedis(), str(tmp_path), str(tmp_path / "cfg.json"))
     new_user = UserCreate(
         username="alice", role="viewer", modules=[], email="a@b.com", name="Alice"
     )
@@ -68,9 +66,7 @@ async def test_user_actions(tmp_path):
             }
         ]
     }
-    admin_users.init_context(
-        cfg, DummyRedis(), str(tmp_path), str(tmp_path / "cfg.json")
-    )
+    admin_users.init_context(cfg, DummyRedis(), str(tmp_path), str(tmp_path / "cfg.json"))
     await admin_users.enable_user("bob")
     assert cfg["users"][0]["status"] == "active"
     await admin_users.disable_user("bob")
@@ -82,4 +78,3 @@ async def test_user_actions(tmp_path):
     export = await admin_users.export_users()
     assert export["users"][0]["username"] == "bob"
     assert "password" not in export["users"][0]
-

@@ -6,12 +6,12 @@ from fakeredis.aioredis import FakeRedis as AsyncFakeRedis
 from fastapi.testclient import TestClient
 
 import app
+import server.startup as startup
 from config import config as cfg
 from routers import entry
 from utils import preflight
 from utils import redis as redis_utils
 from utils.redis_facade import RedisFacade
-import server.startup as startup
 
 
 @pytest.fixture

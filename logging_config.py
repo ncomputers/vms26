@@ -48,9 +48,7 @@ def _configure(level: str = LOG_LEVEL) -> None:
         ]
 
     if DISABLE_FILE_LOGGING:
-        logger.warning(
-            "File logging disabled via DISABLE_FILE_LOGGING environment variable"
-        )
+        logger.warning("File logging disabled via DISABLE_FILE_LOGGING environment variable")
         return
 
     free_space = shutil.disk_usage(LOG_PATH.parent).free
@@ -83,5 +81,3 @@ def setup_json_logger(level: str = LOG_LEVEL) -> None:
 def set_log_level(level: str) -> None:
     """Update logger level at runtime."""
     _configure(level)
-
-

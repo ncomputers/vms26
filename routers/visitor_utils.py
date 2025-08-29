@@ -11,9 +11,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 # Canonical message used whenever visitor management is unavailable.
-VISITOR_DISABLED_MSG = (
-    "Visitor management feature disabled; enable in settings or license"
-)
+VISITOR_DISABLED_MSG = "Visitor management feature disabled; enable in settings or license"
 
 
 def visitor_disabled_response() -> JSONResponse:

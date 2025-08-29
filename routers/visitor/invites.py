@@ -12,16 +12,7 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import List
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    File,
-    Form,
-    Query,
-    Request,
-    UploadFile,
-)
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from loguru import logger
 
@@ -34,12 +25,7 @@ from utils.image import decode_base64_image
 from utils.redis import trim_sorted_set_async as trim_sorted_set
 
 from ..visitor_utils import require_visitor_mgmt, visitor_disabled_response
-from . import (
-    _save_host_master,
-    _save_visitor_master,
-    get_context,
-    get_host_names_cached,
-)
+from . import _save_host_master, _save_visitor_master, get_context, get_host_names_cached
 
 router = APIRouter()
 
@@ -48,9 +34,7 @@ async def _trim(client, key, ts):
     await trim_sorted_set(client, key, ts)
 
 
-def _build_invite_link(
-    request: Request, invite_id: str, ctx: SimpleNamespace | None = None
-) -> str:
+def _build_invite_link(request: Request, invite_id: str, ctx: SimpleNamespace | None = None) -> str:
     """Return a fully qualified link to the public invite form.
 
     ``ctx`` is optional so the helper can be called directly in tests or
@@ -277,7 +261,11 @@ async def invites_create(
     }
     await _persist_invite(ctx.redis, rec)
 
-    return JSONResponse({"invite_id": invite_id, "view_url": link_url, "photo_url": rec["photo_url"]}, status_code=201)
+    return JSONResponse(
+        {"invite_id": invite_id, "view_url": link_url, "photo_url": rec["photo_url"]},
+        status_code=201,
+    )
+
 
 @router.post("/invite/create")
 async def invite_create(
@@ -487,7 +475,7 @@ async def invite_list(
         vals = ctx.redis.hmget(f"invite:{iid}", fields)
         rec = {
             k: (v.decode() if isinstance(v, bytes) else v)
-            for k, v in zip(fields, vals)
+            for k, v in zip(fields, vals, strict=False)
             if v
         }
         if status and rec.get("status") not in status:
@@ -535,9 +523,7 @@ async def invite_public_form(
     if not rec_raw:
         return HTMLResponse("invalid", status_code=404)
     rec = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in rec_raw.items()
     }
     return ctx.templates.TemplateResponse(
@@ -580,9 +566,7 @@ async def invite_complete_form(
     if not rec_raw:
         return HTMLResponse("invalid", status_code=404)
     rec = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in rec_raw.items()
     }
     return ctx.templates.TemplateResponse(
@@ -611,9 +595,7 @@ async def invite_complete_submit(
     if not rec_raw:
         return JSONResponse({"errors": {"id": "invalid"}}, status_code=404)
     rec = {
-        (k.decode() if isinstance(k, bytes) else k): (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
         for k, v in rec_raw.items()
     }
     errors = {}
@@ -691,9 +673,7 @@ async def invite_public_submit(
     if not rec_raw:
         return JSONResponse({"errors": {"id": "invalid"}}, status_code=404)
     rec = {
-        (k.decode() if isinstance(k, bytes) else k): (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
         for k, v in rec_raw.items()
     }
 
@@ -727,9 +707,7 @@ async def invite_public_submit(
     if photo and photo.filename:
         content_type = (photo.content_type or "").lower()
         if content_type not in ("image/jpeg", "image/png"):
-            return JSONResponse(
-                {"errors": {"photo": "invalid_format"}}, status_code=400
-            )
+            return JSONResponse({"errors": {"photo": "invalid_format"}}, status_code=400)
         img_bytes = await photo.read()
         max_bytes = int(ctx.config.get("invite_photo_max_bytes", 500000))
         if len(img_bytes) > max_bytes:
@@ -763,9 +741,7 @@ async def invite_public_submit(
     if photo_url:
         update_data["photo_url"] = photo_url
     rec.update(update_data)
-    visitor_id = _save_visitor_master(
-        name, email, phone, visitor_type, company, photo_url
-    )
+    visitor_id = _save_visitor_master(name, email, phone, visitor_type, company, photo_url)
     rec["visitor_id"] = visitor_id
     redirect = f"/invite/thanks?visitor_id={visitor_id}"
     if rec.get("host"):
@@ -912,9 +888,7 @@ async def invite_get(
     if not rec_raw:
         return JSONResponse({"error": "not_found"}, status_code=404)
     rec = {
-        (k.decode() if isinstance(k, bytes) else k): (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
         for k, v in rec_raw.items()
     }
     return rec
@@ -945,9 +919,7 @@ async def invite_approve(
             return HTMLResponse("Invite not found", status_code=404)
         return {"error": "not_found"}
     obj = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
     if not obj.get("id_proof_type"):
@@ -980,9 +952,7 @@ async def invite_reject(
             return HTMLResponse("Invite not found", status_code=404)
         return {"error": "not_found"}
     obj = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
     obj["status"] = "rejected"
@@ -1011,9 +981,7 @@ async def invite_hold(
     if not data:
         return {"error": "not_found"}
     obj = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
     obj["status"] = "hold"
@@ -1037,9 +1005,7 @@ async def invite_delete(
     if not data:
         return {"error": "not_found"}
     obj = {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
     try:

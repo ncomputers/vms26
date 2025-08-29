@@ -14,9 +14,7 @@ def collect_logs(redis_client, start_ts: int, end_ts: int) -> List[Dict]:
 
 def compute_occupancy(logs: Iterable[Dict], now: int) -> int:
     """Return number of active visits at *now*."""
-    return sum(
-        1 for e in logs if e.get("valid_from", e["ts"]) <= now <= e.get("valid_to", now)
-    )
+    return sum(1 for e in logs if e.get("valid_from", e["ts"]) <= now <= e.get("valid_to", now))
 
 
 def compute_avg_duration(logs: Iterable[Dict]) -> str:
@@ -57,9 +55,7 @@ def compute_busiest_day(logs: Iterable[Dict]) -> str:
     return max(days, key=days.get) if days else ""
 
 
-def compute_daily_counts(
-    logs: Iterable[Dict], start_ts: int, end_ts: int
-) -> List[Dict]:
+def compute_daily_counts(logs: Iterable[Dict], start_ts: int, end_ts: int) -> List[Dict]:
     """Return list of daily visitor counts limited to two weeks."""
     start_date = datetime.fromtimestamp(start_ts).date()
     days_range = max(1, int((end_ts - start_ts) / 86400) + 1)

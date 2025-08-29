@@ -1,10 +1,11 @@
 import asyncio
+from collections import OrderedDict
 
-import routers.troubleshooter as ts
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from collections import OrderedDict
-import pytest
+
+import routers.troubleshooter as ts
 
 
 @pytest.fixture
@@ -48,9 +49,7 @@ def client():
 
 
 def test_troubleshooter_tests_endpoint(client, monkeypatch):
-    monkeypatch.setattr(
-        ts, "list_tests", lambda: OrderedDict([("a", object()), ("b", object())])
-    )
+    monkeypatch.setattr(ts, "list_tests", lambda: OrderedDict([("a", object()), ("b", object())]))
     res = client.get("/api/troubleshooter/tests")
     assert res.status_code == 200
     body = res.json()

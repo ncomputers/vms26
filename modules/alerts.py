@@ -219,9 +219,7 @@ class AlertWorker:
             value = int(rule.get("value", 1))
             window = int(rule.get("window", 1))
             attach = rule.get("attach", True)
-            recipients = [
-                a.strip() for a in rule.get("recipients", "").split(",") if a.strip()
-            ]
+            recipients = [a.strip() for a in rule.get("recipients", "").split(",") if a.strip()]
             if not metric or not recipients:
                 continue
             last_key = f"alert_rule_{i}_last"

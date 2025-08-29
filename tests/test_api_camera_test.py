@@ -9,9 +9,7 @@ from routers import cameras
 from utils import redis as redis_utils
 
 app.get_sync_client = lambda url=None: fakeredis.FakeRedis(decode_responses=True)
-redis_utils.get_sync_client = lambda url=None: fakeredis.FakeRedis(
-    decode_responses=True
-)
+redis_utils.get_sync_client = lambda url=None: fakeredis.FakeRedis(decode_responses=True)
 
 
 async def _fake_get_client(url: str | None = None):
@@ -33,9 +31,7 @@ def test_api_camera_test_success(client, monkeypatch):
         return CP()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    resp = client.post(
-        "/api/cameras/test", json={"url": "rtsp://example", "transport": "tcp"}
-    )
+    resp = client.post("/api/cameras/test", json={"url": "rtsp://example", "transport": "tcp"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["ok"] is True
@@ -74,9 +70,7 @@ def test_activate_camera_success(client, monkeypatch):
     client.post("/api/cameras", json={"name": "Cam2", "url": "rtsp://example"})
 
     called = {}
-    monkeypatch.setattr(
-        cameras.camera_manager, "start", lambda cid: called.setdefault("cid", cid)
-    )
+    monkeypatch.setattr(cameras.camera_manager, "start", lambda cid: called.setdefault("cid", cid))
 
     resp = client.post("/api/cameras/2/activate")
     assert resp.status_code == 200

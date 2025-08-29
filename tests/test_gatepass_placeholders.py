@@ -10,9 +10,7 @@ import fakeredis
 # stub qrcode to avoid dependency
 sys.modules.setdefault(
     "qrcode",
-    types.SimpleNamespace(
-        make=lambda data: types.SimpleNamespace(save=lambda *a, **k: None)
-    ),
+    types.SimpleNamespace(make=lambda data: types.SimpleNamespace(save=lambda *a, **k: None)),
 )
 
 from routers import gatepass

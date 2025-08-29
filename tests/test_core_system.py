@@ -5,14 +5,9 @@ import fakeredis
 import redis
 
 import core.tracker_manager as tm
+from config import _sanitize_track_ppe, load_branding, save_branding, sync_detection_classes
 from core import stats
 from modules.events_store import RedisStore
-from config import (
-    _sanitize_track_ppe,
-    sync_detection_classes,
-    load_branding,
-    save_branding,
-)
 
 
 class DummyTracker:

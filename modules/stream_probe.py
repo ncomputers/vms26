@@ -59,9 +59,7 @@ class TrialResult:
 
 
 # build ffmpeg trial command
-def _build_trial_cmd(
-    url: str, transport: str, hwaccel: bool, sample_seconds: int
-) -> List[str]:
+def _build_trial_cmd(url: str, transport: str, hwaccel: bool, sample_seconds: int) -> List[str]:
     cmd = ["ffmpeg"]
     if url.startswith("rtsp://"):
         cmd += ["-rtsp_transport", transport]
@@ -87,9 +85,7 @@ def _build_trial_cmd(
 
 
 # probe_stream routine
-def probe_stream(
-    url: str, sample_seconds: int = 2, enable_hwaccel: bool = True
-) -> Dict[str, Any]:
+def probe_stream(url: str, sample_seconds: int = 2, enable_hwaccel: bool = True) -> Dict[str, Any]:
     """Probe a stream for metadata and effective FPS.
 
     This helper performs an ``ffprobe`` to gather codec and resolution
@@ -230,9 +226,7 @@ def check_rtsp(
     parsed = urlparse(url)
     cred_hint = None
     if "@" in (parsed.username or "") or "@" in (parsed.password or ""):
-        cred_hint = (
-            "Credentials contain '@'; URL-encode or use separate user/password fields."
-        )
+        cred_hint = "Credentials contain '@'; URL-encode or use separate user/password fields."
 
     if not url.startswith(("rtsp://", "rtsps://")):
         hints = list(_ERROR_HINTS.get("BAD_URL", []))

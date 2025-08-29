@@ -16,6 +16,7 @@ def _patch_health_loop():
 
 def test_email_test_uses_payload_config(client, monkeypatch):
     from routers import settings
+
     ctx = settings.get_settings_context()
     monkeypatch.setitem(ctx.cfg, "email", {})
 
@@ -46,6 +47,7 @@ def test_email_test_uses_payload_config(client, monkeypatch):
 
 def test_email_test_sets_last_ts_allows_save(client, monkeypatch):
     from routers import settings
+
     ctx = settings.get_settings_context()
     monkeypatch.setitem(ctx.cfg, "email", {})
     monkeypatch.setitem(ctx.cfg, "settings_password", "pass")
@@ -53,9 +55,7 @@ def test_email_test_sets_last_ts_allows_save(client, monkeypatch):
     monkeypatch.setattr("routers.settings.save_config", lambda *a, **k: None)
     monkeypatch.setattr("routers.settings.save_branding", lambda *a, **k: None)
     monkeypatch.setattr("routers.settings.start_profiler", lambda *a, **k: None)
-    monkeypatch.setattr(
-        "routers.settings.send_email", lambda *a, **k: (True, "", None, None)
-    )
+    monkeypatch.setattr("routers.settings.send_email", lambda *a, **k: (True, "", None, None))
 
     payload = {"recipient": "to@example.com", "smtp_host": "smtp.example.com"}
     r = client.post("/settings/email/test", json=payload)

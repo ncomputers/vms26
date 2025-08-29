@@ -23,16 +23,12 @@ def load_faces(
     ctx = visitor.get_context()
     redis = ctx.redis
     prefix: str = fields_map.get("prefix", "")
-    field_funcs: dict[str, Callable[[str, dict, int, str, str], Any]] = fields_map.get(
-        "fields", {}
-    )
+    field_funcs: dict[str, Callable[[str, dict, int, str, str], Any]] = fields_map.get("fields", {})
 
     max_score = cursor if cursor is not None else "+inf"
     if cursor is not None:
         max_score = f"({cursor}"
-    raw_ids = redis.zrevrangebyscore(
-        set_key, max_score, "-inf", start=0, num=limit * 5 + 1
-    )
+    raw_ids = redis.zrevrangebyscore(set_key, max_score, "-inf", start=0, num=limit * 5 + 1)
 
     faces: list[tuple[dict, int]] = []
     next_cursor: int | None = None
@@ -44,9 +40,7 @@ def load_faces(
         key = f"{prefix}{fid_str}"
         raw_fields = redis.hgetall(key)
         fields = {
-            k.decode() if isinstance(k, bytes) else k: (
-                v.decode() if isinstance(v, bytes) else v
-            )
+            k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
             for k, v in raw_fields.items()
         }
 
@@ -80,8 +74,7 @@ def load_faces(
                 img_b64 = base64.b64encode(f.read()).decode()
 
         info = {
-            out: func(fid_str, fields, ts, date_str, img_b64)
-            for out, func in field_funcs.items()
+            out: func(fid_str, fields, ts, date_str, img_b64) for out, func in field_funcs.items()
         }
         faces.append((info, ts))
         if len(faces) >= limit:

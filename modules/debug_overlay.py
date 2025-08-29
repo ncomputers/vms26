@@ -24,6 +24,7 @@ except Exception:  # pragma: no cover - optional in tests
 
 try:
     from pathlib import Path
+
     from PIL import ImageFont
 
     font_path = Path(__file__).resolve().parents[1] / "static" / "fonts" / "DejaVuSans.ttf"

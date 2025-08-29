@@ -29,9 +29,7 @@ def test_rtsp_probe_endpoint(client: TestClient, monkeypatch):
     monkeypatch.setattr(stream_probe, "probe_stream", fake_probe)
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/" + name)
 
-    payload = {
-        "url": "rtsp://admin:pass@192.168.31.11:554/cam/realmonitor?channel=1&subtype=1"
-    }
+    payload = {"url": "rtsp://admin:pass@192.168.31.11:554/cam/realmonitor?channel=1&subtype=1"}
     resp = client.post("/api/rtsp/probe", json=payload)
     assert resp.status_code == 200
     data = resp.json()

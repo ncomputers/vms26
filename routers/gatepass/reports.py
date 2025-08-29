@@ -145,9 +145,7 @@ async def gatepass_print(gate_id: str, request: Request, pdf: bool = False):
         "qr_img": qr_img,
     }
     if pdf:
-        html = templates.get_template("gatepass_print.html").render(
-            **context, show_controls=False
-        )
+        html = templates.get_template("gatepass_print.html").render(**context, show_controls=False)
         return export.export_pdf(html, f"gatepass_{gate_id}")
 
     return templates.TemplateResponse("gatepass_print.html", context)
@@ -266,9 +264,7 @@ async def gatepass_export(fmt: str = "csv"):
             + "".join(f"<th>{c[1]}</th>" for c in columns)
             + "</tr>"
             + "".join(
-                "<tr>"
-                + "".join(f"<td>{row.get(c[0],'')}</td>" for c in columns)
-                + "</tr>"
+                "<tr>" + "".join(f"<td>{row.get(c[0],'')}</td>" for c in columns) + "</tr>"
                 for row in rows
             )
             + "</table>"

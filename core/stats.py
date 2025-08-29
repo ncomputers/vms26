@@ -10,21 +10,16 @@ from typing import Dict
 import redis
 from loguru import logger
 
-from utils.logx import event, every, on_change
-
 from config import ANOMALY_ITEMS, COUNT_GROUPS, config
 from modules.events_store import RedisStore
+from utils.logx import event, every, on_change
 
 
 # gather_stats routine
-def gather_stats(
-    trackers: Dict[int, "PersonTracker"], r: redis.Redis, store: RedisStore
-) -> dict:
+def gather_stats(trackers: Dict[int, "PersonTracker"], r: redis.Redis, store: RedisStore) -> dict:
     """Collect aggregated counts and anomaly metrics."""
     now = int(time.time())
-    start_day = int(
-        datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    )
+    start_day = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
     group_counts = {}
     warned = False
 
@@ -52,7 +47,7 @@ def gather_stats(
     count_keys = [f"{item}_count" for item in ANOMALY_ITEMS]
     count_vals = r.mget(count_keys)
     anomaly_counts = {
-        item: int(val or 0) for item, val in zip(ANOMALY_ITEMS, count_vals)
+        item: int(val or 0) for item, val in zip(ANOMALY_ITEMS, count_vals, strict=False)
     }
     max_cap = config.get("max_capacity", 0)
     warn_lim = max_cap * config.get("warn_threshold", 0) / 100

@@ -11,8 +11,10 @@ def _setup(tmp_path):
     visitor.init_context(cfg, r, str(tmp_path), [])
     app = FastAPI()
     from starlette.middleware.sessions import SessionMiddleware
+
     app.add_middleware(SessionMiddleware, secret_key="test")
     import modules.utils as utils
+
     utils.require_roles = lambda request, roles: {"role": "viewer"}
     app.post("/invite/create")(visitor.invite_create)
     app.post("/invite/form/submit")(visitor.invite_public_submit)
@@ -27,8 +29,10 @@ def test_invite_link_open(tmp_path):
     visitor.init_context(cfg, r, str(tmp_path), [])
     app = FastAPI()
     from starlette.middleware.sessions import SessionMiddleware
+
     app.add_middleware(SessionMiddleware, secret_key="test")
     import modules.utils as utils
+
     utils.require_roles = lambda request, roles: {"role": "viewer"}
     app.post("/invite/create")(visitor.invite_create)
     app.get("/invite/form")(visitor.invite_public_form)

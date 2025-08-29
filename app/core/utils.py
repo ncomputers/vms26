@@ -4,7 +4,6 @@ import os
 import time
 from typing import Callable, TypeVar, overload
 
-
 T = TypeVar("T", int, float)
 
 

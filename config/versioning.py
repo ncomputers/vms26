@@ -1,13 +1,12 @@
 import asyncio
-import os
 import json
+import os
 from pathlib import Path
 from typing import Callable
 
 from loguru import logger
 
 from .storage import load_config
-
 
 DEFAULT_CONFIG_PATH = Path(os.getenv("CONFIG_PATH", "config.json"))
 VERSION_FILE_SUFFIX = ".version"
@@ -92,7 +91,7 @@ async def watch_config(
                 else:
                     try:
                         callback(cfg)
-                    except Exception as exc:
+                    except Exception:
                         logger.exception("Config callback failed")
                         raise
     except asyncio.CancelledError:

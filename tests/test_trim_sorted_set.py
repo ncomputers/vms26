@@ -1,6 +1,5 @@
 import asyncio
 
-
 from utils.redis import trim_sorted_set, trim_sorted_set_async
 from utils.redis_facade import RedisFacade
 

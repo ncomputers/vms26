@@ -22,9 +22,7 @@ def _require_cv2() -> None:
         ) from _cv2_error
 
 
-def abs_line_from_ratio(
-    w: int, h: int, orient: str, ratio: float
-) -> Tuple[int, int, int, int]:
+def abs_line_from_ratio(w: int, h: int, orient: str, ratio: float) -> Tuple[int, int, int, int]:
     """Return absolute line coordinates from ``ratio`` within a frame.
 
     ``ratio`` is clamped to ``[0, 1]``. For ``orient == "horizontal"`` the
@@ -82,9 +80,7 @@ def draw_boxes_pil(
             label = f'{d["cls"]} {d.get("conf", 0):.2f}'
             tw = dr.textlength(label, font=font)
             th = 12
-            dr.rectangle(
-                [xi1, yi1 - th - 2, xi1 + int(tw) + 6, yi1], fill=(0, 0, 0, 160)
-            )
+            dr.rectangle([xi1, yi1 - th - 2, xi1 + int(tw) + 6, yi1], fill=(0, 0, 0, 160))
             dr.text((xi1 + 3, yi1 - th - 1), label, fill=(255, 255, 255), font=font)
 
 
@@ -132,9 +128,7 @@ def _draw_counting_line(frame, line_orientation: str, line_ratio: float) -> None
         cv2.line(frame, (line_pos, 0), (line_pos, h), (255, 0, 0), 2)
 
 
-def _draw_track(
-    frame, info: Dict, scale: float, show_ids: bool, show_track_lines: bool
-) -> None:
+def _draw_track(frame, info: Dict, scale: float, show_ids: bool, show_track_lines: bool) -> None:
     """Render a single track on ``frame``."""
     _require_cv2()
     h, w = frame.shape[:2]
@@ -281,6 +275,4 @@ def draw_overlays(
             bbox = _sanitize_bbox(box, w, h)
             if bbox:
                 x1, y1, x2, y2 = bbox
-                cv2.rectangle(
-                    frame, (x1, y1), (x2, y2), (255, 255, 0), 2, lineType=cv2.LINE_8
-                )
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 2, lineType=cv2.LINE_8)

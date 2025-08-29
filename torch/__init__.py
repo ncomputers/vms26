@@ -1,7 +1,7 @@
 import importlib.util
-from importlib.machinery import PathFinder
 import os
 import sys
+from importlib.machinery import PathFinder
 
 # Attempt to load real PyTorch if available outside this stub package
 _current_dir = os.path.dirname(__file__)
@@ -12,9 +12,7 @@ def _is_same_path(a: str, b: str) -> bool:
     try:
         return os.path.samefile(a, b)
     except OSError:
-        return os.path.normcase(os.path.abspath(a)) == os.path.normcase(
-            os.path.abspath(b)
-        )
+        return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
 _real_spec = None
@@ -39,6 +37,7 @@ if _real_spec and _real_spec.origin and not _is_same_path(_real_spec.origin, __f
     sys.modules[__name__] = _real_torch
     globals().update(_real_torch.__dict__)
 else:
+
     class device:
         def __init__(self, name: str):
             self.type = name
@@ -55,4 +54,3 @@ else:
     def set_num_threads(n: int) -> None:
         """Stub implementation that ignores requested thread count."""
         return None
-

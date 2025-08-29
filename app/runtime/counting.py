@@ -13,7 +13,7 @@ def _tracks_to_dict(tracks: Iterable[Any]) -> Dict[int, Dict[str, Any]]:
     for tr in tracks or []:
         tid = None
         if hasattr(tr, "track_id"):
-            tid = getattr(tr, "track_id")
+            tid = tr.track_id
         elif isinstance(tr, dict):
             tid = tr.get("track_id")
         if tid is None:

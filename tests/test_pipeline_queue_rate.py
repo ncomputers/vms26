@@ -30,5 +30,5 @@ def test_pipeline_queue_and_rate():
     pipe.process.join(timeout=1)
     assert len(pipe.queue) <= 2
     if len(times) >= 2:
-        intervals = [b - a for a, b in zip(times, times[1:])]
+        intervals = [b - a for a, b in zip(times, times[1:], strict=False)]
         assert all(i >= 0.09 for i in intervals)

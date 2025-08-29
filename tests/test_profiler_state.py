@@ -1,11 +1,6 @@
 import pytest
 
-from modules.profiler import (
-    ProfilerState,
-    _collect_stats,
-    log_inference,
-    register_thread,
-)
+from modules.profiler import ProfilerState, _collect_stats, log_inference, register_thread
 
 
 def test_profiler_state_custom_instance():

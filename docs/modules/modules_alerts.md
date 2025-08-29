@@ -6,7 +6,7 @@ Purpose: Alerts module. Modules publish events to Redis and this worker
 evaluates alert rules based on those events.
 
 ## Key Classes
-- **AlertWorker** - 
+- **AlertWorker** -
 
 ## Key Functions
 None

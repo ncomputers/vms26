@@ -14,9 +14,7 @@ _IDS_KEY = "feedback:ids"
 
 def _decode_map(data: Dict) -> Dict:
     return {
-        k.decode() if isinstance(k, bytes) else k: (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
 

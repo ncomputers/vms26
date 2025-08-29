@@ -33,15 +33,10 @@ async def help_page(request: Request) -> HTMLResponse:
     if FAQ_PATH.exists():
         with open(FAQ_PATH) as f:
             faqs = json.load(f)
-    return templates.TemplateResponse(
-        "help.html", {"request": request, "cfg": cfg, "faqs": faqs}
-    )
+    return templates.TemplateResponse("help.html", {"request": request, "cfg": cfg, "faqs": faqs})
 
 
 @router.get("/contact", response_class=HTMLResponse)
 async def contact_page(request: Request) -> HTMLResponse:
     """Render the contact page."""
-    return templates.TemplateResponse(
-        "contact.html", {"request": request, "cfg": cfg}
-    )
-
+    return templates.TemplateResponse("contact.html", {"request": request, "cfg": cfg})

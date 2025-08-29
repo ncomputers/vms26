@@ -15,7 +15,7 @@ try:  # OpenCV may be absent in tests
 except Exception:  # pragma: no cover - optional dependency
     cv2 = None  # type: ignore
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks, Body, File, Form, Request, UploadFile, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 
@@ -27,14 +27,15 @@ except Exception:  # pragma: no cover - optional in tests
         invalidate_host_cache=lambda: None,
     )
 from config import config as cfg
+from core import events
 from modules import gatepass_service, visitor_db
 from modules.email_utils import send_email, sign_token
 from routers.visitor_utils import visitor_disabled_response
 from schemas.gatepass import GatepassBase
 from utils.ids import generate_id
 from utils.image import decode_base64_image
-from utils.redis import publish_event, trim_sorted_set_async as trim_sorted_set
-from core import events
+from utils.redis import publish_event
+from utils.redis import trim_sorted_set_async as trim_sorted_set
 
 from . import (
     _cache_gatepass,
@@ -85,9 +86,7 @@ def _merge_invite_fields(data: dict, invite_id: str) -> dict:
     try:
         raw = redis.hgetall(f"invite:{invite_id}")
         invite_data = {
-            (k.decode() if isinstance(k, bytes) else k): (
-                v.decode() if isinstance(v, bytes) else v
-            )
+            (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
             for k, v in raw.items()
         }
     except Exception:
@@ -96,16 +95,10 @@ def _merge_invite_fields(data: dict, invite_id: str) -> dict:
         return data
     merged = data.copy()
     merged["name"] = merged.get("name") or invite_data.get("name", merged.get("name"))
-    merged["phone"] = merged.get("phone") or invite_data.get(
-        "phone", merged.get("phone")
-    )
-    merged["email"] = merged.get("email") or invite_data.get(
-        "email", merged.get("email")
-    )
+    merged["phone"] = merged.get("phone") or invite_data.get("phone", merged.get("phone"))
+    merged["email"] = merged.get("email") or invite_data.get("email", merged.get("email"))
     merged["host"] = merged.get("host") or invite_data.get("host", merged.get("host"))
-    merged["purpose"] = merged.get("purpose") or invite_data.get(
-        "purpose", merged.get("purpose")
-    )
+    merged["purpose"] = merged.get("purpose") or invite_data.get("purpose", merged.get("purpose"))
     merged["visitor_type"] = merged.get("visitor_type") or invite_data.get(
         "visitor_type", merged.get("visitor_type")
     )
@@ -113,9 +106,7 @@ def _merge_invite_fields(data: dict, invite_id: str) -> dict:
         "company", merged.get("company_name")
     )
     if not merged.get("valid_to"):
-        merged["valid_to"] = (
-            invite_data.get("expiry") or invite_data.get("visit_time") or ""
-        )
+        merged["valid_to"] = invite_data.get("expiry") or invite_data.get("visit_time") or ""
     return merged
 
 
@@ -400,12 +391,8 @@ async def gatepass_create(
     approval_url = None
     if needs_approval == "on" and approver_email:
         tok = f"{entry['gate_id']}:{sign_token(entry['gate_id'], config_obj.get('secret_key', 'secret'))}"
-        approve_url = str(
-            request.url_for("gatepass_approve").include_query_params(token=tok)
-        )
-        reject_url = str(
-            request.url_for("gatepass_reject").include_query_params(token=tok)
-        )
+        approve_url = str(request.url_for("gatepass_approve").include_query_params(token=tok))
+        reject_url = str(request.url_for("gatepass_reject").include_query_params(token=tok))
         approval_url = approve_url
         _format_gatepass_times(entry)
         qr_img = _qr_data_uri(qr_content)
@@ -470,9 +457,7 @@ async def gatepass_verify_form(gate_id: str, request: Request):
             "%Y-%m-%d %H:%M:%S", time.localtime(item["valid_from"])
         )
     if item.get("valid_to"):
-        item["valid_to_str"] = time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime(item["valid_to"])
-        )
+        item["valid_to_str"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(item["valid_to"]))
     branding = cfg.get("branding", {})
     return templates.TemplateResponse(
         "host_verify.html",
@@ -494,9 +479,7 @@ async def gatepass_verify(gate_id: str, request: Request, host_pass: str = Form(
     if item.get("host", "").strip().lower() != host_pass.strip().lower():
         return HTMLResponse("host mismatch", status_code=403)
     new_status = (
-        "Meeting in progress"
-        if item.get("status") != "Meeting in progress"
-        else "Completed"
+        "Meeting in progress" if item.get("status") != "Meeting in progress" else "Completed"
     )
     item["status"] = new_status
     try:
@@ -539,9 +522,7 @@ async def gatepass_sign(gate_id: str, payload: dict = Body(...)):
 
 
 @router.post("/gatepass/checkout/{gate_id}")
-async def gatepass_checkout(
-    gate_id: str, request: Request, host_pass: str | None = None
-):
+async def gatepass_checkout(gate_id: str, request: Request, host_pass: str | None = None):
     """Record visitor exit and update pass status."""
     if not config_obj.get("features", {}).get("visitor_mgmt"):
         return visitor_disabled_response()
@@ -566,9 +547,7 @@ async def gatepass_checkout(
     item["status"] = status
     item["exit_ts"] = now
     try:
-        redis.hset(
-            f"gatepass:pass:{gate_id}", mapping={"status": status, "exit_ts": now}
-        )
+        redis.hset(f"gatepass:pass:{gate_id}", mapping={"status": status, "exit_ts": now})
         entries = redis.zrange("vms_logs", 0, -1)
         for e in entries:
             rec = json.loads(e if isinstance(e, str) else e.decode())

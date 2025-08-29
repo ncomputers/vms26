@@ -41,13 +41,11 @@ class BaseCameraStream(ABC):
 
     # _read_frame routine
     @abstractmethod
-    def _read_frame(self) -> Tuple[bool, Optional[np.ndarray]]:
-        ...
+    def _read_frame(self) -> Tuple[bool, Optional[np.ndarray]]: ...
 
     # _release_stream routine
     @abstractmethod
-    def _release_stream(self) -> None:
-        ...
+    def _release_stream(self) -> None: ...
 
     # ------------------------------------------------------------------
     # _capture_loop routine

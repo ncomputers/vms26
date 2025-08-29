@@ -8,8 +8,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
-from loguru import logger
 from fastapi.templating import Jinja2Templates
+from loguru import logger
 
 from modules import feedback_db
 from utils.deps import get_redis, get_settings, get_templates

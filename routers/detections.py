@@ -12,8 +12,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from utils.deps import get_cameras, get_settings, get_templates, get_trackers
 from modules.email_utils import sign_token
+from utils.deps import get_cameras, get_settings, get_templates, get_trackers
 from utils.video import async_get_stream_resolution
 
 if TYPE_CHECKING:  # pragma: no cover - imported for type checking only
@@ -76,11 +76,7 @@ async def _build_payload(
             except (TypeError, ValueError):
                 ratio = 0.5
             ratio = max(0.0, min(1.0, ratio))
-            lines = (
-                [[ratio, 0.0, ratio, 1.0]]
-                if ori == "vertical"
-                else [[0.0, ratio, 1.0, ratio]]
-            )
+            lines = [[ratio, 0.0, ratio, 1.0]] if ori == "vertical" else [[0.0, ratio, 1.0, ratio]]
     try:
         if tracker is not None and getattr(tracker, "last_frame_shape", None):
             src_h, src_w = tracker.last_frame_shape
@@ -124,8 +120,7 @@ async def _build_payload(
         else:
             out_c = int(getattr(tracker, "out_count", 0) or 0)
     counts = {
-        k: int(val)
-        for k, val in {"entered": in_c, "exited": out_c, "inside": in_c - out_c}.items()
+        k: int(val) for k, val in {"entered": in_c, "exited": out_c, "inside": in_c - out_c}.items()
     }
     counts["inside"] = max(0, counts["inside"])
 

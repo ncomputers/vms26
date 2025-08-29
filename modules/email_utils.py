@@ -69,9 +69,7 @@ def _build_message(
         )
     if attachment:
         maintype, subtype = (
-            attachment_type.split("/")
-            if attachment_type
-            else ("application", "octet-stream")
+            attachment_type.split("/") if attachment_type else ("application", "octet-stream")
         )
         msg.add_attachment(
             attachment,
@@ -182,9 +180,7 @@ def send_email(
                 rcpt_responses[r] = {
                     "code": rcpt_code,
                     "message": (
-                        rcpt_resp.decode()
-                        if isinstance(rcpt_resp, bytes)
-                        else str(rcpt_resp)
+                        rcpt_resp.decode() if isinstance(rcpt_resp, bytes) else str(rcpt_resp)
                     ),
                 }
             data_code, data_resp = s.data(msg.as_string())
@@ -192,18 +188,14 @@ def send_email(
                 "mail": {
                     "code": mail_code,
                     "message": (
-                        mail_resp.decode()
-                        if isinstance(mail_resp, bytes)
-                        else str(mail_resp)
+                        mail_resp.decode() if isinstance(mail_resp, bytes) else str(mail_resp)
                     ),
                 },
                 "rcpt": rcpt_responses,
                 "data": {
                     "code": data_code,
                     "message": (
-                        data_resp.decode()
-                        if isinstance(data_resp, bytes)
-                        else str(data_resp)
+                        data_resp.decode() if isinstance(data_resp, bytes) else str(data_resp)
                     ),
                 },
             }

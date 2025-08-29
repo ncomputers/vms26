@@ -22,9 +22,7 @@ def _patch(monkeypatch):
     monkeypatch.setattr(cameras, "trackers_map", {})
     cameras.cams = []
     cameras.cams_lock = asyncio.Lock()
-    cameras.redis = type(
-        "R", (), {"hget": lambda *a, **k: "", "hset": lambda *a, **k: None}
-    )()
+    cameras.redis = type("R", (), {"hget": lambda *a, **k: "", "hset": lambda *a, **k: None})()
 
 
 def test_concurrent_add_camera(monkeypatch):

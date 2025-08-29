@@ -104,7 +104,6 @@ async def test_visit_requests_page_after_context_reload(monkeypatch, tmp_path):
     visitor.init_context(cfg, r2, str(tmp_path))
     assert visit_requests.redis is r2
 
-
     scope = {
         "type": "http",
         "scheme": "http",
@@ -116,4 +115,3 @@ async def test_visit_requests_page_after_context_reload(monkeypatch, tmp_path):
     resp = await visit_requests.visit_requests_page(req, user={})
     assert resp.template == "visit_requests.html"
     assert resp.context["rows"][0]["id"] == "2"
-

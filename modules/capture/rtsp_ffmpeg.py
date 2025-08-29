@@ -109,12 +109,8 @@ class RtspFfmpegSource(IFrameSource):
         opts = [(15_000_000, 3_000_000), (30_000_000, 6_000_000)]
         for probesize, analyzeduration in opts:
             try:
-                info = ffmpeg.probe(
-                    self.uri, probesize=probesize, analyzeduration=analyzeduration
-                )
-                stream = next(
-                    s for s in info.get("streams", []) if s.get("codec_type") == "video"
-                )
+                info = ffmpeg.probe(self.uri, probesize=probesize, analyzeduration=analyzeduration)
+                stream = next(s for s in info.get("streams", []) if s.get("codec_type") == "video")
                 self.width = self.width or int(stream.get("width", 0) or 0)
                 self.height = self.height or int(stream.get("height", 0) or 0)
                 if self.width and self.height:
@@ -128,9 +124,7 @@ class RtspFfmpegSource(IFrameSource):
         self._frame_queue = queue.Queue(maxsize=1)
         self._stop_event = threading.Event()
         if self.width and self.height:
-            self._reader_thread = threading.Thread(
-                target=self._reader_loop, daemon=True
-            )
+            self._reader_thread = threading.Thread(target=self._reader_loop, daemon=True)
             self._reader_thread.start()
 
     def _start_proc(self) -> None:
@@ -215,9 +209,7 @@ class RtspFfmpegSource(IFrameSource):
         if not self.width or not self.height:
             self._log_stderr()
             logger.warning("ffmpeg stderr:\n%s", self.last_stderr)
-            logger.warning(
-                "HINT: increase probesize/analyzeduration; try TCP transport."
-            )
+            logger.warning("HINT: increase probesize/analyzeduration; try TCP transport.")
             raise FrameSourceError("NO_VIDEO_STREAM")
         try:
             return self._frame_queue.get(timeout=timeout or self.latency_ms / 1000)
@@ -248,9 +240,7 @@ class RtspFfmpegSource(IFrameSource):
                 if self._short_reads >= MAX_SHORT_READS:
                     self._restart_proc()
                 continue
-            frame = (
-                np.frombuffer(mv, np.uint8).reshape((self.height, self.width, 3)).copy()
-            )
+            frame = np.frombuffer(mv, np.uint8).reshape((self.height, self.width, 3)).copy()
             self._short_reads = 0
             self._backoff.reset()
             if self._frame_queue:

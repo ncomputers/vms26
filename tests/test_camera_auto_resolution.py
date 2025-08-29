@@ -4,15 +4,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-import routers.cameras as cameras
 from types import SimpleNamespace
 
+import routers.cameras as cameras
 
 
 def test_auto_resolution_on_add_and_update(client, monkeypatch):
     monkeypatch.setattr(cameras, "cams", [])
     monkeypatch.setattr(cameras, "start_tracker", lambda *a, **k: None)
     monkeypatch.setattr(cameras, "save_cameras", lambda *a, **k: None)
+
     async def fake_res(
         url,
         *,
@@ -73,4 +74,3 @@ def test_resolution_update_restarts_capture(client, monkeypatch):
     assert resp.status_code == 200
     assert cameras.cams[0]["resolution"] == "480p"
     assert tracker.restart_capture is True
-

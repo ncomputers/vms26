@@ -1,8 +1,9 @@
 import sys
+
 import pytest
+from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.websockets import WebSocket
-from starlette.applications import Starlette
 
 sys.modules.setdefault("cv2", type("cv2", (), {}))
 from utils.deps import get_settings

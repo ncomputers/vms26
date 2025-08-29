@@ -100,12 +100,8 @@ def test_misc_endpoints(tmp_path):
     ctx = setup_context(tmp_path)
     assert asyncio.run(settings.reset_endpoint(ctx)) == {"reset": True}
 
-    lic = generate_license(
-        "default_secret", 1, 1, {"face_recognition": True}, client="T"
-    )
-    resp = asyncio.run(
-        settings.activate_license(DummyRequest(json_data={"key": lic}), ctx)
-    )
+    lic = generate_license("default_secret", 1, 1, {"face_recognition": True}, client="T")
+    resp = asyncio.run(settings.activate_license(DummyRequest(json_data={"key": lic}), ctx))
     assert resp["activated"]
     assert ctx.cfg["license_key"] == lic
 

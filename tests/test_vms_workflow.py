@@ -83,8 +83,6 @@ def test_full_workflow(tmp_path):
     assert r.hget(f"gatepass:pass:{gp_id}", "status") == b"approved"
     asyncio.run(gatepass.gatepass_verify(gp_id, DummyRequest(), host_pass="H"))
     assert r.hget(f"gatepass:pass:{gp_id}", "status") == b"Meeting in progress"
-    checkout = asyncio.run(
-        gatepass.gatepass_checkout(gp_id, DummyRequest(), host_pass="H")
-    )
+    checkout = asyncio.run(gatepass.gatepass_checkout(gp_id, DummyRequest(), host_pass="H"))
     assert json.loads(checkout.body)["status"] in {"Completed", "Expired"}
     assert r.hget(f"gatepass:pass:{gp_id}", "status") in {b"Completed", b"Expired"}

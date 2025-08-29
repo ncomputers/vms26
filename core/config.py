@@ -9,4 +9,5 @@ def get_config() -> dict:
     """Return application configuration."""
     return _config
 
+
 __all__ = ["get_config"]

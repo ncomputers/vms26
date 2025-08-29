@@ -55,16 +55,12 @@ async def preload_models(cfg: dict[str, Any], cams: list[dict[str, Any]]) -> Non
         "full_monitor",
         "visitor_mgmt",
     } | set(PPE_TASKS)
-    needs_person = any(
-        t in required_tasks for cam in cams for t in cam.get("tasks", [])
-    )
+    needs_person = any(t in required_tasks for cam in cams for t in cam.get("tasks", []))
     if not needs_person:
         cfg["enable_person_tracking"] = False
         return
 
-    if getattr(device, "type", "") != "cuda" and cfg.get(
-        "enable_person_tracking", True
-    ):
+    if getattr(device, "type", "") != "cuda" and cfg.get("enable_person_tracking", True):
         logger.warning("CUDA device not available, disabling person tracking")
         cfg["enable_person_tracking"] = False
 
@@ -112,15 +108,11 @@ async def init_trackers(
     try:
 
         async def _start(cam: dict[str, Any]) -> None:
-            tr = await asyncio.to_thread(
-                start_tracker, cam, cfg, trackers, redis_client
-            )
+            tr = await asyncio.to_thread(start_tracker, cam, cfg, trackers, redis_client)
             if tr:
                 tasks.append(
                     asyncio.create_task(
-                        watch_config(
-                            lambda c, tr=tr: tr.update_cfg(c), config_path=config_path
-                        )
+                        watch_config(lambda c, tr=tr: tr.update_cfg(c), config_path=config_path)
                     )
                 )
 
@@ -155,9 +147,7 @@ async def ppe_worker(
                 cfg,
                 redis_client,
                 SNAP_DIR,
-                lambda: broadcast_stats(
-                    trackers, redis_client, RedisStore(redis_client)
-                ),
+                lambda: broadcast_stats(trackers, redis_client, RedisStore(redis_client)),
             )
             worker.start()
             app.state.ppe_worker = worker
@@ -166,9 +156,7 @@ async def ppe_worker(
             cfg.setdefault("features", {})["ppe_detection"] = False
 
 
-async def visitor_worker(
-    app: FastAPI, cfg: dict[str, Any], redis_client: Redis
-) -> None:
+async def visitor_worker(app: FastAPI, cfg: dict[str, Any], redis_client: Redis) -> None:
     """Launch the visitor worker using the provided Redis client."""
     from workers.visitor import VisitorWorker
 
@@ -190,17 +178,13 @@ async def start_background_workers(
 ) -> list[asyncio.Task[None]]:
     """Preload models and create background tasks."""
     await preload_models(cfg, cams)
-    watcher_tasks = await init_trackers(
-        cams, cfg, trackers, redis_client, app.state.config_path
-    )
+    watcher_tasks = await init_trackers(cams, cfg, trackers, redis_client, app.state.config_path)
     worker_defs = [
         ("alert-worker", lambda: alert_worker(app, cfg, redis_client)),
         ("ppe-detector", lambda: ppe_worker(app, cfg, trackers, redis_client)),
     ]
     if cfg.get("features", {}).get("visitor_mgmt"):
-        worker_defs.append(
-            ("visitor-worker", lambda: visitor_worker(app, cfg, redis_client))
-        )
+        worker_defs.append(("visitor-worker", lambda: visitor_worker(app, cfg, redis_client)))
 
     tasks = watcher_tasks
     tasks.append(
@@ -210,7 +194,6 @@ async def start_background_workers(
         )
     )
     tasks.extend(
-        asyncio.create_task(start_worker(name, worker), name=name)
-        for name, worker in worker_defs
+        asyncio.create_task(start_worker(name, worker), name=name) for name, worker in worker_defs
     )
     return tasks

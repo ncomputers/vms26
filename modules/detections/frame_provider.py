@@ -1,4 +1,5 @@
 """Utilities for lazily decoding frames from capture streams."""
+
 from __future__ import annotations
 
 from modules.capture import IFrameSource

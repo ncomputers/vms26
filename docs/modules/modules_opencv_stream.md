@@ -5,7 +5,7 @@
 Simple OpenCV VideoCapture wrapper with a rolling buffer.
 
 ## Key Classes
-- **OpenCVCameraStream** - 
+- **OpenCVCameraStream** -
 
 ## Key Functions
 None

@@ -170,9 +170,7 @@ def infer_batch(
         return []
 
 
-def process_frame(
-    tracker: "PersonTracker", frame: np.ndarray, detections: list[Any]
-) -> None:
+def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[Any]) -> None:
     """Process a single frame with associated detections."""
     purge = getattr(tracker, "_purge_counted", None)
     if purge:
@@ -194,10 +192,7 @@ def process_frame(
                 l2, t2, r2, b2 = map(int, f.bbox)
                 if f.det_score < tracker.face_count_conf:
                     continue
-                if (
-                    r2 - l2 < tracker.face_count_min_size
-                    or b2 - t2 < tracker.face_count_min_size
-                ):
+                if r2 - l2 < tracker.face_count_min_size or b2 - t2 < tracker.face_count_min_size:
                     continue
                 faces.append((l2, t2, r2, b2, f.embedding))
     if getattr(tracker, "tracker", None):
@@ -219,9 +214,7 @@ def process_frame(
                     from modules.tracker import detector as det
 
                     start_det = time.time()
-                    detections = det.profile_predict(
-                        None, "person", frame, device=tracker.device
-                    )
+                    detections = det.profile_predict(None, "person", frame, device=tracker.device)
                     PERF[tracker.cam_id].on_det_ms((time.time() - start_det) * 1000.0)
                 tracker._last_det_ts = now
                 tracker.last_detections = detections
@@ -268,15 +261,11 @@ def process_frame(
         except ValueError:
             logger.exception(f"[{tracker.cam_id}] tracker update error")
             return
-        ds_tracks = sorted(
-            ds_tracks, key=lambda tr: getattr(tr, "det_class", "") != "person"
-        )
+        ds_tracks = sorted(ds_tracks, key=lambda tr: getattr(tr, "det_class", "") != "person")
         new_tracks = {}
         h, w = frame.shape[:2]
         tracker.last_frame_shape = (h, w)
-        line_pos = int(
-            (h if tracker.line_orientation == "horizontal" else w) * tracker.line_ratio
-        )
+        line_pos = int((h if tracker.line_orientation == "horizontal" else w) * tracker.line_ratio)
         now = time.time()
         for trk in ds_tracks:
             if not trk.is_confirmed():
@@ -299,9 +288,7 @@ def process_frame(
                 line_start = (float(line_pos), 0.0)
                 line_end = (float(line_pos), float(h - 1))
             prev = tracker.tracks.get(tid, {})
-            raw_side = side(
-                (cx, cy), line_start, line_end, getattr(tracker, "side_eps", 2.0)
-            )
+            raw_side = side((cx, cy), line_start, line_end, getattr(tracker, "side_eps", 2.0))
             cur_side_sign = raw_side
             prev_side_sign = prev.get("last_side")
 
@@ -359,11 +346,7 @@ def process_frame(
             direction = None
             age = getattr(trk, "age", 0)
             if conf >= 0.5 and age >= 2 and group != "other":
-                if (
-                    prev_side_sign != cur_side_sign
-                    and prev_side_sign != 0
-                    and cur_side_sign != 0
-                ):
+                if prev_side_sign != cur_side_sign and prev_side_sign != 0 and cur_side_sign != 0:
                     if cur_side_sign > 0 and not state.get("counted_in"):
                         tracker.in_counts[group] = tracker.in_counts.get(group, 0) + 1
                         state["counted_in"] = True
@@ -420,12 +403,7 @@ def process_frame(
                         and faces
                     ):
                         for fl, ft, fr, fb, emb in faces:
-                            if (
-                                fl >= left
-                                and ft >= top
-                                and fr <= right
-                                and fb <= bottom
-                            ):
+                            if fl >= left and ft >= top and fr <= right and fb <= bottom:
                                 if tracker.unique_counter.is_new(emb):
                                     if entered:
                                         tracker.in_counts["face"] = (
@@ -462,9 +440,7 @@ def process_frame(
             if not lines:
                 del tracker.track_states[t_id]
         tracker.tracks = new_tracks
-        if {"in_count", "out_count"} & set(
-            getattr(tracker, "tasks", ["in_count", "out_count"])
-        ):
+        if {"in_count", "out_count"} & set(getattr(tracker, "tasks", ["in_count", "out_count"])):
             tracker.in_count = sum(tracker.in_counts.values())
             tracker.out_count = sum(tracker.out_counts.values())
         if updated and tracker.update_callback:
@@ -545,8 +521,7 @@ def process_frame(
             tracker.output_frame = processed
         tracker.debug_stats["last_overlay_ts"] = time.time()
         tracker.debug_stats["overlay_match"] = (
-            tracker.output_frame is not None
-            and tracker.output_frame.shape == frame.shape
+            tracker.output_frame is not None and tracker.output_frame.shape == frame.shape
         )
 
     else:
@@ -642,11 +617,7 @@ class ProcessingWorker:
                 continue
             detections = []
             now = time.time()
-            interval = (
-                0.0
-                if not getattr(t, "detector_fps", 0)
-                else 1.0 / float(t.detector_fps)
-            )
+            interval = 0.0 if not getattr(t, "detector_fps", 0) else 1.0 / float(t.detector_fps)
             last_ts = getattr(t, "_last_det_ts", 0.0)
             run_det = interval == 0.0 or now - last_ts >= interval
             if run_det and getattr(t, "detector", None):
@@ -745,9 +716,7 @@ class LightweightFaceTracker:
             self.tracks[best_id] = (x1, y1, x2, y2)
             results.append((best_id, (x1, y1, x2, y2), conf))
             assigned[best_id] = True
-        self.tracks = {
-            tid: bbox for tid, bbox in self.tracks.items() if tid in assigned
-        }
+        self.tracks = {tid: bbox for tid, bbox in self.tracks.items() if tid in assigned}
         return results
 
 
@@ -790,9 +759,7 @@ class PersonTracker:
         self.count_classes = cfg.get("count_classes", [])
         self.ppe_classes = cfg.get("ppe_classes", [])
         self.alert_anomalies = cfg.get("alert_anomalies", [])
-        self.line_orientation = line_orientation or cfg.get(
-            "line_orientation", "vertical"
-        )
+        self.line_orientation = line_orientation or cfg.get("line_orientation", "vertical")
         self.reverse = reverse
         self.resolution = resolution
         self.rtsp_transport = rtsp_transport
@@ -869,9 +836,7 @@ class PersonTracker:
             self.output_frame = None
 
         self.dup_filter = (
-            DuplicateFilter(
-                self.duplicate_filter_threshold, self.duplicate_bypass_seconds
-            )
+            DuplicateFilter(self.duplicate_filter_threshold, self.duplicate_bypass_seconds)
             if self.duplicate_filter_enabled
             else None
         )
@@ -996,9 +961,7 @@ class PersonTracker:
         self.in_count = sum(self.in_counts.values())
         self.out_count = sum(self.out_counts.values())
         stored_date = self.redis.get(self.key_date)
-        self.prev_date = (
-            date.fromisoformat(stored_date) if stored_date else date.today()
-        )
+        self.prev_date = date.fromisoformat(stored_date) if stored_date else date.today()
         init_data = {self.key_date: self.prev_date.isoformat()}
         for g in self.groups:
             init_data[f"{self.key_in}:{g}"] = self.in_counts[g]
@@ -1095,15 +1058,11 @@ class PersonTracker:
         tracks: list[tuple[int, tuple[int, int, int, int], float, Any]] = []
 
         if isinstance(self.face_tracker, LightweightFaceTracker):
-            raw = self.face_tracker.update(
-                [(x1, y1, x2, y2, q) for x1, y1, x2, y2, q, _ in dets]
-            )
+            raw = self.face_tracker.update([(x1, y1, x2, y2, q) for x1, y1, x2, y2, q, _ in dets])
             for (tid, bbox, _), (_, _, _, _, dq, emb) in zip(raw, dets):
                 tracks.append((tid, bbox, dq, emb))
         else:
-            ds_dets = [
-                ((x1, y1, x2 - x1, y2 - y1), q, "face") for x1, y1, x2, y2, q, _ in dets
-            ]
+            ds_dets = [((x1, y1, x2 - x1, y2 - y1), q, "face") for x1, y1, x2, y2, q, _ in dets]
             ds_tracks = self.face_tracker.update_tracks(ds_dets, frame=frame)
             for trk in ds_tracks:
                 if not trk.is_confirmed():
@@ -1123,9 +1082,7 @@ class PersonTracker:
 
         h, w = frame.shape[:2]
         self.last_frame_shape = (h, w)
-        line_pos = int(
-            (h if self.line_orientation == "horizontal" else w) * self.line_ratio
-        )
+        line_pos = int((h if self.line_orientation == "horizontal" else w) * self.line_ratio)
         now = time.time()
         for tid, bbox, q, emb in tracks:
             self.face_active_ids.add(tid)
@@ -1167,9 +1124,7 @@ class PersonTracker:
                     state["img_ref"] = str(path)
                     state["best_q"] = q
                     if emb is not None:
-                        state["embed"] = (
-                            emb.tolist() if isinstance(emb, np.ndarray) else emb
-                        )
+                        state["embed"] = emb.tolist() if isinstance(emb, np.ndarray) else emb
                 except Exception:
                     pass
             if prev_zone and prev_zone != zone:
@@ -1189,9 +1144,7 @@ class PersonTracker:
                         publish_event(self.redis, events.FACE_IN, camera_id=self.cam_id)
                     else:
                         self.out_counts["face"] = self.out_counts.get("face", 0) + 1
-                        publish_event(
-                            self.redis, events.FACE_OUT, camera_id=self.cam_id
-                        )
+                        publish_event(self.redis, events.FACE_OUT, camera_id=self.cam_id)
                     self._counted[key] = now
             state["zone"] = zone
         ended_ids = prev_ids - self.face_active_ids
@@ -1280,17 +1233,13 @@ class PersonTracker:
         if "overlay_min_ms" in cfg:
             self.overlay_min_ms = cfg["overlay_min_ms"]
         if "overlay_every_n" in cfg or "overlay_min_ms" in cfg:
-            self.overlay_throttler = OverlayThrottler(
-                self.overlay_every_n, self.overlay_min_ms
-            )
+            self.overlay_throttler = OverlayThrottler(self.overlay_every_n, self.overlay_min_ms)
         if "debug_logs" in cfg:
             self.debug_logs = cfg["debug_logs"]
         if "duplicate_filter_enabled" in cfg:
             self.duplicate_filter_enabled = cfg["duplicate_filter_enabled"]
             self.dup_filter = (
-                DuplicateFilter(
-                    self.duplicate_filter_threshold, self.duplicate_bypass_seconds
-                )
+                DuplicateFilter(self.duplicate_filter_threshold, self.duplicate_bypass_seconds)
                 if self.duplicate_filter_enabled
                 else None
             )
@@ -1317,14 +1266,10 @@ class PersonTracker:
             self.unique_counter.similarity = cfg["face_count_similarity"]
         from ..model_registry import get_yolo
 
-        if "person_model" in cfg and cfg["person_model"] != getattr(
-            self, "person_model", None
-        ):
+        if "person_model" in cfg and cfg["person_model"] != getattr(self, "person_model", None):
             self.person_model = cfg["person_model"]
             self.model_person = get_yolo(self.person_model, self.device)
-        if "plate_model" in cfg and cfg["plate_model"] != getattr(
-            self, "plate_model", None
-        ):
+        if "plate_model" in cfg and cfg["plate_model"] != getattr(self, "plate_model", None):
             self.plate_model = cfg["plate_model"]
             self.model_plate = get_yolo(self.plate_model, self.device)
         if "email" in cfg:

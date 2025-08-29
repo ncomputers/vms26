@@ -122,4 +122,3 @@ test('clampCanvas limits longest side to 1024', async () => {
     expect(hidden.value).toBe('');
     HTMLCanvasElement.prototype.getContext = origGetContext;
   });
-

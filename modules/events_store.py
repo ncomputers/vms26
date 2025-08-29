@@ -65,9 +65,7 @@ class RedisStore:
             logger.warning("failed to persist event: {}", exc)
 
     # fetch_events routine
-    def fetch_events(
-        self, start_ts: int, end_ts: int, *, label: str | None = None
-    ) -> list[str]:
+    def fetch_events(self, start_ts: int, end_ts: int, *, label: str | None = None) -> list[str]:
         """Return raw event entries from Redis within the time range."""
         key = "events"
         if label == "person":

@@ -1,13 +1,13 @@
 from __future__ import annotations
-from typing import List, Dict
+
+from typing import Dict, List
+
 import numpy as np
 from ultralytics import YOLO
 
 # COCO class ids of interest for "basic"
-COCO_KEEP = {
-    0: "person",
-    2: "car", 3: "motorcycle", 5: "bus", 7: "truck", 1: "bicycle"
-}
+COCO_KEEP = {0: "person", 2: "car", 3: "motorcycle", 5: "bus", 7: "truck", 1: "bicycle"}
+
 
 class BasicDetector:
     def __init__(self, weights_path: str = "models/yolov8n.pt", device: str | None = None):
@@ -27,13 +27,16 @@ class BasicDetector:
             if cid not in COCO_KEEP:
                 continue
             x1, y1, x2, y2 = (float(v) for v in b.xyxy[0].tolist())
-            out.append({
-                "cls_id": cid,
-                "cls": COCO_KEEP[cid],
-                "conf": float(b.conf.item()),
-                "xyxy": [x1, y1, x2, y2],
-            })
+            out.append(
+                {
+                    "cls_id": cid,
+                    "cls": COCO_KEEP[cid],
+                    "conf": float(b.conf.item()),
+                    "xyxy": [x1, y1, x2, y2],
+                }
+            )
         return out
+
 
 class PPEDetector:
     def __init__(self, weights_path: str = "models/ppe.pt", device: str | None = None):
@@ -53,13 +56,16 @@ class PPEDetector:
             cid = int(b.cls.item())
             label = str(names.get(cid, f"cls_{cid}"))
             x1, y1, x2, y2 = (float(v) for v in b.xyxy[0].tolist())
-            out.append({
-                "cls_id": cid,
-                "cls": label,
-                "conf": float(b.conf.item()),
-                "xyxy": [x1, y1, x2, y2],
-            })
+            out.append(
+                {
+                    "cls_id": cid,
+                    "cls": label,
+                    "conf": float(b.conf.item()),
+                    "xyxy": [x1, y1, x2, y2],
+                }
+            )
         return out
+
 
 def make_detector(kind: str, device: str | None = None):
     kind = (kind or "basic").lower()

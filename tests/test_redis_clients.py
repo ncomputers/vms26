@@ -1,4 +1,5 @@
 import asyncio
+
 import fakeredis
 from fakeredis.aioredis import FakeRedis as AsyncFakeRedis
 

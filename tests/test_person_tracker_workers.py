@@ -402,6 +402,7 @@ def test_apply_debug_pipeline_resolution(monkeypatch):
 
     def oc(cfg, src, cam_id, src_type, resolution, *a, **k):
         resolutions.append(resolution)
+
         class Cap:
             def __init__(self):
                 self.pipeline = ""
@@ -409,14 +410,17 @@ def test_apply_debug_pipeline_resolution(monkeypatch):
                 self.last_status = ""
                 self.last_error = ""
                 self.idx = 0
+
             def read(self):
                 self.idx += 1
                 frame = np.zeros((1, 1, 3), dtype=np.uint8)
                 if self.idx == 1:
                     return True, frame
                 return False, None
+
             def release(self):
                 pass
+
         return Cap(), "tcp"
 
     monkeypatch.setattr(stream_mod, "open_capture", oc)
