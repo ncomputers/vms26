@@ -16,8 +16,9 @@ sys.modules.setdefault("modules.ppe_worker", types.SimpleNamespace(PPEDetector=o
 sys.modules.setdefault("modules.tracker", types.SimpleNamespace(PersonTracker=object))
 sys.modules.setdefault("modules.utils", types.SimpleNamespace(SNAP_DIR=None))
 sys.modules.setdefault(
-    "modules.camera_factory", types.SimpleNamespace(probe_stream=lambda *a, **k: None)
+    "modules.stream_probe", types.SimpleNamespace(probe_stream=lambda *a, **k: None)
 )
+sys.modules.setdefault("modules.camera_factory", types.SimpleNamespace())
 
 startup = importlib.import_module("startup")
 preload_models = startup.preload_models

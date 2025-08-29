@@ -11,15 +11,13 @@ import cv2
 import psutil
 from loguru import logger
 
+from app.core.logx import log_throttled
+from app.core.utils import mtime
 from core import events
 from modules.profiler import log_resource_usage, profile_predict, register_thread
 from utils import logx
 from utils.gpu import get_device
 from utils.redis import trim_sorted_set_sync
-from utils import logx
-from app.core.logx import log_throttled
-from app.core.utils import mtime
-
 
 try:  # optional heavy dependency
     import torch  # type: ignore

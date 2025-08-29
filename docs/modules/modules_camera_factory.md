@@ -9,7 +9,7 @@ FFmpeg and falls back to GStreamer when initialization fails.
 - **StreamUnavailable** - Raised when no capture backend can provide frames.
 
 ## Key Functions
-- **open_capture(src, cam_id, src_type=None, resolution, rtsp_transport, stream_mode, use_gpu, capture_buffer, local_buffer_size=1, backend_priority=None, ffmpeg_flags=None, pipeline=None, profile=None, ffmpeg_reconnect_delay=None, ready_frames=1, ready_duration=None, ready_timeout=15.0, for_display=False)** - Return a capture object for the configured stream, trying FFmpeg first and using GStreamer as a fallback. The stream is considered ready only after ``ready_frames`` consecutive frames or ``ready_duration`` seconds of continuous frames are read within ``ready_timeout`` seconds (defaults: 1 frame, 15 seconds). When ``for_display`` is ``False``, the ``opencv`` backend is skipped. ``src_type`` defaults to the scheme-derived value and ``ffmpeg_reconnect_delay`` falls back to the ``ffmpeg_reconnect_delay`` setting in ``config.json``. ``local_buffer_size`` controls the internal frame queue for USB cameras.
+- **open_capture(src, cam_id, src_type=None, resolution, rtsp_transport, use_gpu, capture_buffer, backend_priority=None, ffmpeg_flags=None, pipeline=None, profile=None, ffmpeg_reconnect_delay=None, ready_frames=1, ready_duration=None, ready_timeout=15.0, for_display=False)** - Return a capture object for the configured stream, trying FFmpeg first and using GStreamer as a fallback. The stream is considered ready only after ``ready_frames`` consecutive frames or ``ready_duration`` seconds of continuous frames are read within ``ready_timeout`` seconds (defaults: 1 frame, 15 seconds). When ``for_display`` is ``False``, the ``opencv`` backend is skipped. ``src_type`` defaults to the scheme-derived value and ``ffmpeg_reconnect_delay`` falls back to the ``ffmpeg_reconnect_delay`` setting in ``config.json``.
 
 ## Backend Selection and Fallback
 `open_capture` attempts capture backends in priority order. By default the order is:
@@ -262,4 +262,3 @@ cap, transport = open_capture(
     ready_timeout=10.0,  # wait up to 10s for 2 seconds of frames
 )
 ```
-
