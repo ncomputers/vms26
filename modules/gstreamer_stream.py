@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from typing import Optional
+
+from .base_stream import BaseStream
+
 Gst = None
 
 
@@ -29,24 +33,34 @@ def _build_pipeline(
     return " ! ".join(parts)
 
 
-class GstCameraStream:
+class GstCameraStream(BaseStream):
     def __init__(
         self,
         url: str,
-        width: int = 640,
-        height: int = 480,
+        width: int | None = None,
+        height: int | None = None,
         transport: str = "tcp",
         extra_pipeline: str | None = None,
-        buffer_seconds: int = 0,
         start_thread: bool = True,
         **kwargs,
     ) -> None:
-        self.url = url
+        width = width or 640
+        height = height or 480
         self.pipeline = _build_pipeline(url, width, height, transport, extra_pipeline)
         self.last_status = ""
         self.last_pipeline = ""
-        if start_thread:
-            self._init_stream()
+        super().__init__(
+            url=url,
+            width=width,
+            height=height,
+            transport=transport,
+            queue_size=1,
+            start_thread=start_thread,
+        )
+
+    # ------------------------------------------------------------------
+    def _start_backend(self) -> None:
+        self._init_stream()
 
     def _init_stream(self) -> None:
         self.last_pipeline = self.pipeline
@@ -59,5 +73,8 @@ class GstCameraStream:
             self.last_status = "error"
             self.last_pipeline = self.pipeline
 
-    def release(self) -> None:
+    def _read_frame(self) -> Optional[object]:
+        return None
+
+    def _release_backend(self) -> None:
         pass
