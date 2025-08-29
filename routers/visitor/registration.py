@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -16,8 +15,6 @@ from config import config
 from modules import export, visitor_db
 from modules.utils import require_admin
 from schemas.visitor import VisitorRegisterForm
-from utils.ids import generate_id
-from utils.image import decode_base64_image
 from utils.pagination import paginate
 
 from ..visitor_utils import visitor_disabled_response
@@ -200,18 +197,13 @@ async def api_visitor_report(
 @router.get("/visitor_register")
 async def visitor_register_form(
     request: Request,
-    face_id: str,
     user=Depends(require_admin),
     ctx: SimpleNamespace = Depends(get_context),
 ):
     if not config_obj.get("features", {}).get("visitor_mgmt"):
         return RedirectResponse("/", status_code=302)
-    raw = ctx.redis.get(f"visitor_log:{face_id}")
-    if not raw:
-        return RedirectResponse("/visitor_report", status_code=302)
-    item = json.loads(raw if isinstance(raw, str) else raw.decode())
     return ctx.templates.TemplateResponse(
-        "visitor_register.html", {"request": request, "record": item}
+        "visitor_register.html", {"request": request, "record": {}}
     )
 
 
@@ -222,25 +214,16 @@ async def _update_visitor_log(form: VisitorRegisterForm) -> dict:
         raise HTTPException(status_code=500, detail="redis_unavailable")
     if not config_obj.get("features", {}).get("visitor_mgmt"):
         raise HTTPException(status_code=403, detail="visitor_mgmt_disabled")
-    raw = redis.get(f"visitor_log:{form.face_id}")
-    if not raw:
-        raise HTTPException(status_code=404, detail="face_id_not_found")
-    record = json.loads(raw if isinstance(raw, str) else raw.decode())
-    record.update(
-        {
-            "name": form.name,
-            "phone": form.phone,
-            "host": form.host,
-            "purpose": form.purpose,
-            "visitor_type": form.visitor_type,
-        }
-    )
-    redis.zadd("visitor_logs", {json.dumps(record): record["ts"]})
-    redis.set(
-        f"visitor_log:{form.face_id}",
-        json.dumps(record),
-        ex=VISITOR_LOG_RETENTION_SECS,
-    )
+    ts = int(time.time())
+    record = {
+        "name": form.name,
+        "phone": form.phone,
+        "host": form.host,
+        "purpose": form.purpose,
+        "visitor_type": form.visitor_type,
+        "ts": ts,
+    }
+    redis.zadd("visitor_logs", {json.dumps(record): ts})
     await _trim_visitor_logs()
     return record
 
@@ -262,44 +245,12 @@ def _persist_master_records(record: dict) -> None:
         pass
 
 
-def _promote_embedding(face_id: str, record: dict) -> None:
-    ctx = get_context()
-    redis = ctx.redis
-    if redis is None:
-        raise HTTPException(status_code=500, detail="redis_unavailable")
-    emb = redis.hget("visitor_embeddings", face_id)
-    if not emb:
-        return
-    embedding = json.loads(emb if isinstance(emb, str) else emb.decode())
-    redis.hset("known_visitors", record["name"], json.dumps(embedding))
-    img_path = ""
-    if record.get("image"):
-        try:
-            img_path = str(Path("static/faces") / f"{generate_id()}.jpg")
-            with open(img_path, "wb") as f:
-                f.write(decode_base64_image(record["image"]))
-        except Exception:
-            img_path = ""
-        redis.hset("known_faces", record["name"], record["image"])
-    new_id = generate_id()
-    redis.hset(
-        f"face:known:{new_id}",
-        mapping={
-            "name": record["name"],
-            "embedding": json.dumps(embedding),
-            "image_path": img_path,
-            "created_at": str(int(time.time())),
-        },
-    )
-
-
 @router.post("/visitor_register")
 async def visitor_register(
     form: VisitorRegisterForm = Depends(VisitorRegisterForm.as_form),
 ):
     record = await _update_visitor_log(form)
     _persist_master_records(record)
-    _promote_embedding(form.face_id, record)
     return {"saved": True}
 
 
