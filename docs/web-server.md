@@ -33,3 +33,16 @@ HTTPS so browsers can fetch them without mixed-content warnings. When using a
 reverse proxy, forward these paths through the TLS terminator and expose them on
 the same external port (typically 443) in every environment to keep client
 configuration consistent.
+
+## Standalone capture API
+
+A lightweight FastAPI application in [server/api.py](../server/api.py) exposes
+camera previews without the full dashboard. Start it with Uvicorn:
+
+```bash
+uvicorn server.api:app
+```
+
+The server provides `/snapshot` for a single JPEG frame, `/stream.mjpeg` for a
+multipart stream and `/health` with basic pipeline metrics. Optional `/config`
+and `/restart` endpoints aid observability.
