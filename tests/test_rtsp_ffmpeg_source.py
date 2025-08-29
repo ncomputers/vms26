@@ -35,3 +35,35 @@ def test_stderr_capture_and_close(monkeypatch, caplog):
     assert any("line1" in r.message for r in caplog.records)
     src.close()
     assert dummy.stdout.closed and dummy.stderr.closed
+
+
+def test_startup_without_rw_timeout(monkeypatch, caplog):
+    class DummyProc:
+        def __init__(self):
+            self.stdout = io.BytesIO()
+            self.stderr = io.BytesIO()
+
+        def terminate(self):
+            pass
+
+    captured: dict[str, list[str]] = {}
+
+    def fake_run(cmd, capture_output=False, text=False):
+        class R:
+            stdout = ""
+
+        return R()
+
+    def fake_popen(cmd, stdout=None, stderr=None, bufsize=None):
+        captured["cmd"] = cmd
+        return DummyProc()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+
+    with caplog.at_level(logging.WARNING):
+        src = RtspFfmpegSource("rtsp://demo")
+        src.open()
+    assert "cmd" in captured and "-rw_timeout" not in captured["cmd"]
+    assert any("rw_timeout" in r.message for r in caplog.records)
+    src.close()
