@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Any
 
-from config import config, use_gstreamer
+from config import use_gstreamer
 from modules.capture import (
     FrameSourceError,
     HttpMjpegSource,
@@ -23,13 +23,13 @@ class StreamUnavailable(Exception):
     """Raised when no capture backend can provide frames."""
 
 
-__all__ = ["open_capture", "StreamUnavailable"]
+__all__ = ["open_capture", "async_open_capture", "async_probe_rtsp", "StreamUnavailable"]
 
 
 logger = logging.getLogger(__name__)
 
 
-async def _probe_rtsp(url: str) -> tuple[str, str, int, int, float]:
+async def async_probe_rtsp(url: str) -> tuple[str, str, int, int, float]:
     """Probe ``url`` with ``ffprobe`` trying UDP then TCP.
 
     Returns the working URL (possibly annotated with transport), the chosen
@@ -95,25 +95,8 @@ def _clamp_latency(value: int) -> int:
     return max(50, min(300, int(value)))
 
 
-def _build(cam_cfg: dict[str, Any], cam_id: int) -> IFrameSource:
-    mode = cam_cfg.get("mode", "rtsp")
-    uri = cam_cfg.get("uri", "")
-    latency = _clamp_latency(cam_cfg.get("latency_ms", 100))
-    tcp = bool(cam_cfg.get("tcp", True))
-    if mode == "local":
-        return LocalCvSource(uri or 0, cam_id=cam_id)
-    if mode == "http":
-        return HttpMjpegSource(
-            uri, cam_id=cam_id, max_queue=cam_cfg.get("max_queue", 1)
-        )
-    if mode == "rtsp":
-        if config.get("use_gstreamer", use_gstreamer) and RtspGstSource is not None:
-            return RtspGstSource(uri, tcp=tcp, latency_ms=latency, cam_id=cam_id)
-        return RtspFfmpegSource(uri, tcp=tcp, latency_ms=latency, cam_id=cam_id)
-    raise StreamUnavailable(f"unknown mode {mode}")
-
-
-def open_capture(
+async def async_open_capture(
+    cfg: dict[str, Any],
     src: str | int | None = None,
     cam_id: int | None = None,
     src_type: str | None = None,
@@ -122,26 +105,15 @@ def open_capture(
     use_gpu: bool = False,
     **kwargs: Any,
 ) -> tuple[IFrameSource, str]:
-    """Instantiate and open a frame source.
+    """Asynchronously instantiate and open a frame source."""
 
-    Parameters mirror the documented public API. ``src`` may be omitted for
-    backwards compatibility, in which case the value is read from global
-    configuration. Unknown keyword arguments are accepted but ignored.
-    """
-
-    # allow legacy ``open_capture(cam_id)`` usage
-    if cam_id is None and isinstance(src, int):
-        cam_id = src
-        src = None
-
-    cam_cfg = config.get("camera", {})
+    cam_cfg = cfg.get("camera", {})
     cam_id = cam_id if cam_id is not None else 0
     if src is None:
         src = cam_cfg.get("uri", "")
     if src_type is None:
         src_type = cam_cfg.get("mode", "rtsp")
 
-    # resolve common options
     transport = rtsp_transport
     width, height = (None, None)
     if resolution and len(resolution) == 2:
@@ -152,7 +124,7 @@ def open_capture(
 
     if src_type == "rtsp" and transport is None and isinstance(src, str):
         try:
-            probed_url, transport, w_p, h_p, _ = asyncio.run(_probe_rtsp(src))
+            probed_url, transport, w_p, h_p, _ = await async_probe_rtsp(src)
             src = probed_url
             if not width and not height and w_p and h_p:
                 width, height = w_p, h_p
@@ -164,19 +136,18 @@ def open_capture(
 
     if src_type == "local":
         cap = LocalCvSource(src or 0, cam_id=cam_id)
-        cap.open()
+        await asyncio.to_thread(cap.open)
         return cap, transport
     if src_type == "http":
         max_queue = capture_buffer or cam_cfg.get("max_queue", 1)
         cap = HttpMjpegSource(str(src), cam_id=cam_id, max_queue=max_queue)
-        cap.open()
+        await asyncio.to_thread(cap.open)
         return cap, transport
     if src_type != "rtsp":
         raise StreamUnavailable(f"unknown mode {src_type}")
 
-    # rtsp with optional backend fallback
     if backend_priority is None:
-        if config.get("use_gstreamer", use_gstreamer) and RtspGstSource is not None:
+        if cfg.get("use_gstreamer", use_gstreamer) and RtspGstSource is not None:
             backend_priority = ["gst", "ffmpeg"]
         elif RtspGstSource is not None:
             backend_priority = ["ffmpeg", "gst"]
@@ -208,7 +179,7 @@ def open_capture(
             else:
                 continue
             try:
-                cap.open()
+                await asyncio.to_thread(cap.open)
                 logger.info(
                     "[cap:%s] opened stream using %s transport",
                     cam_id,
@@ -229,3 +200,32 @@ def open_capture(
             transport = "udp"
             continue
         raise StreamUnavailable(last_err or "failed to open stream")
+
+
+def open_capture(
+    cfg: dict[str, Any],
+    src: str | int | None = None,
+    cam_id: int | None = None,
+    src_type: str | None = None,
+    resolution: tuple[int, int] | None = None,
+    rtsp_transport: str | None = None,
+    use_gpu: bool = False,
+    **kwargs: Any,
+) -> tuple[IFrameSource, str]:
+    """Instantiate and open a frame source synchronously.
+
+    This is a thin wrapper over :func:`async_open_capture` for contexts where
+    running an event loop is acceptable."""
+
+    return asyncio.run(
+        async_open_capture(
+            cfg,
+            src,
+            cam_id,
+            src_type,
+            resolution,
+            rtsp_transport,
+            use_gpu,
+            **kwargs,
+        )
+    )
