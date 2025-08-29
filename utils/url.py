@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 
@@ -63,20 +64,19 @@ def get_stream_type(url: str) -> str:
     return "local"
 
 
+_CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
+
+
+def mask_credentials(text: str) -> str:
+    """Redact credentials in *text* for safe logging."""
+
+    return _CRED_RE.sub("***:***@", text)
+
+
 def mask_creds(url: str) -> str:
     """Return ``url`` with password replaced by ``***`` if present."""
 
-    if "://" not in url or "@" not in url:
-        return url
-    parts = urlsplit(url)
-    if not parts.username:
-        return url
-    host = parts.hostname or ""
-    if parts.port:
-        host += f":{parts.port}"
-    userinfo = f"{parts.username}:***"
-    netloc = f"{userinfo}@{host}" if host else userinfo
-    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    return mask_credentials(url)
 
 
 def with_rtsp_transport(url: str, transport: str) -> str:

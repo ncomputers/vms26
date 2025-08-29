@@ -78,16 +78,17 @@ Examples:
   {"camera": {"mode": "http", "uri": "http://cam/mjpg"}}
   ```
 
-Toggle `use_gstreamer` to switch RTSP backends. Hardware decode options are
-available via the GStreamer backend. Set `overlay_mode` to `"none"` to stream
-raw frames without server-side overlays.
+Toggle `use_gstreamer` to switch RTSP backends. Only one pipeline is active at a
+time; set it to `true` for GStreamer or `false` to use FFmpeg. Hardware decode
+options are available via the GStreamer backend. Set `overlay_mode` to `"none"`
+to stream raw frames without server-side overlays.
+
 - **Counting and alerts**: Tracks entries/exits and can send email alerts based on customizable rules.
 - **Duplicate frame filter**: Skips nearly identical frames to reduce GPU/CPU load.
 - **Dashboard and reports**: Live counts, recent anomalies, and historical reports are available in the web interface.
 - **Dashboard polling**: The dashboard refreshes counts by polling `/api/stats` every 2 seconds.
 - **Dashboard history API**: Aggregated metrics are available via `/api/dashboard/stats?range=7d` where `range` may be `today`, `7d`, or `this_month`.
 - **Debug stats**: Visit `/debug` to monitor raw SSE data, connection status, and camera backend info. For YOLO detection logs, open `/debug/yolo`.
-- **Debug overlays**: Select Vehicle, Person, Center Line, Vehicle/Person/Face counts or ID overlays directly on the camera stream page; these options are no longer in Display Preferences.
 - **Live feed optimization**: Dashboard streams the raw camera feed via `/stream/{cam_id}?raw=1` while analysis runs separately.
 - **Per-camera resolution**: Choose 480p, 720p, 1080p, or original when adding a camera.
 - **Camera status**: Online/offline indicators appear in the Cameras page for quick troubleshooting.
@@ -118,10 +119,34 @@ raw frames without server-side overlays.
 - **Visitor dashboard revamp**: animated KPI cards and auto-refreshing charts provide a livelier overview.
 - **GStreamer streaming**: RTSP cameras use `avdec_h264` for software decoding and a leaky queue to drop stale frames for low latency.
 
+## Quick Start
+
+Minimal configuration examples for RTSP cameras:
+
+```json
+{"camera": {"mode": "rtsp", "uri": "rtsp://user:pass@host/stream"}, "use_gstreamer": false}
+```
+
+Set `use_gstreamer` to `true` to run the GStreamer pipeline instead of FFmpeg.
+Only one pipeline runs at a time; restart after changing this flag.
+
+## Camera Configuration Recommendations
+
+- Use an H.264 substream.
+- Limit the frame rate to 10–15 fps.
+- Prefer constant bit rate (CBR).
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Resolution |
+| --- | --- | --- |
+| 401/403 errors | Authentication failure | Verify credentials in the URL. |
+| Unsupported codec or blank feed | Codec mismatch | Configure the camera for H.264. |
+| Connection refused or 404 | Invalid URL | Check host, port, and stream path. |
+| Frozen video or frequent reconnects | Transport issues or timeouts | Confirm `transport` setting and adjust RTSP timeouts. |
+
 ## Camera API
 
-`GET /api/cameras/{id}/mjpeg?overlay=1[&thickness=2][&labels=true]` –
-Server-rendered overlay using latest tracker detections.
 
 Environment knobs influencing the preview stream:
 
@@ -498,7 +523,6 @@ The repository contains the following files:
 - `modules/ffmpeg_stream.py` – FFmpeg based camera wrapper.
 - `modules/gstreamer_stream.py` – GStreamer camera wrapper.
 - `modules/license.py` – license token utilities.
-- `modules/overlay.py` – draw tracking overlays on frames.
 - `modules/tracker/manager.py` – main tracking and counting logic.
 - `modules/ppe_worker.py` – process person logs for PPE detection.
 - `modules/profiler.py` – lightweight profiling utilities.
@@ -595,7 +619,6 @@ Detailed documentation for internal modules and routers is available below.
 - [license](docs/modules/modules_license.md)
 - [model_registry](docs/modules/modules_model_registry.md)
 - [opencv_stream](docs/modules/modules_opencv_stream.md)
-- [overlay](docs/modules/modules_overlay.md)
 - [ppe_worker](docs/modules/modules_ppe_worker.md)
 - [profiler](docs/modules/modules_profiler.md)
 - [renderer](docs/modules/modules_renderer.md)

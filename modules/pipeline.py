@@ -41,7 +41,7 @@ class CaptureLoop(StoppableThread):
 
 
 class ProcessLoop(StoppableThread):
-    """Encode frames from the capture loop to JPEG overlays."""
+    """Encode frames from the capture loop to JPEG bytes."""
 
     def __init__(self, pipeline: "Pipeline") -> None:
         cam_id = pipeline.cam_cfg.get("id", id(pipeline))
@@ -67,7 +67,7 @@ class ProcessLoop(StoppableThread):
             if cv2 is None or not hasattr(cv2, "imencode"):
                 continue
             q = getenv_num("VMS26_JPEG_QUALITY", 80, int)
-            self.pipeline._overlay_bytes = encode_jpeg(frame, q)
+            self.pipeline._frame_bytes = encode_jpeg(frame, q)
             self.last_processed_ts = time.time()
 
 
@@ -78,7 +78,7 @@ class Pipeline:
         self.cam_cfg = cam_cfg
         maxlen = getenv_num("VMS26_QUEUE_MAX", 2, int)
         self.queue: Deque[np.ndarray] = deque(maxlen=maxlen)
-        self._overlay_bytes: bytes | None = None
+        self._frame_bytes: bytes | None = None
         self.capture = CaptureLoop(self)
         self.process = ProcessLoop(self)
 
@@ -97,6 +97,6 @@ class Pipeline:
         self.capture.join(timeout=2.0)
         self.process.join(timeout=2.0)
 
-    def get_overlay_bytes(self) -> Optional[bytes]:
-        """Return latest encoded overlay frame bytes."""
-        return self._overlay_bytes
+    def get_frame_bytes(self) -> Optional[bytes]:
+        """Return latest encoded frame bytes."""
+        return self._frame_bytes

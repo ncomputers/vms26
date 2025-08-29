@@ -36,7 +36,7 @@ from modules.gstreamer_stream import GstCameraStream
 
 
 def test_build_pipeline_helper():
-    extra = "clockoverlay"
+    extra = "timecode"
     pipeline = gst_mod._build_pipeline("rtsp://demo", 640, 480, "tcp", extra)
     expected = (
         'rtspsrc location="rtsp://demo" protocols=tcp latency=100 ! '
@@ -49,7 +49,7 @@ def test_build_pipeline_helper():
 
 
 def test_custom_pipeline_inserted_once():
-    extra = "clockoverlay"
+    extra = "timecode"
     stream = GstCameraStream(
         "rtsp://demo", width=640, height=480, extra_pipeline=extra, start_thread=False
     )

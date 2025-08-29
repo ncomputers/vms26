@@ -34,9 +34,6 @@ None
 - `jitter_ms` – difference between the slowest and fastest recent frame
   intervals in milliseconds.
 - `dropped_frames` – number of frames discarded when the input queue is full.
-- `last_overlay_ts` – timestamp of the last successfully rendered overlay.
-- `overlay_match` – whether the overlay canvas matches the capture frame
-  dimensions.
 - `det_in` – current depth of the detection input queue.
 
 
@@ -54,8 +51,7 @@ r = (r_raw - pad_x) / scale
 b = (b_raw - pad_y) / scale
 ```
 
-The unscaled coordinates are used for center/side calculations and for
-drawing overlays.
+The unscaled coordinates are used for center/side calculations.
 
 ## Counting Line Geometry
 

@@ -6,7 +6,6 @@ import asyncio
 import base64
 import json
 import os
-import re
 import secrets
 import shlex
 import subprocess
@@ -26,7 +25,6 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from starlette.requests import ClientDisconnect
 
 from app.core.utils import getenv_num
-from app.vision.overlay import render_from_legacy
 from config import PPE_PAIRS, PPE_TASKS, UI_CAMERA_TASKS, VEHICLE_LABELS, config
 from core.camera_manager import CameraManager
 from core.config import get_config
@@ -53,7 +51,9 @@ from utils.ffmpeg_snapshot import capture_snapshot
 from utils.jpeg import encode_jpeg
 from utils.logx import log_throttled
 from utils.overlay import draw_boxes_np
-from utils.url import get_stream_type
+from utils.url import get_stream_type, mask_credentials
+from utils.api_errors import stream_error_message
+
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
@@ -61,7 +61,6 @@ from utils.video import async_get_stream_resolution
 # ruff: noqa
 
 
-_CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
 
 TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
 FRAME_JPEG_QUALITY = getenv_num("FRAME_JPEG_QUALITY", 80, int)
@@ -70,13 +69,6 @@ HEARTBEAT_INTERVAL_MS = getenv_num("HEARTBEAT_INTERVAL_MS", 1500, int)
 HEARTBEAT_JPEG = base64.b64decode(
     b"/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5/ooooA//2Q=="
 )
-
-
-def mask_credentials(text: str) -> str:
-    """Redact credentials in ``text`` for safe logging."""
-    return _CRED_RE.sub("***:***@", text)
-
-
 def require_admin(request: Request):
     """Ensure the current user has the ``admin`` role."""
     return require_roles(request, ["admin"])
@@ -182,14 +174,6 @@ manager = camera_manager
 # optional experimental pipeline support
 USE_PIPELINE = os.getenv("VMS21_PIPELINE") == "1"
 pipelines_map: Dict[int, object] = {}
-
-
-def get_pipeline_overlay(camera_id: int) -> bytes | None:
-    """Return latest overlay frame bytes from the optional pipeline."""
-    pipe = pipelines_map.get(camera_id)
-    if pipe and hasattr(pipe, "get_overlay_bytes"):
-        return pipe.get_overlay_bytes()
-    return None
 
 
 def get_camera_manager() -> CameraManager:  # pragma: no cover - simple accessor
@@ -391,7 +375,6 @@ async def create_camera_api(camera: dict):
         f"[create_camera_api] saving camera {cam_obj.name} url={sanitized} transport={cam_obj.transport}"
     )
     cam_dict = cam_obj.model_dump()
-    cam_dict.pop("face_recog", None)
     cam_dict["site_id"] = cam_dict.get("site_id") or cfg.get("site_id", 1)
     now = datetime.utcnow().isoformat()
     cam_dict["created_at"] = now
@@ -686,22 +669,14 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
 
     ok, status, err, hint = await _probe_url()
     if not ok:
+        msg = stream_error_message(status) or err or "unable to read"
         if status == "auth":
-            return JSONResponse(
-                {"error": err or "Authentication failed", "hint": hint},
-                status_code=401,
-            )
+            return JSONResponse({"error": msg, "hint": hint}, status_code=401)
         if status == "timeout":
-            return JSONResponse(
-                {"error": err or "Connection timed out", "hint": hint},
-                status_code=504,
-            )
+            return JSONResponse({"error": msg, "hint": hint}, status_code=504)
         if status == "dns":
-            return JSONResponse(
-                {"error": err or "DNS lookup failed", "hint": hint},
-                status_code=502,
-            )
-        return JSONResponse({"error": err or "unable to read", "hint": hint}, status_code=500)
+            return JSONResponse({"error": msg, "hint": hint}, status_code=502)
+        return JSONResponse({"error": msg, "hint": hint}, status_code=500)
 
     async with cams_lock:
         if lic:
@@ -913,6 +888,7 @@ async def toggle_vms(cam_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Not found")
 
 
+
 @router.put("/cameras/{cam_id}")
 async def update_camera(
     cam_id: int, request: Request, manager: CameraManager = Depends(get_camera_manager)
@@ -946,6 +922,7 @@ async def update_camera(
                     if "visitor_mgmt" in data
                     else cam.get("visitor_mgmt", False)
                 )
+
                 line = data.get("line")
                 if line is None:
                     line = cam.get("line") or cam.get("inout_line")
@@ -955,6 +932,7 @@ async def update_camera(
                     cam["ppe"] = bool(ppe)
                 if "visitor_mgmt" in data:
                     cam["visitor_mgmt"] = bool(visitor)
+
                 if "enabled" in data:
                     cam["enabled"] = bool(data["enabled"])
                 if "latitude" in data:
@@ -1254,38 +1232,15 @@ async def api_camera_preview(token: str | None = None):
 
 @router.get(
     "/api/cameras/{camera_id}/mjpeg",
-    summary="Stream MJPEG feed with optional overlay",
+    summary="Stream MJPEG feed",
 )
 async def camera_mjpeg(
     camera_id: int,
-    overlay: bool = Query(False, description="Render server-side overlays"),
-    thickness: int = Query(2, ge=1, le=8, description="Box line thickness"),
-    labels: bool = Query(True, description="Draw labels for detections"),
 ):
-    """Stream an MJPEG feed for the given camera.
-
-    Use ``?overlay=1`` to draw detection boxes on the server.
-    """
+    """Stream an MJPEG feed for the given camera."""
     cam = next((c for c in cams if c.get("id") == camera_id), None)
     if not cam or not cam.get("url"):
         raise HTTPException(status_code=404, detail="camera not found")
-
-    if USE_PIPELINE and overlay:
-
-        async def generator():
-            boundary = b"--frame"
-            while True:
-                frame = get_pipeline_overlay(camera_id)
-                if frame:
-                    yield (boundary + b"\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
-                await asyncio.sleep(0.05)
-
-        headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
-        return StreamingResponse(
-            generator(),
-            media_type="multipart/x-mixed-replace; boundary=frame",
-            headers=headers,
-        )
 
     try:
         cap = await _get_preview_cap(cam)
@@ -1307,28 +1262,6 @@ async def camera_mjpeg(
             except FrameSourceError:
                 frame = None
             if frame is not None:
-                if overlay:
-                    try:
-                        dets = tracker.get_latest(camera_id) or []
-                        if not labels:
-                            dets = [{**d, "label": ""} for d in dets]
-                        arr_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        if os.getenv("VMS21_OVERLAY_PURE") == "1":
-                            frame = render_from_legacy(
-                                arr_rgb,
-                                arr_rgb.shape[1],
-                                arr_rgb.shape[0],
-                                {},
-                                dets,
-                                [],
-                                None,
-                                str(camera_id),
-                            )
-                        else:
-                            arr_rgb = draw_boxes_np(arr_rgb, dets, thickness=thickness)
-                            frame = cv2.cvtColor(arr_rgb, cv2.COLOR_RGB2BGR)
-                    except Exception:
-                        pass
                 ok, buf = cv2.imencode(
                     ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), FRAME_JPEG_QUALITY]
                 )
@@ -1408,37 +1341,6 @@ async def camera_health(camera_id: int):
     }
 
 
-@router.get("/api/cameras/{camera_id}/overlays")
-async def camera_overlay_stream(
-    request: Request,
-    camera_id: int,
-    token: str | None = Query(None),
-):
-    secret = cfg.get("secret_key", "secret")
-    expected = sign_token(str(camera_id), secret)
-    if token != expected:
-        logger.warning("[%s] invalid overlay token", camera_id)
-        raise HTTPException(status_code=401, detail="invalid token")
-
-    async def event_gen():
-        while True:
-            if await request.is_disconnected():
-                break
-            cam_cfg = next((c for c in cams if c.get("id") == camera_id), {})
-            tracker_obj = trackers_map.get(camera_id) if trackers_map else None
-            enabled_ppe = set(cfg.get("track_ppe", []))
-            show_lines = bool(cfg.get("show_lines"))
-            payload = await _build_payload(camera_id, tracker_obj, cam_cfg, enabled_ppe, show_lines)
-            yield "data: " + json.dumps(payload) + "\n\n"
-            await asyncio.sleep(0.1)
-
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-    }
-    return StreamingResponse(event_gen(), headers=headers)
 
 
 @router.post("/cameras/test")
@@ -1619,7 +1521,7 @@ async def test_camera(request: Request):
     if not result:
         tail_lines = mask_credentials(stderr or "").splitlines()[-50:]
         stderr_tail = "\n".join(tail_lines)
-        payload = {}
+        msg = stream_error_message(status) or err
         code = 400
         suggestion = "Check stream URL or camera accessibility"
 
@@ -1627,16 +1529,17 @@ async def test_camera(request: Request):
             code = 401
             suggestion = "Verify camera credentials"
         elif status == "timeout":
-            payload["error"] = err or "Connection timed out"
+            msg = msg or "Connection timed out"
             suggestion = "Check network connectivity or increase timeout"
         elif status == "dns":
-            payload["error"] = err or "DNS lookup failed"
+            msg = msg or "DNS lookup failed"
             suggestion = "Verify hostname or DNS settings"
         elif status == "network":
-            payload["error"] = err or "Network error"
+            msg = msg or "Network error"
             suggestion = "Check network connectivity or try different transport"
         else:
-            payload["error"] = err or "unable to read"
+            msg = msg or "unable to read"
+        payload = {"error": msg}
         if cmd:
             payload["ffmpeg_cmd"] = mask_credentials(cmd)
         if stderr_tail:

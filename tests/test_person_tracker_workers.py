@@ -232,36 +232,13 @@ def test_post_process_worker(monkeypatch):
     tr.show_lines = True
     tr.running = False
     tr.det_queue.put((frame, []))
-    called = []
-
-    def draw(*a, **k):
-        called.append(True)
-
-    monkeypatch.setattr(manager_mod, "draw_overlays", draw)
-    worker = PostProcessWorker(tr)
-    tr.post_worker = worker
-    worker.run()
-    assert called and tr.debug_stats.get("last_process_ts") is not None
-    assert tr.output_frame.shape == frame.shape
-    assert tr.output_frame is not frame
-    assert not tr.out_queue.empty()
-
-
-def test_post_process_worker_error(monkeypatch):
-    frame = np.zeros((2, 2, 3), dtype=np.uint8)
-    tr = make_tracker(monkeypatch, [frame])
-    tr.show_lines = True
-    tr.running = False
-    tr.det_queue.put((frame, []))
-
-    def draw(*a, **k):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(manager_mod, "draw_overlays", draw)
     worker = PostProcessWorker(tr)
     tr.post_worker = worker
     worker.run()
     assert tr.debug_stats.get("last_process_ts") is not None
+    assert tr.output_frame.shape == frame.shape
+    assert tr.output_frame is not frame
+    assert not tr.out_queue.empty()
 
 
 def test_post_process_worker_face_boxes(monkeypatch):

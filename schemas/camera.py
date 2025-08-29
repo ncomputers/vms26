@@ -70,7 +70,7 @@ class CameraBase(BaseModel):
     resolution: Optional[Resolution | str] = None
     ppe: Optional[bool] = None
     vms: Optional[bool] = None
-    face_recog: Optional[bool] = None
+    face_recognition: Optional[bool] = None
     inout_count: Optional[bool] = None
     reverse: Optional[bool] = None
     show: Optional[bool] = None
@@ -148,7 +148,7 @@ class CameraCreate(CameraBase):
     resolution: Resolution | str = Resolution.original
     ppe: bool = False
     vms: bool = False
-    face_recog: bool = False
+    face_recognition: bool = False
     inout_count: bool = False
     reverse: bool = False
     show: bool = False

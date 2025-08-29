@@ -199,31 +199,6 @@ body:not(.login-page) {
   overflow-x: auto;
 }
 
-/* Overlay toggle buttons */
-.overlay-toggle-group {
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.overlay-toggle-group .overlay-toggle {
-  padding: 0.25rem 0.5rem;
-}
-
-.overlay-toggle-group .overlay-toggle.active {
-  background-color: #0d6efd;
-  color: #fff;
-}
-
-/* ===== MJPEG Feed Overlays ===== */
-.feed-container {
-  position: relative;
-}
-.feed-container .overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
 
 @media (max-width: 1199.98px) {
   #navDrawer {
@@ -379,10 +354,4 @@ body:not(.login-page) {
 .feed {
   position: relative;
   display: inline-block;
-}
-.feed .overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
 }

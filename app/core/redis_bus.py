@@ -10,7 +10,7 @@ from redis import Redis
 from redis.exceptions import RedisError
 
 from .redis_guard import ensure_ttl, wrap_pipeline
-from .redis_keys import CAM_STATE, EVENT_STREAM
+from .redis_keys import CAM_STATE, EVENTS_STREAM
 
 _redis_client: Redis | None = None
 
@@ -29,7 +29,7 @@ def get_redis() -> Redis:
     return _redis_client
 
 
-def xadd_event(stream: str = EVENT_STREAM, data: Dict | None = None) -> None:
+def xadd_event(stream: str = EVENTS_STREAM, data: Dict | None = None) -> None:
     """Append ``data`` to the Redis ``stream``.
 
     Any errors are logged but otherwise ignored so event publishing does not
@@ -38,6 +38,9 @@ def xadd_event(stream: str = EVENT_STREAM, data: Dict | None = None) -> None:
 
     if data is None:
         data = {}
+    if not data:
+        logger.debug("xadd_event skipped for %s: empty data", stream)
+        return
     try:
         get_redis().xadd(stream, data, maxlen=1000, approximate=True)
     except RedisError as exc:  # pragma: no cover - network failure
