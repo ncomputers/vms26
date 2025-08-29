@@ -49,10 +49,7 @@ jobs:
           pre-commit install
           pre-commit run --all-files
       - name: Unit tests
-        run: |
-          pytest -m "not integration and not gpu and not slow" \
-            --junitxml=unit-tests.xml \
-            --cov=. --cov-report=xml
+        run: pytest -m "not integration and not gpu and not slow" --junitxml=unit-tests.xml --cov=. --cov-report=xml
       - name: Upload JUnit results
         if: always()
         uses: actions/upload-artifact@v4
