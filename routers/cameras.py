@@ -129,11 +129,17 @@ def _consume_preview_token(token: str) -> str | None:
 async def _get_preview_cap(cam: dict) -> object:
     cap = PREVIEW_CAPS.get(cam["id"])
     if cap is None:
+        uri = cam["url"]
         if cfg.get("use_gstreamer") and RtspGstSource is not None:
-            cap = RtspGstSource(cam["url"], cam_id=cam["id"])
-        else:
-            cap = RtspFfmpegSource(cam["url"], cam_id=cam["id"])
-        await asyncio.to_thread(cap.open)
+            gst = RtspGstSource(uri, cam_id=cam["id"])
+            try:
+                await asyncio.to_thread(gst.open)
+                cap = gst
+            except FrameSourceError as exc:
+                logger.warning("[%s] gst preview open failed: %s", cam["id"], exc)
+        if cap is None:
+            cap = RtspFfmpegSource(uri, cam_id=cam["id"])
+            await asyncio.to_thread(cap.open)
         PREVIEW_CAPS[cam["id"]] = cap
     return cap
 
@@ -1352,7 +1358,11 @@ async def camera_mjpeg(
             headers=headers,
         )
 
-    cap = await _get_preview_cap(cam)
+    try:
+        cap = await _get_preview_cap(cam)
+    except FrameSourceError as exc:
+        logger.error("[%s] preview source error: %s", cam["id"], exc)
+        raise HTTPException(status_code=503, detail="stream unavailable") from exc
 
     async def generator():
         boundary = b"--frame"
@@ -1450,7 +1460,9 @@ async def camera_mjpeg(
 
     headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
     return StreamingResponse(
-        generator(), media_type="multipart/x-mixed-replace; boundary=frame", headers=headers
+        generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers=headers,
     )
 
 
