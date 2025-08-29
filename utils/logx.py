@@ -15,7 +15,7 @@ from loguru import logger
 from redis.exceptions import RedisError
 
 from .redis import get_sync_client
-from .url import mask_creds
+from .url import mask_credentials
 
 # in-memory state for throttling helpers
 _last_times: Dict[str, float] = {}
@@ -73,7 +73,7 @@ def _log(level: str, event: str, **fields: Any) -> None:
 
     for key in ("url", "cmd", "pipeline", "pipeline_info"):
         if key in fields:
-            fields[key] = mask_creds(str(fields[key]))
+            fields[key] = mask_credentials(str(fields[key]))
     _validate(event, fields)
     payload: Dict[str, Any] = {
         "ts": time.time(),

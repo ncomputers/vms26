@@ -11,7 +11,7 @@ The implementation lives in ``core.camera_manager``.
 ## Key Functions
 - **start(camera_id)** – start trackers for the given camera.
 - **restart(camera_id)** – restart trackers and update status in Redis.
-- **refresh_flags(camera_id)** – signal a tracker to reload debug overlay flags.
+-- **refresh_flags(camera_id)** – signal a tracker to reload debug flags.
 
 ## Configuration Notes
 `CameraManager` receives callback functions for starting and stopping trackers.

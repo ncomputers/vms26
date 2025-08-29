@@ -15,7 +15,7 @@ Additional helpers:
 
 The default suite covers connectivity and runtime health checks such as
 `camera_found`, `ping`, `rtsp_probe`, `mjpeg_probe`, `snapshot_fresh`,
-`stream_metrics`, `overlay_health`, `detector_warm`, `inference_latency`,
+`stream_metrics`, `detector_warm`, `inference_latency`,
 `queues_depth`, `redis_rtt`, `gpu_stats`, `report_consistency` and
 `license_limits`.
 

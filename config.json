@@ -5,7 +5,6 @@
     "latency_ms": 100,
     "tcp": true
   },
-  "overlay_mode": "server",
   "person_model": "yolov8s.pt",
   "ppe_model": "mymodalv7.pt",
   "plate_model": "license_plate_detector.pt",
@@ -36,8 +35,6 @@
   "show_lines": false,
   "show_ids": false,
   "show_counts": false,
-  "overlay_every_n": 1,
-  "overlay_min_ms": 0,
   "enable_person_tracking": true,
   "enable_profiling": false,
   "profiling_interval": 5,
