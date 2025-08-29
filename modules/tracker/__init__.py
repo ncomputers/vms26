@@ -6,16 +6,6 @@ from .stream import CaptureWorker
 from .tracker import Tracker
 
 
-def start_face_tracker(*args, **kwargs):
-    """Placeholder for removed face tracker."""
-    return None
-
-
-def stop_face_tracker(*args, **kwargs):
-    """Placeholder for removed face tracker."""
-    return None
-
-
 class _TrackerCache:
     """Provide read access to latest tracker detections."""
 
@@ -60,7 +50,5 @@ __all__ = [
     "CaptureWorker",
     "Detector",
     "Tracker",
-    "start_face_tracker",
-    "stop_face_tracker",
     "tracker",
 ]
