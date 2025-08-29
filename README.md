@@ -251,6 +251,13 @@ Accessible labels and live region updates ensure screen reader support.
    either set `"headless": true` in `config.json` or run without a `DISPLAY`
    environment variable. If OpenCV is not installed, the application still
    starts but features that rely on local camera capture remain unavailable.
+   If you see an `ImportError: libGL.so.1` during startup, remove any existing
+   `opencv-python` package and reinstall the headless variant:
+
+   ```bash
+   pip uninstall -y opencv-python
+   pip install opencv-python-headless
+   ```
 3. Install [WeasyPrint](https://weasyprint.org/) and its native dependencies for
    PDF generation. On Debian/Ubuntu:
    ```bash
