@@ -385,7 +385,6 @@ async def create_camera_api(camera: dict):
         f"[create_camera_api] saving camera {cam_obj.name} url={sanitized} transport={cam_obj.transport}"
     )
     cam_dict = cam_obj.model_dump()
-    cam_dict["face_recognition"] = cam_dict.pop("face_recog", False)
     cam_dict["site_id"] = cam_dict.get("site_id") or cfg.get("site_id", 1)
     if cam_dict.get("face_recognition") and not cam_dict.get("line"):
         return JSONResponse({"error": "Virtual line required"}, status_code=400)
@@ -593,7 +592,7 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
     src_type = data.get("type", "http")
     ppe = bool(data.get("ppe"))
     visitor = bool(data.get("visitor_mgmt"))
-    face_rec = bool(data.get("face_recognition") or data.get("face_recog"))
+    face_rec = bool(data.get("face_recognition"))
     features = lic.get("features", {})
     counting = data.get("counting", True)
     enabled = bool(data.get("enabled", True))
@@ -917,9 +916,9 @@ async def toggle_vms(cam_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Not found")
 
 
-@router.post("/cameras/{cam_id}/face_recog")
+@router.post("/cameras/{cam_id}/face_recognition")
 @require_feature("face_recognition")
-async def toggle_face_recog(cam_id: int, request: Request):
+async def toggle_face_recognition(cam_id: int, request: Request):
     async with cams_lock:
         for cam in cams:
             if cam["id"] == cam_id:
@@ -964,8 +963,8 @@ async def update_camera(
                     if "visitor_mgmt" in data
                     else cam.get("visitor_mgmt", False)
                 )
-                if "face_recognition" in data or "face_recog" in data:
-                    face_rec = bool(data.get("face_recognition") or data.get("face_recog"))
+                if "face_recognition" in data:
+                    face_rec = bool(data.get("face_recognition"))
                 else:
                     face_rec = cam.get("face_recognition", False)
                 line = data.get("line")
@@ -982,7 +981,7 @@ async def update_camera(
                     cam["ppe"] = bool(ppe)
                 if "visitor_mgmt" in data:
                     cam["visitor_mgmt"] = bool(visitor)
-                if "face_recognition" in data or "face_recog" in data:
+                if "face_recognition" in data:
                     cam["face_recognition"] = bool(face_rec)
                     cam["enable_face_counting"] = bool(face_rec)
                 if "enabled" in data:
@@ -1004,7 +1003,6 @@ async def update_camera(
                         "ppe",
                         "visitor_mgmt",
                         "face_recognition",
-                        "face_recog",
                         "tasks",
                     ]
                 ):

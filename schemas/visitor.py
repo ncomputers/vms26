@@ -9,7 +9,6 @@ from pydantic import BaseModel
 class VisitorRegisterForm(BaseModel):
     """Form data for the visitor register endpoint."""
 
-    face_id: str
     name: str
     phone: str = ""
     host: str = ""
@@ -19,7 +18,6 @@ class VisitorRegisterForm(BaseModel):
     @classmethod
     def as_form(
         cls,
-        face_id: str = Form(...),
         name: str = Form(...),
         phone: str = Form(""),
         host: str = Form(""),
@@ -27,7 +25,6 @@ class VisitorRegisterForm(BaseModel):
         visitor_type: str = Form(""),
     ) -> "VisitorRegisterForm":
         return cls(
-            face_id=face_id,
             name=name,
             phone=phone,
             host=host,
