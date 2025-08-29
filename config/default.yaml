@@ -1,0 +1,23 @@
+# URL to the RTSP camera stream
+rtsp_url: rtsp://localhost:8554/live
+
+# Use TCP transport for RTSP (more reliable but higher latency)
+prefer_tcp: false
+
+# Read timeout for the RTSP stream in milliseconds
+read_timeout_ms: 10000
+
+# Video pipeline to use: ffmpeg or gstreamer
+pipeline: ffmpeg
+
+# Display the stream output locally (for debugging)
+show_stream: false
+
+# Resize frames to this width (0 to keep original)
+target_width: 1280
+
+# Resize frames to this height (0 to keep original)
+target_height: 720
+
+# Force the decoder codec: h264, hevc, or auto
+force_codec: auto
