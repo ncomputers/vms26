@@ -9,8 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from config.constants import WHATSAPP_SERVICE_URL, WHATSAPP_SHARED_SECRET
-from config import config
+from config import WHATSAPP_SERVICE_URL, WHATSAPP_SHARED_SECRET, config
 
 router = APIRouter(prefix="/whatsapp")
 
@@ -21,7 +20,9 @@ templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 async def _proxy_request(method: str, endpoint: str, data: dict | None = None) -> dict:
     """Forward a request to the WhatsApp service."""
     url = f"{WHATSAPP_SERVICE_URL.rstrip('/')}{endpoint}"
-    headers = {"x-shared-secret": WHATSAPP_SHARED_SECRET} if WHATSAPP_SHARED_SECRET else {}
+    headers = (
+        {"x-shared-secret": WHATSAPP_SHARED_SECRET} if WHATSAPP_SHARED_SECRET else {}
+    )
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             resp = await client.request(method, url, json=data, headers=headers)

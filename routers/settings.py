@@ -11,20 +11,23 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from starlette.datastructures import FormData
 
-from config import config
-from config.constants import ANOMALY_ITEMS, COUNT_GROUPS, PPE_ITEMS
+from config import ANOMALY_ITEMS, COUNT_GROUPS, PPE_ITEMS
 from config.storage import load_branding, save_branding, save_config
 from config.versioning import bump_version
+from core import events
 from core.tracker_manager import reset_counts, save_cameras, start_tracker, stop_tracker
 from modules.email_utils import send_email
-from modules.utils import require_admin, require_roles
-from core import events
+from modules.tracker import PersonTracker
+from modules.utils import require_admin
 from schemas.alerts import EmailConfig
+
+# ruff: noqa: B008
+
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -371,8 +374,9 @@ async def update_settings(
         else:
             for cid in list(ctx.trackers_map.keys()):
                 stop_tracker(cid, ctx.trackers_map)
-    from modules.profiler import start_profiler
-    start_profiler(ctx.cfg)
+    from modules.profiler import profiler_manager
+
+    profiler_manager.start(ctx.cfg)
     from routers.config_api import CONFIG_EVENT
 
     CONFIG_EVENT.set()
@@ -454,7 +458,6 @@ async def export_settings(
     request: Request, ctx: SettingsContext = Depends(get_settings_context)
 ):
     """Download configuration and cameras as a single JSON payload."""
-    from fastapi.responses import JSONResponse
 
     data = {"config": ctx.cfg, "cameras": ctx.cams}
     return JSONResponse(data)
@@ -475,9 +478,9 @@ async def import_settings(
     set_config(ctx.cfg)
     for tr in ctx.trackers_map.values():
         tr.update_cfg(ctx.cfg)
-    from modules.profiler import start_profiler
+    from modules.profiler import profiler_manager
 
-    start_profiler(ctx.cfg)
+    profiler_manager.start(ctx.cfg)
     if isinstance(cams_data, list):
         # stop existing trackers
         for cid in list(ctx.trackers_map.keys()):
@@ -512,8 +515,8 @@ async def activate_license(
 ):
     data = await request.json()
     key = data.get("key")
-    from modules.license import verify_license
     from config.license_storage import set as save_license
+    from modules.license import verify_license
 
     info = verify_license(key)
     if not info.get("valid"):

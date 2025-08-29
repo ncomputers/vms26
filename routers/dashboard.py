@@ -9,26 +9,19 @@ import os
 import queue
 import threading
 import time
-from datetime import datetime
-from pathlib import Path
 from typing import Annotated, AsyncIterator, Dict, Iterable
 
 import cv2
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import (
-    HTMLResponse,
-    JSONResponse,
-    RedirectResponse,
-    StreamingResponse,
-)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.core.utils import getenv_num
-from config.constants import ANOMALY_ITEMS, PPE_ITEMS, PPE_TASKS
-from modules.capture import ensure_gst as _ensure_gst
+from config import ANOMALY_ITEMS, PPE_ITEMS, PPE_TASKS
 from modules.email_utils import sign_token
+from modules.tracker import PersonTracker
 from modules.utils import require_roles
 from utils.async_utils import run_with_timeout
 from utils.deps import (
@@ -41,6 +34,14 @@ from utils.deps import (
 )
 from utils.logx import log_throttled
 from utils.time import parse_range
+
+# ruff: noqa
+
+
+
+
+# ruff: noqa: B008
+
 
 router = APIRouter()
 
@@ -209,7 +210,8 @@ async def index(
             "/dashboard?error=Unable%20to%20load%20stats", status_code=303
         )
     anomaly_counts = {
-        item: int(val or 0) for item, val in zip(ANOMALY_ITEMS, count_vals)
+        item: int(val or 0)
+        for item, val in zip(ANOMALY_ITEMS, count_vals, strict=False)
     }
     return templates.TemplateResponse(
         "dashboard.html",

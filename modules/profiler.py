@@ -154,32 +154,45 @@ class Profiler(threading.Thread):
             time.sleep(self.interval)
 
 
-_profiler: Optional[Profiler] = None
+class ProfilerManager:
+    """Manage the lifecycle of a background :class:`Profiler`."""
+
+    def __init__(self) -> None:
+        self._profiler: Optional[Profiler] = None
+
+    def start(self, cfg: dict) -> None:
+        """Start the profiler if enabled in ``cfg``."""
+        if not cfg.get("enable_profiling"):
+            self.stop()
+            return
+        interval = int(cfg.get("profiling_interval", 5))
+        if self._profiler and self._profiler.is_alive():
+            self._profiler.interval = interval
+            return
+        self.stop()
+        self._profiler = Profiler(interval)
+        self._profiler.start()
+        logger.info(f"Profiler started with interval={interval}s")
+
+    def stop(self) -> None:
+        """Stop the profiler if running."""
+        if self._profiler:
+            self._profiler.running = False
+            self._profiler.join(timeout=1)
+            self._profiler = None
+            logger.info("Profiler stopped")
 
 
-# start_profiler routine
+profiler_manager = ProfilerManager()
+
+
 def start_profiler(cfg: dict) -> None:
-    """Start the background profiler if enabled in config."""
-    global _profiler
-    if not cfg.get("enable_profiling"):
-        stop_profiler()
-        return
-    interval = int(cfg.get("profiling_interval", 5))
-    if _profiler and _profiler.is_alive():
-        _profiler.interval = interval
-        return
-    stop_profiler()
-    _profiler = Profiler(interval)
-    _profiler.start()
-    logger.info(f"Profiler started with interval={interval}s")
+    """Wrapper calling :meth:`ProfilerManager.start`."""
+
+    profiler_manager.start(cfg)
 
 
-# stop_profiler routine
 def stop_profiler() -> None:
-    """Stop the background profiler."""
-    global _profiler
-    if _profiler:
-        _profiler.running = False
-        _profiler.join(timeout=1)
-        _profiler = None
-        logger.info("Profiler stopped")
+    """Wrapper calling :meth:`ProfilerManager.stop`."""
+
+    profiler_manager.stop()

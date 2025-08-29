@@ -1,6 +1,6 @@
 import fakeredis
 
-from config.constants import CONFIG_DEFAULTS
+from config import CONFIG_DEFAULTS
 from config.storage import load_config
 
 
