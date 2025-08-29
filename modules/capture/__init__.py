@@ -14,6 +14,7 @@ except Exception:  # pragma: no cover - gstreamer/opencv missing
 
 
 from .http_mjpeg import HttpMjpegSource
+from .pipeline_ffmpeg import FfmpegPipeline
 
 __all__ = [
     "IFrameSource",
@@ -23,5 +24,6 @@ __all__ = [
     "RtspFfmpegSource",
     "RtspGstSource",
     "HttpMjpegSource",
+    "FfmpegPipeline",
     "ensure_gst",
 ]
