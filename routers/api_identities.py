@@ -13,9 +13,21 @@ router = APIRouter()
 logger = logger.bind(module="api_identities")
 
 
+def init_context(*_args, **_kwargs) -> None:
+    """Initialize router context.
+
+    The API identities endpoints do not require additional setup, but
+    ``routers.blueprints`` expects each router to expose an ``init_context``
+    hook.  Defining this no-op function keeps application startup from
+    failing when the blueprint initializer calls it.
+    """
+
+    return None
+
+
 @router.get("/api/identities/{identity_id}")
 def get_identity(
-    identity_id: str, ctx: AppContext = Depends(get_app_context)
+    identity_id: str, ctx: AppContext = Depends(get_app_context)  # noqa: B008
 ):
     r = ctx.redis
     if r is None:
@@ -50,8 +62,8 @@ def get_identity(
 @router.post("/api/identities/{identity_id}")
 def update_identity(
     identity_id: str,
-    payload: dict = Body(...),
-    ctx: AppContext = Depends(get_app_context),
+    payload: dict = Body(...),  # noqa: B008
+    ctx: AppContext = Depends(get_app_context),  # noqa: B008
 ):
     r = ctx.redis
     if r is None:
@@ -72,7 +84,9 @@ def update_identity(
 
 @router.delete("/api/identities/{identity_id}/faces/{face_id}")
 def remove_face(
-    identity_id: str, face_id: str, ctx: AppContext = Depends(get_app_context)
+    identity_id: str,
+    face_id: str,
+    ctx: AppContext = Depends(get_app_context),  # noqa: B008
 ):
     r = ctx.redis
     if r is None:
@@ -86,11 +100,12 @@ def remove_face(
 
 @router.post("/api/identities/{identity_id}/faces/{face_id}/primary")
 def set_primary_face(
-    identity_id: str, face_id: str, ctx: AppContext = Depends(get_app_context)
+    identity_id: str,
+    face_id: str,
+    ctx: AppContext = Depends(get_app_context),  # noqa: B008
 ):
     r = ctx.redis
     if r is None:
         return JSONResponse({"error": "unavailable"}, status_code=500)
     r.hset(f"identity:{identity_id}", "primary_face_id", face_id)
     return {"primary_set": True}
-
