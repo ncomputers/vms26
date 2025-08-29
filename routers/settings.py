@@ -131,10 +131,6 @@ def parse_basic_settings(data: dict, cfg: dict) -> dict:
         "chart_update_freq",
         "profiling_interval",
         "stream_mode",
-        "face_match_thresh",
-        "face_count_conf",
-        "face_count_similarity",
-        "face_count_min_size",
     ]:
         if key in data:
             val = data[key]
@@ -145,10 +141,8 @@ def parse_basic_settings(data: dict, cfg: dict) -> dict:
         "show_ids",
         "show_track_lines",
         "show_counts",
-        "show_face_boxes",
         "enable_live_charts",
         "debug_logs",
-        "enable_face_counting",
         "enable_profiling",
         "enable_person_tracking",
         "email_enabled",

@@ -157,7 +157,6 @@
   ],
   "capture_buffer_seconds": 15,
   "debug_logs": false,
-  "enable_face_counting": true,
   "branding": {
     "company_name": "Workspace Metal Solutions",
     "site_name": "Udaipur",

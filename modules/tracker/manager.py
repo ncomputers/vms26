@@ -23,27 +23,13 @@ import psutil
 from loguru import logger
 from redis.exceptions import RedisError
 
-from config import ANOMALY_ITEMS, config
-from core import events
-from utils import logx
-
-# Face detector is optional; import lazily to keep modules independent
-try:  # pragma: no cover - face engine optional
-    from modules.face_engine.detector import FaceDetector
-except Exception:  # pragma: no cover - missing optional dependency
-    FaceDetector = None  # type: ignore[assignment]
-
 from app.core.perf import PERF
 from app.core.redis_guard import ensure_ttl, wrap_pipeline
+from config import ANOMALY_ITEMS, config
 from modules.profiler import register_thread
+from utils import logx
 from utils.gpu import get_device
-from utils.redis import (
-    EVENTS_STREAM,
-    get_sync_client,
-    publish_event,
-    trim_sorted_set_sync,
-    xadd_event,
-)
+from utils.redis import EVENTS_STREAM, get_sync_client, xadd_event
 from utils.time import format_ts
 from utils.url import get_stream_type
 
@@ -175,23 +161,6 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
     if getattr(tracker, "face_tracking_enabled", False):
         tracker._process_faces(frame)
     updated = False
-    rgb = None
-    faces: list[tuple[int, int, int, int, np.ndarray]] = []
-    if getattr(tracker, "enable_face_counting", False) and FaceDetector:
-        if not getattr(tracker, "face_detector", None):
-            try:
-                tracker.face_detector = FaceDetector()
-            except Exception:
-                tracker.face_detector = None
-        if tracker.face_detector:
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            for f in tracker.face_detector.detect(rgb):
-                l2, t2, r2, b2 = map(int, f.bbox)
-                if f.det_score < tracker.face_count_conf:
-                    continue
-                if r2 - l2 < tracker.face_count_min_size or b2 - t2 < tracker.face_count_min_size:
-                    continue
-                faces.append((l2, t2, r2, b2, f.embedding))
     if getattr(tracker, "tracker", None):
         if not detections:
             now = time.time()
@@ -393,36 +362,6 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
                         ensure_ttl(tracker.redis, key, 15)
                     except Exception:
                         logger.exception("failed to update cam state")
-                    if (
-                        group == "person"
-                        and getattr(tracker, "enable_face_counting", False)
-                        and getattr(tracker, "unique_counter", None)
-                        and faces
-                    ):
-                        for fl, ft, fr, fb, emb in faces:
-                            if fl >= left and ft >= top and fr <= right and fb <= bottom:
-                                if tracker.unique_counter.is_new(emb):
-                                    if entered:
-                                        tracker.in_counts["face"] = (
-                                            tracker.in_counts.get("face", 0) + 1
-                                        )
-                                        publish_event(
-                                            tracker.redis,
-                                            events.FACE_IN,
-                                            cam_id=tracker.cam_id,
-                                            track_id=tid,
-                                            direction=direction,
-                                        )
-                                    else:
-                                        tracker.out_counts["face"] = (
-                                            tracker.out_counts.get("face", 0) + 1
-                                        )
-                                        trim_sorted_set_sync(
-                                            tracker.redis,
-                                            "face_logs",
-                                            face_entry["ts"],
-                                        )
-                                    break
             state["last_side"] = cur_side_sign
             state["last_seen"] = now
             state_lines[0] = state
@@ -452,22 +391,10 @@ def process_frame(tracker: "PersonTracker", frame: np.ndarray, detections: list[
             "show_ids",
             "show_track_lines",
             "show_counts",
-            "show_face_boxes",
         )
     }
     processed = frame.copy() if any(debug_flags.values()) else frame
     if any(debug_flags.values()):
-        face_boxes = None
-        if debug_flags["show_face_boxes"] and FaceDetector:
-            if not getattr(tracker, "face_detector", None):
-                try:
-                    tracker.face_detector = FaceDetector()
-                except Exception:
-                    tracker.face_detector = None
-            if tracker.face_detector:
-                if rgb is None:
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                face_boxes = tracker.face_detector.detect_boxes(rgb)
         counts = {
             k: int(v)
             for k, v in {
@@ -701,12 +628,7 @@ class PersonTracker:
             setattr(self, k, v)
         self.load_durations: dict[str, float] = {}
         self.pipeline = cfg.get("pipeline", "")
-        self.enable_face_counting = False
-        self.face_count_conf = cfg.get("face_count_conf", 0.85)
-        self.face_count_similarity = cfg.get("face_count_similarity", 0.6)
-        self.face_count_min_size = cfg.get("face_count_min_size", 80)
         self.face_detector = None
-        self.unique_counter = None
         self.cam_id = cam_id
         self.src = src
         self.src_type = src_type or cfg.get("type") or get_stream_type(src)
@@ -727,7 +649,6 @@ class PersonTracker:
         self.show_ids = cfg.get("show_ids", True)
         self.show_track_lines = cfg.get("show_track_lines", False)
         self.show_counts = cfg.get("show_counts", False)
-        self.show_face_boxes = cfg.get("show_face_boxes", False)
         self.preview_scale = cfg.get("preview_scale", 1.0)
         self.detector_fps = cfg.get("detector_fps", 10)
         self.adaptive_skip = cfg.get("adaptive_skip", False)
@@ -1072,10 +993,8 @@ class PersonTracker:
                 if not last or now - last >= self.count_cooldown:
                     if entered:
                         self.in_counts["face"] = self.in_counts.get("face", 0) + 1
-                        publish_event(self.redis, events.FACE_IN, camera_id=self.cam_id)
                     else:
                         self.out_counts["face"] = self.out_counts.get("face", 0) + 1
-                        publish_event(self.redis, events.FACE_OUT, camera_id=self.cam_id)
                     self._counted[key] = now
             state["zone"] = zone
         ended_ids = prev_ids - self.face_active_ids
@@ -1153,8 +1072,6 @@ class PersonTracker:
             self.show_track_lines = cfg["show_track_lines"]
         if "show_counts" in cfg:
             self.show_counts = cfg["show_counts"]
-        if "show_face_boxes" in cfg:
-            self.show_face_boxes = cfg["show_face_boxes"]
         if "detector_fps" in cfg:
             self.detector_fps = cfg["detector_fps"]
         if "adaptive_skip" in cfg:
@@ -1176,19 +1093,6 @@ class PersonTracker:
             self.duplicate_bypass_seconds = cfg["duplicate_bypass_seconds"]
             if self.dup_filter:
                 self.dup_filter.bypass_seconds = self.duplicate_bypass_seconds
-        if "face_recognition" in cfg:
-            self.enable_face_counting = bool(cfg["face_recognition"])
-            if self.enable_face_counting:
-                if self.unique_counter is None:
-                    self.unique_counter = UniqueFaceCounter(self.face_count_similarity)
-            else:
-                self.unique_counter = None
-        if "face_count_conf" in cfg:
-            self.face_count_conf = cfg["face_count_conf"]
-        if "face_count_min_size" in cfg:
-            self.face_count_min_size = cfg["face_count_min_size"]
-        if "face_count_similarity" in cfg and self.unique_counter:
-            self.unique_counter.similarity = cfg["face_count_similarity"]
         from ..model_registry import get_yolo
 
         if "person_model" in cfg and cfg["person_model"] != getattr(self, "person_model", None):

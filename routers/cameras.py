@@ -46,20 +46,18 @@ from routers.detections import _build_payload
 from routers.visitor_utils import visitor_disabled_response
 from schemas.camera import CameraCreate
 from utils import require_feature
+from utils.api_errors import stream_error_message
 from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.jpeg import encode_jpeg
 from utils.logx import log_throttled
 from utils.overlay import draw_boxes_np
 from utils.url import get_stream_type, mask_credentials
-from utils.api_errors import stream_error_message
-
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
 
 # ruff: noqa
-
 
 
 TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
@@ -69,6 +67,8 @@ HEARTBEAT_INTERVAL_MS = getenv_num("HEARTBEAT_INTERVAL_MS", 1500, int)
 HEARTBEAT_JPEG = base64.b64decode(
     b"/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5/ooooA//2Q=="
 )
+
+
 def require_admin(request: Request):
     """Ensure the current user has the ``admin`` role."""
     return require_roles(request, ["admin"])
@@ -163,7 +163,6 @@ stop_tracker_fn = lambda cid, trackers: stop_tracker(cid, trackers)
 camera_manager = CameraManager(
     cfg,
     trackers_map,
-    {},
     redis,
     lambda: cams,
     start_tracker_fn,
@@ -283,7 +282,6 @@ def init_context(
     camera_manager = CameraManager(
         cfg,
         trackers_map,
-        {},
         redis,
         lambda: cams,
         start_tracker_fn,
@@ -888,7 +886,6 @@ async def toggle_vms(cam_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Not found")
 
 
-
 @router.put("/cameras/{cam_id}")
 async def update_camera(
     cam_id: int, request: Request, manager: CameraManager = Depends(get_camera_manager)
@@ -1339,8 +1336,6 @@ async def camera_health(camera_id: int):
         "last_frame_age_ms": age_ms,
         "restarts": getattr(cap, "restarts", 0),
     }
-
-
 
 
 @router.post("/cameras/test")

@@ -20,7 +20,6 @@ def _display_settings(cfg: dict) -> dict:
         "show_track_lines": cfg.get("show_track_lines", False),
         "show_counts": cfg.get("show_counts", False),
         "show_ids": cfg.get("show_ids", False),
-        "show_face_boxes": cfg.get("show_face_boxes", False),
         "debug_logs": cfg.get("debug_logs", False),
         "enable_live_charts": cfg.get("enable_live_charts", False),
         "track_ppe": cfg.get("track_ppe", []),
