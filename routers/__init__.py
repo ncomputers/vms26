@@ -21,6 +21,5 @@ __all__ = [
     "detections",
     "troubleshooter",
     "debug",
-    "whatsapp",
     "logs",
 ]

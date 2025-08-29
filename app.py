@@ -14,7 +14,6 @@ from app.web import api_perf
 from core.config import get_config
 from core.logging import setup_json_logger
 from modules.utils import SNAP_DIR
-from routers import whatsapp
 from server.config import _load_secret_key
 from server.startup import handle_unexpected_error
 from server.startup import init_app as _init_app
@@ -58,7 +57,6 @@ for route, directory_name in static_mounts:
     if directory.is_dir():
         app.mount(route, StaticFiles(directory=str(directory)), name=directory.name)
 
-app.include_router(whatsapp.router)
 app.include_router(api_perf.router)
 
 

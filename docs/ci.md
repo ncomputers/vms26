@@ -66,6 +66,4 @@ These environment variables affect tests and local development:
 | `VMS26_QUEUE_MAX` | Maximum size of the internal processing queue. |
 | `VMS26_TARGET_FPS` | Target frame processing rate for the pipeline. |
 | `TZ` | Time zone used in tests for date/time handling. |
-| `WHATSAPP_SERVICE_URL` | Base URL for the optional WhatsApp service. |
-| `WHATSAPP_SHARED_SECRET` | Shared secret for WhatsApp integration. |
 | `ALLOW_UNAUTHENTICATED_STREAM` | If set, disables stream authentication in development. |

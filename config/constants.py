@@ -23,10 +23,6 @@ FACE_THRESHOLDS = FaceThresholds()
 
 DEFAULT_MODULES = ["dashboard", "visitors", "reports", "settings"]
 
-
-WHATSAPP_SERVICE_URL = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001")
-WHATSAPP_SHARED_SECRET = os.getenv("WHATSAPP_SHARED_SECRET", "")
-
 # Optional development flag to disable stream authentication
 ALLOW_UNAUTHENTICATED_STREAM = parse_bool(os.getenv("ALLOW_UNAUTHENTICATED_STREAM"))
 
