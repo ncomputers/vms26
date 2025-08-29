@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import re
@@ -13,18 +14,12 @@ import time
 import uuid
 from datetime import datetime
 from typing import Dict, List
-import base64
 from urllib.parse import urlparse, urlsplit
 
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import (
-    JSONResponse,
-    RedirectResponse,
-    Response,
-    StreamingResponse,
-)
+from fastapi.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -134,11 +129,17 @@ def _consume_preview_token(token: str) -> str | None:
 async def _get_preview_cap(cam: dict) -> object:
     cap = PREVIEW_CAPS.get(cam["id"])
     if cap is None:
+        uri = cam["url"]
         if cfg.get("use_gstreamer") and RtspGstSource is not None:
-            cap = RtspGstSource(cam["url"], cam_id=cam["id"])
-        else:
-            cap = RtspFfmpegSource(cam["url"], cam_id=cam["id"])
-        await asyncio.to_thread(cap.open)
+            gst = RtspGstSource(uri, cam_id=cam["id"])
+            try:
+                await asyncio.to_thread(gst.open)
+                cap = gst
+            except FrameSourceError as exc:
+                logger.warning("[%s] gst preview open failed: %s", cam["id"], exc)
+        if cap is None:
+            cap = RtspFfmpegSource(uri, cam_id=cam["id"])
+            await asyncio.to_thread(cap.open)
         PREVIEW_CAPS[cam["id"]] = cap
     return cap
 
@@ -166,9 +167,7 @@ redis = None
 redisfx = None
 
 # camera manager instance for API routes
-start_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_tracker(
-    cam, cfg, trackers, r, cb
-)
+start_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_tracker(cam, cfg, trackers, r, cb)
 stop_tracker_fn = lambda cid, trackers: stop_tracker(cid, trackers)
 start_face_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_face_tracker(
     cam, cfg, trackers, r
@@ -228,9 +227,7 @@ class LineConfig(BaseModel):
         return v
 
 
-async def _resolve_resolution(
-    url: str, res: str | None, timeout: float | None = None
-) -> str:
+async def _resolve_resolution(url: str, res: str | None, timeout: float | None = None) -> str:
     """Return a resolution string, probing the stream when set to ``auto``."""
 
     res = res or "original"
@@ -396,9 +393,7 @@ def _validate_ffmpeg_flags(flags: str) -> bool:
 async def create_camera_api(camera: dict):
     """Persist a new camera configuration."""
     try:
-        cam_obj = CameraCreate.model_validate(
-            camera, context={"cams": cams, "cfg": cfg}
-        )
+        cam_obj = CameraCreate.model_validate(camera, context={"cams": cams, "cfg": cfg})
     except ValidationError as exc:
         return _validation_response(exc)
     sanitized = mask_credentials(cam_obj.url)
@@ -423,9 +418,7 @@ async def create_camera_api(camera: dict):
             host = f"{host}:{parsed.port}"
         try:
             probed_url = probe_rtsp_base(host, parsed.username, parsed.password)
-            logger.info(
-                f"[create_camera_api] auto-probed RTSP path {mask_credentials(probed_url)}"
-            )
+            logger.info(f"[create_camera_api] auto-probed RTSP path {mask_credentials(probed_url)}")
             cam_dict["url"] = probed_url
             url = probed_url
         except Exception as e:
@@ -589,9 +582,7 @@ async def cameras_page(request: Request):
             cam_copy.setdefault("ppe", False)
             cam_copy.setdefault("visitor_mgmt", False)
             cam_copy.setdefault("face_recognition", False)
-            cam_copy.setdefault(
-                "enable_face_counting", cam_copy.get("face_recognition", False)
-            )
+            cam_copy.setdefault("enable_face_counting", cam_copy.get("face_recognition", False))
             cam_copy.setdefault("enabled", True)
             cam_copy.setdefault("orientation", "vertical")
             cam_copy.setdefault("rtsp_transport", "auto")
@@ -611,9 +602,7 @@ async def cameras_page(request: Request):
 
 
 @router.post("/cameras")
-async def add_camera(
-    request: Request, manager: CameraManager = Depends(get_camera_manager)
-):
+async def add_camera(request: Request, manager: CameraManager = Depends(get_camera_manager)):
     data = await request.json()
     lic = cfg.get("license_info", {})
     url = data.get("url")
@@ -627,15 +616,11 @@ async def add_camera(
     tasks: list[str] = []
     if counting:
         if not features.get("in_out_counting", True):
-            return JSONResponse(
-                {"error": "In/Out counting not licensed"}, status_code=403
-            )
+            return JSONResponse({"error": "In/Out counting not licensed"}, status_code=403)
         tasks.extend(["in_count", "out_count", "inout_count"])
     if ppe:
         if not features.get("ppe_detection", True):
-            return JSONResponse(
-                {"error": "PPE detection not licensed"}, status_code=403
-            )
+            return JSONResponse({"error": "PPE detection not licensed"}, status_code=403)
         tasks += _expand_ppe_tasks(cfg.get("track_ppe", []))
     if visitor or face_rec:
         if not features.get("visitor_mgmt", True):
@@ -719,9 +704,7 @@ async def add_camera(
                     TEST_CAMERA_TRANSPORT[url] = tr_used
                 logger.info(f"[add_camera] probe succeeded for {url} via {tr_used}")
                 return True, "ok", "", ""
-            logger.warning(
-                f"[add_camera] probe failed for {url} via {tr}: {status} {err}"
-            )
+            logger.warning(f"[add_camera] probe failed for {url} via {tr}: {status} {err}")
             last_status, last_error, last_hint = status, err, hint
         return False, last_status, last_error, last_hint
 
@@ -742,9 +725,7 @@ async def add_camera(
                 {"error": err or "DNS lookup failed", "hint": hint},
                 status_code=502,
             )
-        return JSONResponse(
-            {"error": err or "unable to read", "hint": hint}, status_code=500
-        )
+        return JSONResponse({"error": err or "unable to read", "hint": hint}, status_code=500)
 
     async with cams_lock:
         if lic:
@@ -874,9 +855,7 @@ async def delete_camera(cam_id: int, request: Request):
 
     await asyncio.to_thread(camera_manager.stop_tracker_fn, cam_id, trackers_map)
     if getattr(camera_manager, "stop_face_tracker_fn", None):
-        await asyncio.to_thread(
-            camera_manager.stop_face_tracker_fn, cam_id, face_trackers_map
-        )
+        await asyncio.to_thread(camera_manager.stop_face_tracker_fn, cam_id, face_trackers_map)
     return {"deleted": True}
 
 
@@ -1002,9 +981,7 @@ async def update_camera(
                 if type_check == "local" and not (
                     url_check.isdigit() or url_check.startswith("/dev/")
                 ):
-                    return JSONResponse(
-                        {"error": "invalid_local_camera"}, status_code=400
-                    )
+                    return JSONResponse({"error": "invalid_local_camera"}, status_code=400)
                 ppe = data.get("ppe") if "ppe" in data else cam.get("ppe", False)
                 visitor = (
                     data.get("visitor_mgmt")
@@ -1012,9 +989,7 @@ async def update_camera(
                     else cam.get("visitor_mgmt", False)
                 )
                 if "face_recognition" in data or "face_recog" in data:
-                    face_rec = bool(
-                        data.get("face_recognition") or data.get("face_recog")
-                    )
+                    face_rec = bool(data.get("face_recognition") or data.get("face_recog"))
                 else:
                     face_rec = cam.get("face_recognition", False)
                 line = data.get("line")
@@ -1076,9 +1051,7 @@ async def update_camera(
                     if cam.get("visitor_mgmt") or cam.get("face_recognition"):
                         if not features.get("visitor_mgmt", True):
                             return visitor_disabled_response()
-                    if cam.get("face_recognition") and not features.get(
-                        "face_recognition", True
-                    ):
+                    if cam.get("face_recognition") and not features.get("face_recognition", True):
                         return JSONResponse(
                             {"error": "Face recognition not licensed"}, status_code=403
                         )
@@ -1157,9 +1130,7 @@ async def update_camera(
                         db_cam.longitude = cam.get("longitude", db_cam.longitude)
                         update_camera(db_cam)
                 required = {"in_count", "out_count", "visitor_mgmt"} | set(PPE_TASKS)
-                needs_tracker = cam.get("enabled", True) and bool(
-                    set(cam["tasks"]) & required
-                )
+                needs_tracker = cam.get("enabled", True) and bool(set(cam["tasks"]) & required)
                 break
         else:
             return {"error": "Not found"}
@@ -1196,9 +1167,7 @@ async def update_camera_restart(
         if not cam:
             return JSONResponse({"error": "Not found"}, status_code=404)
         if data.get("resolution") == "auto":
-            data["resolution"] = await _resolve_resolution(
-                data.get("url", cam["url"]), "auto"
-            )
+            data["resolution"] = await _resolve_resolution(data.get("url", cam["url"]), "auto")
         cam.update(data)
         save_cameras(cams, redis)
     await manager.restart(cam_id)
@@ -1244,23 +1213,17 @@ async def import_cameras(request: Request):
         features = lic.get("features", {})
         if counting:
             if not features.get("in_out_counting", True):
-                return JSONResponse(
-                    {"error": "In/Out counting not licensed"}, status_code=403
-                )
+                return JSONResponse({"error": "In/Out counting not licensed"}, status_code=403)
             tasks.extend(["in_count", "out_count"])
         if cam["ppe"]:
             if not features.get("ppe_detection", True):
-                return JSONResponse(
-                    {"error": "PPE detection not licensed"}, status_code=403
-                )
+                return JSONResponse({"error": "PPE detection not licensed"}, status_code=403)
             tasks += _expand_ppe_tasks(cfg.get("track_ppe", []))
         if cam["visitor_mgmt"] or cam["face_recognition"]:
             if not features.get("visitor_mgmt", True):
                 return visitor_disabled_response()
         if cam["face_recognition"] and not features.get("face_recognition", True):
-            return JSONResponse(
-                {"error": "Face recognition not licensed"}, status_code=403
-            )
+            return JSONResponse({"error": "Face recognition not licensed"}, status_code=403)
 
         if cam["visitor_mgmt"]:
             tasks.append("visitor_mgmt")
@@ -1280,9 +1243,7 @@ async def import_cameras(request: Request):
                 try:
                     await camera_manager.start(cam["id"])
                 except Exception:
-                    logger.exception(
-                        f"[import_cameras] tracker start failed for {cam['id']}"
-                    )
+                    logger.exception(f"[import_cameras] tracker start failed for {cam['id']}")
     return {"imported": True}
 
 
@@ -1387,12 +1348,7 @@ async def camera_mjpeg(
             while True:
                 frame = get_pipeline_overlay(camera_id)
                 if frame:
-                    yield (
-                        boundary
-                        + b"\r\nContent-Type: image/jpeg\r\n\r\n"
-                        + frame
-                        + b"\r\n"
-                    )
+                    yield (boundary + b"\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
                 await asyncio.sleep(0.05)
 
         headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
@@ -1402,7 +1358,11 @@ async def camera_mjpeg(
             headers=headers,
         )
 
-    cap = await _get_preview_cap(cam)
+    try:
+        cap = await _get_preview_cap(cam)
+    except FrameSourceError as exc:
+        logger.error("[%s] preview source error: %s", cam["id"], exc)
+        raise HTTPException(status_code=503, detail="stream unavailable") from exc
 
     async def generator():
         boundary = b"--frame"
@@ -1500,7 +1460,9 @@ async def camera_mjpeg(
 
     headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
     return StreamingResponse(
-        generator(), media_type="multipart/x-mixed-replace; boundary=frame", headers=headers
+        generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers=headers,
     )
 
 
@@ -1537,9 +1499,7 @@ async def camera_overlay_stream(
             tracker_obj = trackers_map.get(camera_id) if trackers_map else None
             enabled_ppe = set(cfg.get("track_ppe", []))
             show_lines = bool(cfg.get("show_lines"))
-            payload = await _build_payload(
-                camera_id, tracker_obj, cam_cfg, enabled_ppe, show_lines
-            )
+            payload = await _build_payload(camera_id, tracker_obj, cam_cfg, enabled_ppe, show_lines)
             yield "data: " + json.dumps(payload) + "\n\n"
             await asyncio.sleep(0.1)
 
@@ -2028,11 +1988,7 @@ async def set_camera_line(cam_id: int, request: Request):
         return _validation_response(exc)
     redis.hset(f"cam:{cam_id}:line", mapping=cfg.model_dump())
     redis.publish("counter.config", f"cam:{cam_id}")
-    ratio = (
-        (cfg.x1 + cfg.x2) / 2
-        if cfg.orientation == "vertical"
-        else (cfg.y1 + cfg.y2) / 2
-    )
+    ratio = (cfg.x1 + cfg.x2) / 2 if cfg.orientation == "vertical" else (cfg.y1 + cfg.y2) / 2
     tr = trackers_map.get(cam_id)
     if tr:
         tr.line_orientation = cfg.orientation

@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """RTSP capture via GStreamer pipelines."""
+
+from __future__ import annotations
 
 import os
 import time
@@ -8,8 +8,9 @@ import time
 import cv2
 import numpy as np
 
-from .base import IFrameSource, FrameSourceError
 from utils.logging import log_capture_event
+
+from .base import FrameSourceError, IFrameSource
 
 
 def ensure_gst() -> bool:
@@ -48,9 +49,12 @@ class RtspGstSource(IFrameSource):
             decode = "rtph264depay ! h264parse ! nvv4l2decoder ! videoconvert"
         else:
             decode = "rtph264depay ! h264parse ! avdec_h264 ! videoconvert"
+        latency = int(self.latency_ms)
+        if latency < 0:
+            latency = 0
         pipeline = (
             "rtspsrc location="
-            f"{self.uri} protocols={proto} do-rtsp-keep-alive=true latency=200 ! "
+            f"{self.uri} protocols={proto} do-rtsp-keep-alive=true latency={latency} ! "
             f"{decode} ! appsink drop=true max-buffers=1 sync=false"
         )
         return pipeline
