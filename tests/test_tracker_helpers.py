@@ -45,7 +45,6 @@ def test_process_frame(monkeypatch):
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
         face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=SimpleNamespace(update_tracks=update_tracks),
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -60,7 +59,6 @@ def test_process_frame(monkeypatch):
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=q,
         output_frame=None,
@@ -88,7 +86,6 @@ def test_process_frame_filters_invalid(monkeypatch):
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
         face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=SimpleNamespace(update_tracks=update_tracks),
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -103,7 +100,6 @@ def test_process_frame_filters_invalid(monkeypatch):
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=queue.Queue(),
         output_frame=None,
@@ -123,7 +119,6 @@ def test_process_frame_reinitializes_renderer_on_shape_change():
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
         face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=None,
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -138,7 +133,6 @@ def test_process_frame_reinitializes_renderer_on_shape_change():
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=q,
         output_frame=None,

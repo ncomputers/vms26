@@ -283,10 +283,6 @@ Edit `config.json` to set camera URLs, model paths, thresholds, and email settin
 - `cpu_limit_percent` – Percent of CPU cores allocated to processing. The
   resolved core count sets process CPU affinity and caps threads in BLAS-backed
   libraries (default 50).
-- `enable_face_counting` – Turn on face counting mode.
-- `face_count_conf`, `face_count_similarity`, `face_count_min_size` –
-  Detection confidence, match threshold and minimum face size for counting.
-  for details.
 - `show_counts` – Display "Entered"/"Exited"/"Inside" labels on the live feed when enabled.
 - `license_key` – JWT license token controlling maximum cameras and feature access.
 - `ppe_log_retention_secs` – Seconds to retain PPE log entries before they are pruned (default 604800).
