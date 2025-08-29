@@ -16,6 +16,20 @@ origins.
 
 Streams are transient and stop when the client disconnects.
 
+## Environment variables
+
+The preview subsystem honours several environment variables:
+
+- `FRAME_JPEG_QUALITY` (default `80`) – quality for encoded preview frames.
+- `TARGET_FPS` (default `15`) – maximum rate at which frames are sent.
+- `NO_FRAME_TIMEOUT_MS` (default `2000`) – if no frame is decoded within this
+  window the capture source is restarted.
+- `HEARTBEAT_INTERVAL_MS` (default `1500`) – interval for tiny keep‑alive JPEGs
+  to prevent browser timeouts when the stream stalls.
+- `RECONNECT_BACKOFF_MS_MIN`/`RECONNECT_BACKOFF_MS_MAX` – bounds for exponential
+  backoff when reconnecting to a dropped stream.
+- `VMS26_RTSP_TCP` – set to `1` to force TCP transport for RTSP sources.
+
 ## Example
 
 ```bash

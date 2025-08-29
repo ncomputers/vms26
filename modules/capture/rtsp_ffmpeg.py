@@ -7,8 +7,8 @@ from __future__ import annotations
 This source supports optional command-line flags via the ``FFMPEG_EXTRA_FLAGS``
 environment variable. ``RTSP_RW_TIMEOUT_USEC`` and ``RTSP_STIMEOUT_USEC``
 control the ``-rw_timeout`` and ``-stimeout`` parameters (in microseconds,
-default ``5000000``). Stream dimensions are probed with ``ffprobe`` when not
-specified explicitly.
+default ``2000000`` and ``20000000`` respectively). Stream dimensions are
+probed with ``ffprobe`` when not specified explicitly.
 """
 
 import logging
@@ -17,6 +17,7 @@ import queue
 import shlex
 import subprocess
 import threading
+import time
 from collections import deque
 
 import ffmpeg
@@ -94,8 +95,11 @@ class RtspFfmpegSource(IFrameSource):
         self._reader_thread: threading.Thread | None = None
         self._stop_event: threading.Event | None = None
         self._short_reads = 0
-        self._backoff = Backoff()
+        base = getenv_num("RECONNECT_BACKOFF_MS_MIN", 500, int) / 1000
+        max_b = getenv_num("RECONNECT_BACKOFF_MS_MAX", 2000, int) / 1000
+        self._backoff = Backoff(base=base, max_sleep=max_b)
         self.restarts = 0
+        self.last_frame_ts = 0.0
         self._udp_fallback = False
 
     def _probe_resolution(self) -> None:
@@ -121,7 +125,7 @@ class RtspFfmpegSource(IFrameSource):
 
     def open(self) -> None:
         self._start_proc()
-        self._frame_queue = queue.Queue(maxsize=2)
+        self._frame_queue = queue.Queue(maxsize=1)
         self._stop_event = threading.Event()
         if self.width and self.height:
             self._reader_thread = threading.Thread(
@@ -135,12 +139,12 @@ class RtspFfmpegSource(IFrameSource):
         rw_timeout = (
             self.rw_timeout_usec
             if self.rw_timeout_usec is not None
-            else getenv_num("RTSP_RW_TIMEOUT_USEC", 5_000_000, int)
+            else getenv_num("RTSP_RW_TIMEOUT_USEC", 2_000_000, int)
         )
         stimeout = (
             self.stimeout_usec
             if self.stimeout_usec is not None
-            else getenv_num("RTSP_STIMEOUT_USEC", 5_000_000, int)
+            else getenv_num("RTSP_STIMEOUT_USEC", 20_000_000, int)
         )
         cmd = [
             "ffmpeg",
@@ -155,18 +159,22 @@ class RtspFfmpegSource(IFrameSource):
             cmd.extend(["-rtsp_flags", "prefer_tcp"])
         cmd.extend(
             [
-                "-rw_timeout",
-                str(rw_timeout),
                 "-stimeout",
                 str(stimeout),
-                "-probesize",
-                "15000000",
-                "-analyzeduration",
-                "3000000",
+                "-rw_timeout",
+                str(rw_timeout),
                 "-fflags",
                 "nobuffer",
                 "-flags",
                 "low_delay",
+                "-probesize",
+                "1000000",
+                "-analyzeduration",
+                "0",
+                "-max_delay",
+                "500000",
+                "-reorder_queue_size",
+                "0",
                 "-avioflags",
                 "direct",
                 "-an",
@@ -245,15 +253,20 @@ class RtspFfmpegSource(IFrameSource):
             )
             self._short_reads = 0
             self._backoff.reset()
-            if self._frame_queue and self._frame_queue.full():
-                try:
-                    self._frame_queue.get_nowait()
-                except queue.Empty:
-                    pass
             if self._frame_queue:
-                self._frame_queue.put(frame)
+                if self._frame_queue.full():
+                    try:
+                        self._frame_queue.get_nowait()
+                    except queue.Empty:
+                        pass
+                try:
+                    self._frame_queue.put_nowait(frame)
+                except queue.Full:
+                    pass
+            self.last_frame_ts = time.time()
 
     def _restart_proc(self) -> None:
+        self._log_stderr()
         self._stop_proc()
         self.restarts += 1
         log_throttled(
