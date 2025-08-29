@@ -42,8 +42,12 @@ jobs:
           path: jest-results.json
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
       - name: Lint
-        run: pre-commit run --all-files
+        run: |
+          pre-commit install
+          pre-commit run --all-files
       - name: Unit tests
         run: |
           pytest -m "not integration and not gpu and not slow" \
