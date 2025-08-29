@@ -192,7 +192,5 @@
   "ffmpeg_flags": "-an -flags low_delay -fflags nobuffer",
   "ffmpeg_available": true,
   "gst_available": true,
-  "cuda_available": true,
-  "WHATSAPP_SERVICE_URL": "http://localhost:3001",
-  "WHATSAPP_SHARED_SECRET": ""
+  "cuda_available": true
 }

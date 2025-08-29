@@ -764,26 +764,3 @@ The mobile build reads metadata from `config/mobile_app.json`. To create a white
 
 After updating the JSON, run the usual Capacitor or Cordova build steps; the configuration is picked up automatically.
 
-## WhatsApp Integration
-
-The application can proxy a separate WhatsApp service under `/whatsapp`.
-
-1. Run the standalone service from the `whatsapp-service` directory.
-2. Set `WHATSAPP_SERVICE_URL` and `WHATSAPP_SHARED_SECRET` (optional) in the environment.
-3. Visit `http://localhost:8000/whatsapp` to view the connection status or scan the QR code.
-
-Example calls through VMS:
-
-```bash
-curl -X POST http://localhost:8000/whatsapp/sendText \
-  -H 'Content-Type: application/json' \
-  -d '{"to":"+1234567890","message":"hello"}'
-
-curl -X POST http://localhost:8000/whatsapp/sendMedia \
-  -H 'Content-Type: application/json' \
-  -d '{"to":"+1234567890","fileUrl":"https://example.com/pic.jpg"}'
-
-curl http://localhost:8000/whatsapp/status
-```
-
-The WhatsApp service must be running alongside VMS for these routes to work.
