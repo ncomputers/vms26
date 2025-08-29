@@ -22,6 +22,24 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# init_context routine
+def init_context(
+    config: dict,
+    trackers,
+    redis_client,
+    templates_path: str,
+    cams,
+    redis_facade=None,
+) -> None:
+    """Initialize module globals.
+
+    The reports routes now obtain all shared resources from :class:`AppContext`
+    during request handling.  This function is retained for compatibility with
+    the startup sequence, but it intentionally performs no setup work.
+    """
+    return None
+
+
 @router.get("/report")
 async def report_page(
     request: Request,
@@ -215,7 +233,7 @@ async def report_export(
             rows = [
                 {"time": t, "in": i, "out": o, "current": c}
                 for t, i, o, c in zip(
-                    data["times"], data["ins"], data["outs"], data["current"]
+                    data["times"], data["ins"], data["outs"], data["current"], strict=False
                 )
             ]
             return export.export_csv(rows, columns, "count_report")
