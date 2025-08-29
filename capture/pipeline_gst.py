@@ -11,7 +11,7 @@ try:  # pragma: no cover - optional dependency
     import gi  # type: ignore
 
     gi.require_version("Gst", "1.0")
-    from gi.repository import Gst, GLib  # type: ignore
+    from gi.repository import GLib, Gst  # type: ignore
 
     Gst.init(None)
 except Exception:  # pragma: no cover - Gst not installed
@@ -35,7 +35,7 @@ class Backoff:
         self._n = 0
 
     def next(self) -> float:
-        delay = min(self.base * (2 ** self._n), self.maximum)
+        delay = min(self.base * (2**self._n), self.maximum)
         self._n += 1
         return delay
 
@@ -137,13 +137,14 @@ class GstPipeline(PipelineBase):
                 self._pipeline = None
                 self._appsink = None
                 self._loop = None
-                if self._stop_event.is_set():
-                    break
-                self.reconnect_count += 1
-                delay = self._backoff.next()
-                logger.info("reconnecting in %ds", int(delay))
-                if self._stop_event.wait(delay):
-                    break
+
+            if self._stop_event.is_set():
+                break
+            self.reconnect_count += 1
+            delay = self._backoff.next()
+            logger.info("reconnecting in %ds", int(delay))
+            if self._stop_event.wait(delay):
+                break
 
     # ------------------------------------------------------------------
     def start(self) -> None:
