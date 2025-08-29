@@ -5,9 +5,7 @@ def test_build_message_html_and_plain():
     cfg = {"from_addr": "from@example.com"}
     msg_plain = email_utils._build_message("Sub", "Body", ["to@example.com"], cfg)
     assert msg_plain.get_content_subtype() == "plain"
-    msg_html = email_utils._build_message(
-        "Sub", "<p>Body</p>", ["to@example.com"], cfg, html=True
-    )
+    msg_html = email_utils._build_message("Sub", "<p>Body</p>", ["to@example.com"], cfg, html=True)
     assert msg_html.get_content_subtype() == "html"
     assert msg_html["To"] == "to@example.com"
 

@@ -118,9 +118,7 @@ def _fetch_hashed_gatepass(gate_id: str) -> dict | None:
     if not data:
         return None
     item = {
-        (k.decode() if isinstance(k, bytes) else k): (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
     item = _normalize_gatepass(item)
@@ -236,9 +234,7 @@ def _get_gatepass(gate_id: str) -> dict | None:
         raise RuntimeError("redis_unavailable")
     if raw:
         item = {
-            (k.decode() if isinstance(k, bytes) else k): (
-                v.decode() if isinstance(v, bytes) else v
-            )
+            (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
             for k, v in raw.items()
         }
         try:
@@ -269,22 +265,16 @@ def _format_gatepass_times(entry: dict) -> dict:
 
     valid_from = _to_int(entry.get("valid_from"))
     if valid_from is not None:
-        entry["valid_from_str"] = time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime(valid_from)
-        )
+        entry["valid_from_str"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(valid_from))
 
     valid_to = _to_int(entry.get("valid_to"))
     if valid_to is not None:
-        entry["valid_to_str"] = time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime(valid_to)
-        )
+        entry["valid_to_str"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(valid_to))
 
     return entry
 
 
-def init_context(
-    cfg_obj: dict, redis_client, templates_path: str, redis_facade=None
-) -> None:
+def init_context(cfg_obj: dict, redis_client, templates_path: str, redis_facade=None) -> None:
     """Initialize shared context for gatepass submodules.
 
     The gatepass package exposes a few module-level objects (``config_obj``,

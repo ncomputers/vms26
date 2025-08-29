@@ -1,4 +1,5 @@
 import numpy as np
+
 from routers import cameras
 
 
@@ -6,7 +7,16 @@ def _patch(monkeypatch):
     monkeypatch.setattr(
         cameras,
         "cfg",
-        {"license_info": {"features": {"ppe_detection": True, "visitor_mgmt": False, "face_recognition": True, "in_out_counting": True}}},
+        {
+            "license_info": {
+                "features": {
+                    "ppe_detection": True,
+                    "visitor_mgmt": False,
+                    "face_recognition": True,
+                    "in_out_counting": True,
+                }
+            }
+        },
     )
 
     class DummyCap:

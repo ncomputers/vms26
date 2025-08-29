@@ -42,9 +42,7 @@ def _persist_watchdog(cam_id: int, **fields: Any) -> None:
 
 
 # _apply_counter_config routine
-def _apply_counter_config(
-    cam_id: int, r: redis.Redis, trackers: Dict[int, PersonTracker]
-) -> None:
+def _apply_counter_config(cam_id: int, r: redis.Redis, trackers: Dict[int, PersonTracker]) -> None:
     tr = trackers.get(cam_id)
     if not tr:
         return
@@ -88,9 +86,7 @@ def _apply_counter_config(
     tr.update_cfg(update)
 
 
-async def counter_config_listener(
-    r: redis.Redis, trackers: Dict[int, PersonTracker]
-) -> None:
+async def counter_config_listener(r: redis.Redis, trackers: Dict[int, PersonTracker]) -> None:
     pubsub = r.pubsub(ignore_subscribe_messages=True)
     pubsub.subscribe("counter.config")
     try:
@@ -280,9 +276,7 @@ def start_tracker(
         "visitor_mgmt",
     } | set(PPE_TASKS)
     if not set(tasks) & required_tasks:
-        logger.info(
-            "No counting/PPE/visitor tasks for this camera; tracker not started"
-        )
+        logger.info("No counting/PPE/visitor tasks for this camera; tracker not started")
         return None
 
     camera_factory.redis_client = r
@@ -357,9 +351,7 @@ def reset_counts(trackers: Dict[int, PersonTracker]) -> None:
         tr.out_count = 0
         tr.tracks.clear()
         tr.prev_date = date.today()
-        tr.redis.mset(
-            {tr.key_in: 0, tr.key_out: 0, tr.key_date: tr.prev_date.isoformat()}
-        )
+        tr.redis.mset({tr.key_in: 0, tr.key_out: 0, tr.key_date: tr.prev_date.isoformat()})
     logger.info("Counts reset")
 
 
@@ -452,9 +444,7 @@ def watchdog_tick(trackers: Dict[int, PersonTracker]) -> None:
             if getattr(tr, "first_frame_ok", False):
                 attempts = info.get("restart_attempts")
                 if not info.get("online_emitted"):
-                    logger.info(
-                        f"Tracker {cam_id} back online after {attempts or 0} attempts"
-                    )
+                    logger.info(f"Tracker {cam_id} back online after {attempts or 0} attempts")
                     logx.event(
                         "TRACKER_ONLINE",
                         camera_id=cam_id,

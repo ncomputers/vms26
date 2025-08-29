@@ -46,14 +46,8 @@ async def _fetch_visitors(
     if not redis:
         raise HTTPException(status_code=503, detail="redis_unavailable")
     local_tz = datetime.now().astimezone().tzinfo
-    min_ts = (
-        int(start_dt.astimezone(timezone.utc).timestamp())
-        if start_dt
-        else float("-inf")
-    )
-    max_ts = (
-        int(end_dt.astimezone(timezone.utc).timestamp()) if end_dt else float("inf")
-    )
+    min_ts = int(start_dt.astimezone(timezone.utc).timestamp()) if start_dt else float("-inf")
+    max_ts = int(end_dt.astimezone(timezone.utc).timestamp()) if end_dt else float("inf")
     try:
         visitor_entries = redis.zrevrangebyscore("visitor_logs", max_ts, min_ts)
         gate_entries = redis.zrevrangebyscore("vms_logs", max_ts, min_ts)
@@ -74,25 +68,17 @@ async def _fetch_visitors(
     def process(entry: bytes | str) -> None:
         item = json.loads(entry if isinstance(entry, str) else entry.decode())
         status = item.get("status", "").lower()
-        if status not in allowed_status or (
-            not include_pending and status == "pending"
-        ):
+        if status not in allowed_status or (not include_pending and status == "pending"):
             return
         ts_val = item.get("time") or item.get("created") or item.get("ts") or 0
         try:
             if isinstance(ts_val, str):
                 try:
-                    ts = datetime.strptime(ts_val, "%Y-%m-%d %H:%M:%S").replace(
-                        tzinfo=local_tz
-                    )
+                    ts = datetime.strptime(ts_val, "%Y-%m-%d %H:%M:%S").replace(tzinfo=local_tz)
                 except Exception:
-                    ts = datetime.fromtimestamp(
-                        int(ts_val), tz=timezone.utc
-                    ).astimezone(local_tz)
+                    ts = datetime.fromtimestamp(int(ts_val), tz=timezone.utc).astimezone(local_tz)
             else:
-                ts = datetime.fromtimestamp(int(ts_val), tz=timezone.utc).astimezone(
-                    local_tz
-                )
+                ts = datetime.fromtimestamp(int(ts_val), tz=timezone.utc).astimezone(local_tz)
         except Exception:
             return
         if start_dt and ts < start_dt:
@@ -201,10 +187,7 @@ async def api_visitor_report(
             host = r.get("host") or "Unknown"
             key = (r.get("name"), r.get("phone"))
             mapping.setdefault(host, set()).add(key)
-        grouped = [
-            {"host": host, "visitors": len(visitors)}
-            for host, visitors in mapping.items()
-        ]
+        grouped = [{"host": host, "visitors": len(visitors)} for host, visitors in mapping.items()]
         grouped.sort(key=lambda x: x["visitors"], reverse=True)
     else:
         raise HTTPException(status_code=400, detail="invalid_view")
@@ -368,10 +351,7 @@ async def export_visitor_report(
             host = r.get("host") or "Unknown"
             key = (r.get("name"), r.get("phone"))
             mapping.setdefault(host, set()).add(key)
-        data = [
-            {"host": host, "visitors": len(visitors)}
-            for host, visitors in mapping.items()
-        ]
+        data = [{"host": host, "visitors": len(visitors)} for host, visitors in mapping.items()]
         columns = [("host", "Host"), ("visitors", "Visitors Met")]
     else:
         data = records
@@ -389,9 +369,7 @@ async def export_visitor_report(
         return export.export_csv(data, columns, "visitor_report")
     except Exception as exc:  # pragma: no cover - export errors
         logger.exception("visitor export failed: {}", exc)
-        return JSONResponse(
-            {"status": "error", "reason": "export_failed"}, status_code=500
-        )
+        return JSONResponse({"status": "error", "reason": "export_failed"}, status_code=500)
 
 
 @router.get("/visitor_report")
@@ -477,9 +455,7 @@ async def custom_report(
             {
                 "name": key,
                 "count": info["count"],
-                "last": datetime.fromtimestamp(info["last"]).isoformat(
-                    sep=" ", timespec="seconds"
-                ),
+                "last": datetime.fromtimestamp(info["last"]).isoformat(sep=" ", timespec="seconds"),
                 "frequent": freq,
             }
         )

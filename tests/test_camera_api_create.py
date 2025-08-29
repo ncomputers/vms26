@@ -158,9 +158,7 @@ def test_create_camera_with_coordinates(client, monkeypatch):
 def test_face_recognition_requires_line(client):
     from config import config as cfg
 
-    cfg.setdefault("license_info", {}).setdefault("features", {})[
-        "face_recognition"
-    ] = True
+    cfg.setdefault("license_info", {}).setdefault("features", {})["face_recognition"] = True
     payload = _payload()
     payload["face_recog"] = True
     payload["profile"] = "main"

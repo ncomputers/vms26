@@ -25,9 +25,7 @@ class VisitorDB:
     @staticmethod
     def _decode_map(data: Dict) -> Dict:
         return {
-            k.decode() if isinstance(k, bytes) else k: (
-                v.decode() if isinstance(v, bytes) else v
-            )
+            k.decode() if isinstance(k, bytes) else k: (v.decode() if isinstance(v, bytes) else v)
             for k, v in data.items()
         }
 
@@ -48,13 +46,9 @@ class VisitorDB:
         ts = time.time()
         self.client.zadd("visitor_name_idx", {member: ts})
 
-    def _iter_name_index(
-        self, prefix_l: str, seen: set[tuple[str, str]]
-    ) -> Iterator[dict]:
+    def _iter_name_index(self, prefix_l: str, seen: set[tuple[str, str]]) -> Iterator[dict]:
         pattern = f"{prefix_l}*"
-        for member, _score in self.client.zscan_iter(
-            "visitor_name_idx", match=pattern, count=50
-        ):
+        for member, _score in self.client.zscan_iter("visitor_name_idx", match=pattern, count=50):
             mstr = member.decode() if isinstance(member, bytes) else member
             try:
                 name, phone = mstr.split("|", 1)
@@ -73,9 +67,7 @@ class VisitorDB:
                 "photo_url": info.get("photo", ""),
             }
 
-    def _scan_logs(
-        self, prefix_l: str, remaining: int, seen: set[tuple[str, str]]
-    ) -> list[dict]:
+    def _scan_logs(self, prefix_l: str, remaining: int, seen: set[tuple[str, str]]) -> list[dict]:
         try:
             entries = self.client.zrevrange("vms_logs", 0, -1)
         except Exception as exc:
@@ -142,9 +134,7 @@ class VisitorDB:
             logger.exception("failed to save visitor {}: {}", phone, exc)
             raise RuntimeError("failed to save visitor") from exc
 
-    def save_host(
-        self, name: str, email: str = "", dept: str = "", location: str = ""
-    ) -> None:
+    def save_host(self, name: str, email: str = "", dept: str = "", location: str = "") -> None:
         if not name:
             raise ValueError("name missing")
         try:

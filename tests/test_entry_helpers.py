@@ -54,9 +54,7 @@ async def test_update_visit_request(monkeypatch):
 
     sent = {}
 
-    monkeypatch.setattr(
-        entry, "send_email", lambda s, b, to, cfg: sent.update({"to": to})
-    )
+    monkeypatch.setattr(entry, "send_email", lambda s, b, to, cfg: sent.update({"to": to}))
 
     form = entry.RegisterVisitorForm(name="Alice", phone="123")
     await entry._update_visit_request(r, form, "GP1")
@@ -65,4 +63,3 @@ async def test_update_visit_request(monkeypatch):
     assert updated["status"] == "arrived"
     assert updated["gate_id"] == "GP1"
     assert sent["to"] == ["a@b"]
-

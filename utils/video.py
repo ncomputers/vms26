@@ -71,9 +71,7 @@ def get_stream_resolution(
     fallback = (640, 480)
     logger.debug("ffprobe command: %s", " ".join(cmd))
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, check=True, timeout=timeout
-        )
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=timeout)
         info = json.loads(proc.stdout or "{}")
         streams = info.get("streams", [])
         if streams:
@@ -89,9 +87,7 @@ def get_stream_resolution(
             return width, height
         logger.debug("ffprobe stdout: %s", proc.stdout)
         logger.debug("ffprobe stderr: %s", proc.stderr)
-        logger.warning(
-            "ffprobe returned no streams for %s; falling back to %dx%d", url, *fallback
-        )
+        logger.warning("ffprobe returned no streams for %s; falling back to %dx%d", url, *fallback)
     except (
         subprocess.CalledProcessError,
         json.JSONDecodeError,
@@ -115,8 +111,10 @@ def get_stream_resolution(
             *fallback,
         )
 
-    ttl = fallback_ttl if fallback_ttl is not None else app_config.get(
-        "stream_probe_fallback_ttl", _FALLBACK_TTL
+    ttl = (
+        fallback_ttl
+        if fallback_ttl is not None
+        else app_config.get("stream_probe_fallback_ttl", _FALLBACK_TTL)
     )
     _RES_CACHE[url] = (fallback, now + ttl)
     _RES_CACHE.move_to_end(url)

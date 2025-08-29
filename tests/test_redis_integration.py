@@ -72,9 +72,7 @@ def test_invite_status_flow(redis_client):
     iid = resp["id"]
     asyncio.run(visitor_router.invite_approve(iid))
     entries = [json.loads(e) for e in redis_client.zrevrange("invite_records", 0, -1)]
-    assert any(
-        e["id"] == iid and e["status"] == "accepted_pending_details" for e in entries
-    )
+    assert any(e["id"] == iid and e["status"] == "accepted_pending_details" for e in entries)
     asyncio.run(visitor_router.invite_reject(iid))
     entries = [json.loads(e) for e in redis_client.zrevrange("invite_records", 0, -1)]
     assert any(e["id"] == iid and e["status"] == "rejected" for e in entries)
@@ -86,9 +84,7 @@ def test_invite_status_flow(redis_client):
 
 def test_ppe_log_retention(redis_client, monkeypatch):
     tracker_manager.last_status = None
-    redis_client.set(
-        "config", json.dumps({"ppe_log_retention_secs": 1, "ppe_log_limit": 10})
-    )
+    redis_client.set("config", json.dumps({"ppe_log_retention_secs": 1, "ppe_log_limit": 10}))
     fake_time = types.SimpleNamespace(time=lambda: 1000)
     monkeypatch.setattr(tracker_manager, "time", fake_time)
     tracker_manager.handle_status_change("yellow", redis_client)

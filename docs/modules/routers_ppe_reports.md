@@ -8,7 +8,7 @@ PPE report routes.
 None
 
 ## Key Functions
-- **init_context(config, trackers, redis_client, templates_path)** - 
+- **init_context(config, trackers, redis_client, templates_path)** -
 
 ## Inputs and Outputs
 Refer to function signatures above for inputs and outputs.

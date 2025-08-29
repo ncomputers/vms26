@@ -14,13 +14,15 @@ Example::
     model = registry.get("yolo_person")
 
 """
+
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Dict, Tuple
-import os
 
 from loguru import logger
+
 from utils.housekeeping import register_cache
 
 try:  # heavy optional dependency
@@ -90,8 +92,8 @@ def get(name: str, device: str | None = None, half: bool = True):
                     name,
                     path,
                     gpu_name,
-                    free / (1024 ** 3),
-                    total / (1024 ** 3),
+                    free / (1024**3),
+                    total / (1024**3),
                 )
             except Exception:
                 logger.info("Loaded %s from %s on CUDA device", name, path)

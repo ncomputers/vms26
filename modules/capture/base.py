@@ -2,9 +2,9 @@ from __future__ import annotations
 
 """Common base classes for frame sources."""
 
-from abc import ABC, abstractmethod
 import os
 import time
+from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import numpy as np

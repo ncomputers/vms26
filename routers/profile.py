@@ -13,8 +13,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageOps
 
-from utils.ids import generate_id
 from config.storage import save_config
+from utils.ids import generate_id
 
 router = APIRouter()
 
@@ -143,9 +143,7 @@ async def save_widget_prefs(prefs: Dict[str, bool] = Body(...)) -> JSONResponse:
 @router.get("/profile/visibility", response_class=HTMLResponse)
 async def profile_visibility(request: Request) -> HTMLResponse:
     """Display profile visibility options."""
-    return templates.TemplateResponse(
-        "profile_visibility.html", {"request": request, "cfg": cfg}
-    )
+    return templates.TemplateResponse("profile_visibility.html", {"request": request, "cfg": cfg})
 
 
 @router.get("/profile/privacy", response_class=HTMLResponse)

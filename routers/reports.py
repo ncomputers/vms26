@@ -52,7 +52,9 @@ async def report_page(
     if isinstance(res, RedirectResponse):
         return res
     no_data = True
-    no_data_message = "No report data available. Verify the tracker is running or adjust log retention settings."
+    no_data_message = (
+        "No report data available. Verify the tracker is running or adjust log retention settings."
+    )
     error_message = None
     try:
         r = ctx.redis
@@ -69,9 +71,7 @@ async def report_page(
     quick_map = {"7d": "week", "this_month": "month"}
     selected_quick = quick_map.get(range, range)
     cam_list = (
-        ctx.cameras
-        if include_archived
-        else [c for c in ctx.cameras if not c.get("archived")]
+        ctx.cameras if include_archived else [c for c in ctx.cameras if not c.get("archived")]
     )
     return ctx.templates.TemplateResponse(
         "report.html",
@@ -141,9 +141,7 @@ async def _report_data(query: ReportQuery, ctx: AppContext):
             key = "face_logs"
 
         if last_ts is None:
-            raw_entries = ctx.redis.zrevrangebyscore(
-                key, end_ts, start_ts, start=0, num=query.rows
-            )
+            raw_entries = ctx.redis.zrevrangebyscore(key, end_ts, start_ts, start=0, num=query.rows)
         else:
             raw_entries = ctx.redis.zrevrangebyscore(
                 key, last_ts, start_ts, start=1, num=query.rows
@@ -202,9 +200,7 @@ async def report_data(
     try:
         return await _report_data(query, ctx)
     except RedisError:
-        return JSONResponse(
-            {"status": "error", "reason": "storage_unavailable"}, status_code=503
-        )
+        return JSONResponse({"status": "error", "reason": "storage_unavailable"}, status_code=503)
 
 
 @router.get("/report/export")
@@ -219,9 +215,7 @@ async def report_export(
     try:
         data = await _report_data(query, ctx)
     except RedisError:
-        return JSONResponse(
-            {"status": "error", "reason": "storage_unavailable"}, status_code=503
-        )
+        return JSONResponse({"status": "error", "reason": "storage_unavailable"}, status_code=503)
     if query.view == "graph":
         try:
             columns = [
@@ -239,18 +233,14 @@ async def report_export(
             return export.export_csv(rows, columns, "count_report")
         except Exception as exc:
             logger.exception("report export failed: {}", exc)
-            return JSONResponse(
-                {"status": "error", "reason": "export_failed"}, status_code=500
-            )
+            return JSONResponse({"status": "error", "reason": "export_failed"}, status_code=500)
     else:
         rows = data["rows"]
         for row in rows:
             if row.get("path"):
                 row["img_file"] = os.path.join(BASE_DIR, row["path"].lstrip("/"))
             if row.get("plate_path"):
-                row["plate_file"] = os.path.join(
-                    BASE_DIR, row["plate_path"].lstrip("/")
-                )
+                row["plate_file"] = os.path.join(BASE_DIR, row["plate_path"].lstrip("/"))
         columns = [
             ("time", "Time"),
             ("cam_id", "Camera"),
@@ -273,6 +263,4 @@ async def report_export(
             )
         except Exception as exc:
             logger.exception("report export failed: {}", exc)
-            return JSONResponse(
-                {"status": "error", "reason": "export_failed"}, status_code=500
-            )
+            return JSONResponse({"status": "error", "reason": "export_failed"}, status_code=500)

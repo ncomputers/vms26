@@ -9,9 +9,7 @@ from functools import lru_cache
 def _ffmpeg_has_option(opt: str) -> bool:
     """Return True if ``ffmpeg`` help lists ``opt``."""
     try:
-        res = subprocess.run(
-            ["ffmpeg", "-h"], capture_output=True, text=True, check=False
-        )
+        res = subprocess.run(["ffmpeg", "-h"], capture_output=True, text=True, check=False)
     except Exception:
         return False
     return f"-{opt}" in res.stdout
@@ -29,9 +27,7 @@ def _build_timeout_flags() -> list[str]:
     return []
 
 
-def build_preview_cmd(
-    url: str, transport: str, downscale: int | None = None
-) -> list[str]:
+def build_preview_cmd(url: str, transport: str, downscale: int | None = None) -> list[str]:
     """Return ffmpeg command for generating an MJPEG preview."""
     cmd = [
         "ffmpeg",
@@ -62,9 +58,7 @@ def build_preview_cmd(
     return cmd
 
 
-def build_snapshot_cmd(
-    url: str, transport: str, downscale: int | None = None
-) -> list[str]:
+def build_snapshot_cmd(url: str, transport: str, downscale: int | None = None) -> list[str]:
     """Return ffmpeg command for capturing a single JPEG frame."""
     cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-nostats"]
     if url.startswith("rtsp://"):

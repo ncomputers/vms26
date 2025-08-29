@@ -1,8 +1,8 @@
 import asyncio
 import json
 
-import pytest
 import fakeredis
+import pytest
 from fakeredis.aioredis import FakeRedis as AsyncFakeRedis
 
 from utils.redis_facade import RedisFacade

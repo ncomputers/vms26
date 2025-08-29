@@ -25,9 +25,7 @@ def init_app(
     stream_url: str | None = None,
     workers: int | None = None,
 ):
-    return _init_app(
-        app, config_path=config_path, stream_url=stream_url, workers=workers
-    )
+    return _init_app(app, config_path=config_path, stream_url=stream_url, workers=workers)
 
 
 try:  # pragma: no cover - middleware optional
@@ -66,9 +64,7 @@ async def health_ping() -> dict:
 
 @app.get("/manifest.webmanifest", include_in_schema=False)
 async def manifest() -> FileResponse:
-    return FileResponse(
-        "static/manifest.webmanifest", media_type="application/manifest+json"
-    )
+    return FileResponse("static/manifest.webmanifest", media_type="application/manifest+json")
 
 
 def _sw_response(path: str) -> FileResponse:

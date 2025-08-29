@@ -72,9 +72,7 @@ async def alerts_page(request: Request):
     res = require_roles(request, ["admin"])
     if isinstance(res, RedirectResponse):
         return res
-    items = list(ANOMALY_ITEMS) + sorted(
-        events.ALL_EVENTS - {events.VISITOR_REGISTERED}
-    )
+    items = list(ANOMALY_ITEMS) + sorted(events.ALL_EVENTS - {events.VISITOR_REGISTERED})
     if cfg.get("features", {}).get("visitor_mgmt"):
         items.append(events.VISITOR_REGISTERED)
     token, signed = csrf_protect.generate_csrf_tokens()

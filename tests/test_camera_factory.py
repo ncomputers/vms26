@@ -1,7 +1,8 @@
+import pytest
+
 import modules.camera_factory as cf
 from config import config as shared_config
 from modules.capture import FrameSourceError, IFrameSource
-import pytest
 
 
 class Dummy(IFrameSource):

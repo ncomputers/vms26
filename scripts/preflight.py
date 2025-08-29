@@ -75,9 +75,7 @@ def main() -> int:
     env_ok, env_msg, cfg = _parse_env()
     _print("env", env_ok, env_msg)
 
-    redis_url = cfg.get("redis_url") or os.getenv(
-        "REDIS_URL", "redis://localhost:6379/0"
-    )
+    redis_url = cfg.get("redis_url") or os.getenv("REDIS_URL", "redis://localhost:6379/0")
     redis_ok, redis_msg, cam_count = _check_redis(redis_url)
     _print("redis", redis_ok, redis_msg)
 

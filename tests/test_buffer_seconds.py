@@ -16,9 +16,7 @@ class DummyCap:
         return True
 
 
-sys.modules["cv2"] = types.SimpleNamespace(
-    CAP_GSTREAMER=0, VideoCapture=lambda *a, **k: DummyCap()
-)
+sys.modules["cv2"] = types.SimpleNamespace(CAP_GSTREAMER=0, VideoCapture=lambda *a, **k: DummyCap())
 import importlib
 
 import modules.gstreamer_stream as gst_mod

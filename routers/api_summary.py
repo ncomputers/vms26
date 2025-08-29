@@ -47,10 +47,7 @@ async def get_summary(
         key = f"summaries:{day.isoformat()}"
         summary = redis.hgetall(key) or {}
         start_ts = int(datetime.combine(day, datetime.min.time()).timestamp())
-        end_ts = int(
-            datetime.combine(day + timedelta(days=1), datetime.min.time()).timestamp()
-            - 1
-        )
+        end_ts = int(datetime.combine(day + timedelta(days=1), datetime.min.time()).timestamp() - 1)
         for g in groups:
             labels = COUNT_GROUPS.get(g, [g])
             for m in metrics:

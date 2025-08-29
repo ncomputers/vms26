@@ -30,7 +30,7 @@ def get_app_context(request: Request) -> AppContext:
             config=getattr(app.state, "config", {}),
             redis=getattr(app.state, "redis_client", None),
             trackers=getattr(app.state, "trackers", {}),
-            templates=getattr(app.state, "templates"),
+            templates=app.state.templates,
             branding=getattr(app.state, "config", {}).get("branding", {}),
             cameras=getattr(app.state, "cameras", []),
             redisfx=getattr(app.state, "redis_facade", None),

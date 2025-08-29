@@ -32,9 +32,7 @@ def capture_snapshot(url: str) -> bytes:
         "pipe:1",
     ]
     logger.debug("snapshot cmd: {}", " ".join(cmd))
-    res = subprocess.run(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
-    )
+    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if res.returncode != 0:
         raise RuntimeError(res.stderr.decode(errors="replace").strip())
     return res.stdout

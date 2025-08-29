@@ -53,7 +53,7 @@ class CameraModal{
     this.ctx.drawImage(this.video,0,0);
     this.ctx.strokeStyle='lime';
     this.ctx.lineWidth=2;
-    for(const [x,y,w,h] of this.boxes){this.ctx.strokeRect(x,y,w,h);} 
+    for(const [x,y,w,h] of this.boxes){this.ctx.strokeRect(x,y,w,h);}
     requestAnimationFrame(()=>this.draw());
   }
   // Capture current frame and send to server

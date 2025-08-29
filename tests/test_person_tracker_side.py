@@ -86,9 +86,7 @@ def test_crossing_near_endpoint(monkeypatch, tmp_path):
             return [StubTrack(bbox)]
 
     tracker.tracker = StubDS()
-    monkeypatch.setattr(
-        manager_mod.cv2, "imwrite", lambda path, img: True, raising=False
-    )
+    monkeypatch.setattr(manager_mod.cv2, "imwrite", lambda path, img: True, raising=False)
 
     inf = InferWorker(tracker)
     post = PostProcessWorker(tracker)
@@ -144,9 +142,7 @@ def test_jitter_near_line_ignored(monkeypatch, tmp_path):
             return [StubTrack(bbox)]
 
     tracker.tracker = StubDS()
-    monkeypatch.setattr(
-        manager_mod.cv2, "imwrite", lambda path, img: True, raising=False
-    )
+    monkeypatch.setattr(manager_mod.cv2, "imwrite", lambda path, img: True, raising=False)
 
     inf = InferWorker(tracker)
     post = PostProcessWorker(tracker)

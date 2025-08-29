@@ -145,9 +145,7 @@ class CaptureWorker:
                                 error=err,
                                 cmd=t.pipeline_info,
                                 rc=getattr(cap, "rc", 0),
-                                ffmpeg_tail="\n".join(
-                                    getattr(cap, "_stderr_buffer", [])
-                                ),
+                                ffmpeg_tail="\n".join(getattr(cap, "_stderr_buffer", [])),
                             )
                             t.stream_status = status
                             t.stream_error = err
@@ -240,9 +238,7 @@ class CaptureWorker:
                         t.debug_stats["det_in"] = qs["det_in"]
                     else:
                         t.debug_stats["det_in"] = t.frame_queue.qsize()
-                    t.debug_stats["packet_loss"] = getattr(
-                        cap, "network_error_count", 0
-                    )
+                    t.debug_stats["packet_loss"] = getattr(cap, "network_error_count", 0)
                     t.debug_stats["restarts"] = getattr(cap, "restarts", 0)
                     if t.cfg.get("once"):
                         t.running = False

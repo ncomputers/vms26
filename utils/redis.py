@@ -22,8 +22,8 @@ from loguru import logger
 from redis.exceptions import RedisError
 
 from config import config as shared_config
-from .redis_facade import RedisFacade
 
+from .redis_facade import RedisFacade
 
 EVENTS_STREAM = "events_stream"
 _xadd_client = None
@@ -90,9 +90,7 @@ async def get_client(url: Optional[str] = None) -> redis_async.Redis:
     automatically.
     """
     url = (
-        url
-        or shared_config.get("redis_url")
-        or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        url or shared_config.get("redis_url") or os.getenv("REDIS_URL", "redis://localhost:6379/0")
     )
     pool = _get_pool(url)
     return redis_async.Redis(connection_pool=pool, decode_responses=True)
@@ -101,9 +99,7 @@ async def get_client(url: Optional[str] = None) -> redis_async.Redis:
 def get_sync_client(url: Optional[str] = None) -> redis_sync.Redis:
     """Return a synchronous Redis client."""
     url = (
-        url
-        or shared_config.get("redis_url")
-        or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        url or shared_config.get("redis_url") or os.getenv("REDIS_URL", "redis://localhost:6379/0")
     )
     try:
         client = redis_sync.Redis.from_url(url, decode_responses=True)

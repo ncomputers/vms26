@@ -26,21 +26,23 @@ def test_add_camera_respects_show_field(client, monkeypatch):
 
 def test_toggle_show_uses_stored_value(client, monkeypatch):
     _patch(monkeypatch)
-    cameras.cams = [{
-        "id": 1,
-        "url": "rtsp://test",
-        "type": "rtsp",
-        "tasks": [],
-        "ppe": False,
-        "visitor_mgmt": False,
-        "face_recognition": False,
-        "enable_face_counting": False,
-        "enabled": True,
-        "show": False,
-        "reverse": False,
-        "line_orientation": "vertical",
-        "resolution": "720p",
-    }]
+    cameras.cams = [
+        {
+            "id": 1,
+            "url": "rtsp://test",
+            "type": "rtsp",
+            "tasks": [],
+            "ppe": False,
+            "visitor_mgmt": False,
+            "face_recognition": False,
+            "enable_face_counting": False,
+            "enabled": True,
+            "show": False,
+            "reverse": False,
+            "line_orientation": "vertical",
+            "resolution": "720p",
+        }
+    ]
     resp = client.patch("/cameras/1/show")
     assert resp.status_code == 200
     assert cameras.cams[0]["show"] is True

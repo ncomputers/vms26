@@ -7,9 +7,7 @@ from types import SimpleNamespace
 # Stub heavy modules before importing startup
 sys.modules.setdefault(
     "core.tracker_manager",
-    types.SimpleNamespace(
-        start_tracker=lambda *a, **k: None, start_watchdog=lambda *a, **k: None
-    ),
+    types.SimpleNamespace(start_tracker=lambda *a, **k: None, start_watchdog=lambda *a, **k: None),
 )
 sys.modules.setdefault("modules.alerts", types.SimpleNamespace(AlertWorker=object))
 sys.modules.setdefault("modules.ppe_worker", types.SimpleNamespace(PPEDetector=object))
@@ -35,9 +33,7 @@ def test_preload_models_cpu_skips_insightface(monkeypatch):
 
     monkeypatch.setattr("startup.get_yolo", fake_get_yolo)
     monkeypatch.setattr("startup.get_insightface", fake_get_insightface)
-    monkeypatch.setattr(
-        "startup.get_device", lambda device=None: SimpleNamespace(type="cpu")
-    )
+    monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cpu"))
 
     cfg = {
         "person_model": "p.pt",
@@ -68,9 +64,7 @@ def test_preload_models_gpu_loads_insightface(monkeypatch):
 
     monkeypatch.setattr("startup.get_yolo", fake_get_yolo)
     monkeypatch.setattr("startup.get_insightface", fake_get_insightface)
-    monkeypatch.setattr(
-        "startup.get_device", lambda device=None: SimpleNamespace(type="cuda")
-    )
+    monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cuda"))
 
     cfg = {
         "person_model": "p.pt",
@@ -100,9 +94,7 @@ def test_preload_models_gpu_loads_insightface_face_recognition(monkeypatch):
 
     monkeypatch.setattr("startup.get_yolo", fake_get_yolo)
     monkeypatch.setattr("startup.get_insightface", fake_get_insightface)
-    monkeypatch.setattr(
-        "startup.get_device", lambda device=None: SimpleNamespace(type="cuda")
-    )
+    monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cuda"))
 
     cfg = {
         "person_model": "p.pt",
@@ -128,9 +120,7 @@ def test_preload_models_skips_person_when_no_counting_tasks(monkeypatch):
         calls.append(path)
 
     monkeypatch.setattr("startup.get_yolo", fake_get_yolo)
-    monkeypatch.setattr(
-        "startup.get_device", lambda device=None: SimpleNamespace(type="cuda")
-    )
+    monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cuda"))
 
     cfg = {"person_model": "p.pt", "plate_model": "pl.pt", "features": {}}
     cams = [{"tasks": []}, {"tasks": ["visitor_mgmt"]}]
@@ -148,9 +138,7 @@ def test_preload_models_skips_person_when_features_disabled(monkeypatch):
         calls.append(path)
 
     monkeypatch.setattr("startup.get_yolo", fake_get_yolo)
-    monkeypatch.setattr(
-        "startup.get_device", lambda device=None: SimpleNamespace(type="cuda")
-    )
+    monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cuda"))
 
     cfg = {
         "person_model": "p.pt",

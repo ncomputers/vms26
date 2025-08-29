@@ -1,6 +1,6 @@
 import threading
 
-from logging_config import set_log_level, logger
+from logging_config import logger, set_log_level
 
 
 def test_configure_thread_safe():

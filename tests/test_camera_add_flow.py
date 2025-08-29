@@ -56,8 +56,6 @@ def test_camera_add_flow(client, monkeypatch):
     assert DummyStream.kwargs["frame_skip"] == 1
     assert r.json()["notes"].startswith("/api/cameras/preview?token=")
 
-    resp = client.post(
-        "/cameras", json={"name": "Cam1", "url": "rtsp://demo", "type": "rtsp"}
-    )
+    resp = client.post("/cameras", json={"name": "Cam1", "url": "rtsp://demo", "type": "rtsp"})
     assert resp.status_code == 200
     assert any(c["name"] == "Cam1" for c in cameras.cams)

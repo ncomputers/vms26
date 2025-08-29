@@ -10,16 +10,16 @@ assignees: ''
 A clear and concise description of the bug.
 
 ## Steps to Reproduce
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected Behavior
 Describe what you expected to happen.
 
 ## Environment
-- OS: 
-- Browser/Version: 
+- OS:
+- Browser/Version:
 - Other relevant details:
 
 ## Checklist

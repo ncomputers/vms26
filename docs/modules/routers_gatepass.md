@@ -10,8 +10,8 @@ None
 ## Key Functions
 - **_cache_gatepass(entry)** - Store gate pass data in Redis using standard keys.
 - **_load_gatepass(gate_id)** - Retrieve gate pass data from cache, hash or logs.
-- **init_context(cfg_obj, redis_client, templates_path)** - 
-- **_save_gatepass(entry)** - 
+- **init_context(cfg_obj, redis_client, templates_path)** -
+- **_save_gatepass(entry)** -
 - **_get_gatepass(gate_id)** - Return gate pass using cache with fallback to Redis hash.
 
 ## Inputs and Outputs

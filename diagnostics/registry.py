@@ -38,7 +38,9 @@ except Exception:  # pragma: no cover - fallback when config unavailable
 REGISTRY: "OrderedDict[str, Callable[..., Awaitable[dict]]]" = OrderedDict()
 
 
-def register(name: str) -> Callable[[Callable[..., Awaitable[dict]]], Callable[..., Awaitable[dict]]]:
+def register(
+    name: str,
+) -> Callable[[Callable[..., Awaitable[dict]]], Callable[..., Awaitable[dict]]]:
     """Decorator to register a diagnostic test function.
 
     Registration preserves definition order using an :class:`OrderedDict`.
@@ -105,6 +107,7 @@ def get_source_mode(cam_id: int) -> str:
 # ---------------------------------------------------------------------------
 # Default test implementations
 # ---------------------------------------------------------------------------
+
 
 async def _template_result(test_id: str) -> dict:
     """Return a generic placeholder test result."""

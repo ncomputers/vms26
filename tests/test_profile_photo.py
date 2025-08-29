@@ -20,9 +20,7 @@ def test_profile_photo_processing(client):
     assert resp.status_code == 200
     assert resp.json()["saved"] is True
     assert "profile_photo" in profile.cfg
-    path = Path(
-        profile.BASE_DIR / profile.cfg["profile_photo"].split("?")[0].lstrip("/")
-    )
+    path = Path(profile.BASE_DIR / profile.cfg["profile_photo"].split("?")[0].lstrip("/"))
     assert path.exists()
     saved = Image.open(path)
     assert saved.size == (256, 256)

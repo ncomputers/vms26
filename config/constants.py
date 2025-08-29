@@ -133,9 +133,7 @@ VEHICLE_LABELS = {
     "auto",
     "van",
 }
-AVAILABLE_CLASSES = (
-    MODEL_CLASSES + ANOMALY_ITEMS + [c for cl in COUNT_GROUPS.values() for c in cl]
-)
+AVAILABLE_CLASSES = MODEL_CLASSES + ANOMALY_ITEMS + [c for cl in COUNT_GROUPS.values() for c in cl]
 CAMERA_TASKS = [
     "in_count",
     "out_count",

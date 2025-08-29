@@ -15,9 +15,7 @@ def test_apply_defaults_populates_and_normalizes():
 
 
 def test_rewrite_pipelines_converts_legacy_fields():
-    cfg = {
-        "pipeline_profiles": {"cam": {"extra_pipeline": "foo", "ffmpeg_flags": "-bar"}}
-    }
+    cfg = {"pipeline_profiles": {"cam": {"extra_pipeline": "foo", "ffmpeg_flags": "-bar"}}}
     _rewrite_pipelines(cfg)
     profile = cfg["pipeline_profiles"]["cam"]
     pipes = profile["pipelines"]

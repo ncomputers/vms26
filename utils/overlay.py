@@ -9,12 +9,9 @@ from typing import Dict, List
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-
 font_path = Path(__file__).resolve().parents[1] / "static" / "fonts" / "DejaVuSans.ttf"
 try:
-    _FONT: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(
-        str(font_path), 14
-    )
+    _FONT: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(str(font_path), 14)
 except Exception:  # pragma: no cover - font load errors
     _FONT = ImageFont.load_default()
 
@@ -42,9 +39,7 @@ class OverlayThrottler:
         return draw
 
 
-def draw_boxes_np(
-    img_rgb: np.ndarray, dets: List[Dict], thickness: int = 2
-) -> np.ndarray:
+def draw_boxes_np(img_rgb: np.ndarray, dets: List[Dict], thickness: int = 2) -> np.ndarray:
     """Draw bounding boxes and optional labels on ``img_rgb``.
 
     Parameters

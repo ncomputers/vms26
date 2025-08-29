@@ -19,4 +19,3 @@ Return a list of currently running threads with their names, liveness and identi
 
 ## Inputs and Outputs
 No inputs. Returns a list of objects with ``name``, ``alive`` and ``ident`` fields.
-

@@ -11,7 +11,7 @@ def test_stub_loads_real_torch(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "path", sys.path + [str(tmp_path)])
     sys.modules.pop("torch", None)
     mod = importlib.import_module("torch")
-    assert getattr(mod, "flag") == "real"
+    assert mod.flag == "real"
 
 
 def test_stub_handles_case_insensitive_paths(tmp_path, monkeypatch):
@@ -30,4 +30,4 @@ def test_stub_handles_case_insensitive_paths(tmp_path, monkeypatch):
 
     sys.modules.pop("torch", None)
     mod = importlib.import_module("torch")
-    assert getattr(mod, "flag") == "real"
+    assert mod.flag == "real"

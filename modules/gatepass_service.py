@@ -27,18 +27,14 @@ class GatepassService:
     @staticmethod
     def build_qr_link(gate_id: str, request: Request) -> str:
         base = str(request.base_url).rstrip("/")
-        return (
-            f"{base}/gatepass/view/{gate_id}" if gate_id else f"{base}/gatepass/view/"
-        )
+        return f"{base}/gatepass/view/{gate_id}" if gate_id else f"{base}/gatepass/view/"
 
     _template_dir = Path(__file__).resolve().parent.parent / "templates"
     _env = Environment(
         loader=FileSystemLoader(_template_dir),
         autoescape=select_autoescape(["html", "xml"]),
     )
-    _env.globals["url_for"] = lambda name, path: (
-        f"/static/{path}" if name == "static" else path
-    )
+    _env.globals["url_for"] = lambda name, path: (f"/static/{path}" if name == "static" else path)
 
     def render_gatepass_card(self, rec: dict, qr_image: str | None = None) -> str:
         rec_local = dict(rec)
@@ -47,18 +43,14 @@ class GatepassService:
         branding = cfg.get("branding", {})
         cfg_local = dict(cfg)
         cfg_local["branding"] = dict(branding)
-        logo = cfg_local["branding"].get("company_logo_url") or cfg_local.get(
-            "logo_url"
-        )
+        logo = cfg_local["branding"].get("company_logo_url") or cfg_local.get("logo_url")
         if logo and logo.startswith("static/"):
             cfg_local["branding"]["company_logo_url"] = f"/{logo}"
             logo = cfg_local["branding"]["company_logo_url"]
         if logo and not (logo.startswith("http") or logo.startswith("/static/")):
             cfg_local["branding"]["company_logo_url"] = ""
             cfg_local["logo_url"] = ""
-        footer = cfg_local["branding"].get("footer_logo_url") or cfg_local.get(
-            "logo2_url"
-        )
+        footer = cfg_local["branding"].get("footer_logo_url") or cfg_local.get("logo2_url")
         if footer and footer.startswith("static/"):
             cfg_local["branding"]["footer_logo_url"] = f"/{footer}"
         color_map = {

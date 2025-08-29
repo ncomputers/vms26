@@ -16,12 +16,8 @@ class ReportQuery(BaseModel):
     type: Literal["person", "vehicle", "face"] = "person"
     view: Literal["graph", "table"] = "graph"
     rows: conint(gt=0, le=200) = 50
-    cam_id: Annotated[int | None, BeforeValidator(lambda v: None if v == "" else v)] = (
-        None
-    )
-    label: Annotated[str | None, BeforeValidator(lambda v: None if v == "" else v)] = (
-        None
-    )
+    cam_id: Annotated[int | None, BeforeValidator(lambda v: None if v == "" else v)] = None
+    label: Annotated[str | None, BeforeValidator(lambda v: None if v == "" else v)] = None
     cursor: int = 0
 
     @field_validator("end")

@@ -1,12 +1,14 @@
+import asyncio
 import sys
 import types
-import asyncio
 
 # minimal stubs for modules.tracker and cv2 dependencies
 tracker_mod = types.ModuleType("modules.tracker")
 
+
 class PersonTracker:  # pragma: no cover - stub
     pass
+
 
 tracker_mod.PersonTracker = PersonTracker
 modules_pkg = types.ModuleType("modules")

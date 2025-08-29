@@ -69,9 +69,7 @@ def test_letterbox_unscale_counts(monkeypatch, tmp_path):
             return [StubTrack(bbox)]
 
     tracker.tracker = StubDS()
-    monkeypatch.setattr(
-        manager_mod.cv2, "imwrite", lambda path, img: True, raising=False
-    )
+    monkeypatch.setattr(manager_mod.cv2, "imwrite", lambda path, img: True, raising=False)
 
     det1 = [((10, 15, 10, 10), 0.9, "person")]
     det2 = [((35, 15, 10, 10), 0.9, "person")]

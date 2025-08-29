@@ -72,9 +72,7 @@ def test_ffmpeg_stream_read(monkeypatch):
 def test_probe_updates_frame_size(monkeypatch):
     def fake_probe(*args, **kwargs):
         return {
-            "streams": [
-                {"codec_type": "video", "width": 320, "height": 240, "pix_fmt": "bgr24"}
-            ]
+            "streams": [{"codec_type": "video", "width": 320, "height": 240, "pix_fmt": "bgr24"}]
         }
 
     monkeypatch.setattr(ffmpeg, "probe", fake_probe)
@@ -99,9 +97,7 @@ def test_probe_downscale_recomputes_frame_size(monkeypatch):
         }
 
     monkeypatch.setattr(ffmpeg, "probe", fake_probe)
-    stream = FFmpegCameraStream(
-        "rtsp://demo", start_thread=False, test=True, downscale=2
-    )
+    stream = FFmpegCameraStream("rtsp://demo", start_thread=False, test=True, downscale=2)
     assert stream.width == 640
     assert stream.height == 360
     assert stream.frame_size == 640 * 360 * 3
@@ -316,9 +312,7 @@ def test_ffmpeg_frame_skip(monkeypatch):
 
     monkeypatch.setattr(FFmpegCameraStream, "_start_process", fake_start)
     monkeypatch.setattr(FFmpegCameraStream, "_read_full_frame", fake_full)
-    stream = FFmpegCameraStream(
-        "rtsp://demo", width=2, height=2, start_thread=False, frame_skip=2
-    )
+    stream = FFmpegCameraStream("rtsp://demo", width=2, height=2, start_thread=False, frame_skip=2)
     ret, frame = stream.read()
     assert ret
     assert np.all(frame == 2)
@@ -336,9 +330,7 @@ def test_ffmpeg_frame_skip(monkeypatch):
     ],
 )
 def test_ffmpeg_error_parsing(monkeypatch, stderr, status, msg):
-    def fake_popen(
-        cmd, stdin=None, stdout=None, stderr_pipe=None, bufsize=None, **kwargs
-    ):
+    def fake_popen(cmd, stdin=None, stdout=None, stderr_pipe=None, bufsize=None, **kwargs):
         return types.SimpleNamespace(
             stdout=io.BytesIO(),
             stderr=io.BytesIO(stderr.encode()),
@@ -682,9 +674,7 @@ def test_no_scale_when_size_unspecified(monkeypatch):
         ffmpeg_stream.ffmpeg,
         "probe",
         lambda *a, **k: {
-            "streams": [
-                {"codec_type": "video", "width": 640, "height": 480, "pix_fmt": "bgr24"}
-            ]
+            "streams": [{"codec_type": "video", "width": 640, "height": 480, "pix_fmt": "bgr24"}]
         },
     )
     stream = FFmpegCameraStream("rtsp://demo", start_thread=False)
@@ -719,9 +709,7 @@ def test_build_ffmpeg_cmd_test_mode(monkeypatch):
     monkeypatch.setattr(ffmpeg, "probe", lambda *a, **k: {})
     monkeypatch.setattr(FFmpegCameraStream, "_start_process", lambda self: None)
     monkeypatch.setattr(ffmpeg_stream, "_supports_drop", lambda: False)
-    stream = FFmpegCameraStream(
-        "rtsp://demo", width=640, height=480, test=True, start_thread=False
-    )
+    stream = FFmpegCameraStream("rtsp://demo", width=640, height=480, test=True, start_thread=False)
     cmd = stream.build_ffmpeg_cmd()
     assert "-t" in cmd and "2" in cmd
     assert "-vf" in cmd
@@ -734,9 +722,7 @@ def test_build_ffmpeg_cmd_downscale(monkeypatch):
     monkeypatch.setattr(ffmpeg, "probe", lambda *a, **k: {})
     monkeypatch.setattr(FFmpegCameraStream, "_start_process", lambda self: None)
     monkeypatch.setattr(ffmpeg_stream, "_supports_drop", lambda: False)
-    stream = FFmpegCameraStream(
-        "rtsp://demo", test=True, downscale=2, start_thread=False
-    )
+    stream = FFmpegCameraStream("rtsp://demo", test=True, downscale=2, start_thread=False)
     cmd = stream.build_ffmpeg_cmd()
     assert "-vf" in cmd
     vf = cmd[cmd.index("-vf") + 1]
@@ -772,9 +758,7 @@ def test_raw_buffer_and_lazy_decode(monkeypatch):
             self._poll = 0
 
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: RawPopen())
-    stream = FFmpegCameraStream(
-        "rtsp://demo", width=1, height=1, use_raw=True, start_thread=False
-    )
+    stream = FFmpegCameraStream("rtsp://demo", width=1, height=1, use_raw=True, start_thread=False)
     ok, pkt = stream._read_frame()
     assert ok and isinstance(pkt, bytes)
     stream.queue.append(pkt)

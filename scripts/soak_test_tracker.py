@@ -113,4 +113,3 @@ if __name__ == "__main__":
     parser.add_argument("--seconds", type=int, default=3600, help="Duration of the test")
     args = parser.parse_args()
     main(args.seconds)
-

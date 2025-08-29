@@ -87,4 +87,3 @@ test('invalid email blocks navigation to photo step', async () => {
   expect(showFieldError).toHaveBeenCalledWith(vEmail, 'Invalid email');
   expect(showTab).not.toHaveBeenCalled();
 });
-

@@ -17,9 +17,9 @@ from starlette.testclient import TestClient
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from core import events
 from modules import email_utils, gatepass_service, visitor_db
 from routers import gatepass
-from core import events
 
 
 # DummyRequest class encapsulates dummyrequest behavior
@@ -82,9 +82,7 @@ def test_gatepass_approval(tmp_path, monkeypatch):
     evt = json.loads(r.zrange("events", 0, -1)[0])
     assert evt["approve_url"].startswith("http://testserver/gatepass/approve?token=")
     assert evt["reject_url"].startswith("http://testserver/gatepass/reject?token=")
-    token = (
-        f"{obj['gate_id']}:{email_utils.sign_token(obj['gate_id'], cfg['secret_key'])}"
-    )
+    token = f"{obj['gate_id']}:{email_utils.sign_token(obj['gate_id'], cfg['secret_key'])}"
     app = FastAPI()
     app.include_router(gatepass.router)
     client = TestClient(app)

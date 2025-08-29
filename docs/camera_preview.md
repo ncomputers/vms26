@@ -102,4 +102,3 @@ python scripts/rtsp_capture_frame.py rtsp://camera/stream -o snapshot.jpg
 ```
 
 The script reports the stream's resolution and logs the image path on success.
-

@@ -78,9 +78,7 @@ def app(monkeypatch):
 
             return Resp()
 
-    monkeypatch.setattr(
-        diagnostics, "httpx", types.SimpleNamespace(AsyncClient=DummyAsyncClient)
-    )
+    monkeypatch.setattr(diagnostics, "httpx", types.SimpleNamespace(AsyncClient=DummyAsyncClient))
 
     class DummyWS:
         async def __aenter__(self):

@@ -6,18 +6,18 @@ import asyncio
 import json
 import time
 import uuid
-from typing import Any, Dict, List, AsyncIterator
+from typing import Any, AsyncIterator, Dict, List
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, Request, Query
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.responses import StreamingResponse
 
 from diagnostics.registry import list_tests
-from modules.stream_probe import check_rtsp
 from modules import troubleshooter_runner as ts_runner
+from modules.stream_probe import check_rtsp
 from utils.deps import get_cameras, get_templates
 
 router = APIRouter()
@@ -97,8 +97,6 @@ async def _ping(host: str) -> bool:
         return proc.returncode == 0
     except Exception:
         return False
-
-
 
 
 @router.get("/api/troubleshooter/tests")
@@ -277,7 +275,6 @@ async def troubleshooter_api(
         results.append(fail("stream", f"stale frame ({age:.1f}s)"))
 
     return results
-
 
 
 # init_context routine

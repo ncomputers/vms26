@@ -43,9 +43,7 @@ async def debug_stats(
     )
 
 
-async def _run_ffprobe(
-    url: str, use_tcp: bool = True
-) -> tuple[bool, Dict[str, Any], str]:
+async def _run_ffprobe(url: str, use_tcp: bool = True) -> tuple[bool, Dict[str, Any], str]:
     cmd = [
         "ffprobe",
         "-v",
@@ -109,8 +107,7 @@ async def _collect_cam_info(cams, trackers_map, redisfx, secret):
                         attempts.append(
                             {
                                 "backend": att.get("backend", ""),
-                                "command": att.get("command")
-                                or att.get("pipeline", ""),
+                                "command": att.get("command") or att.get("pipeline", ""),
                                 "error": att.get("error", ""),
                                 "exit_code": att.get("exit_code"),
                                 "stderr": att.get("stderr", ""),
@@ -137,17 +134,11 @@ async def _collect_cam_info(cams, trackers_map, redisfx, secret):
                 summary = debug
         stats = tr.get_debug_stats() if tr and hasattr(tr, "get_debug_stats") else {}
         if stats.get("last_capture_ts"):
-            stats["last_capture_ts"] = datetime.fromtimestamp(
-                stats["last_capture_ts"]
-            ).isoformat()
+            stats["last_capture_ts"] = datetime.fromtimestamp(stats["last_capture_ts"]).isoformat()
         if stats.get("last_process_ts"):
-            stats["last_process_ts"] = datetime.fromtimestamp(
-                stats["last_process_ts"]
-            ).isoformat()
+            stats["last_process_ts"] = datetime.fromtimestamp(stats["last_process_ts"]).isoformat()
         restart_ts = getattr(tr, "debug_restart_ts", None)
-        restart_str = (
-            datetime.fromtimestamp(restart_ts).isoformat() if restart_ts else None
-        )
+        restart_str = datetime.fromtimestamp(restart_ts).isoformat() if restart_ts else None
         pipeline = getattr(tr, "pipeline_info", "") or ""
         if not pipeline:
             if attempts:
@@ -329,9 +320,7 @@ async def debug_page(
 
 
 @router.websocket("/ws/debug/yolo")
-async def debug_ws(
-    ws: WebSocket, trackers: Dict[int, Any] = Depends(get_trackers)
-) -> None:
+async def debug_ws(ws: WebSocket, trackers: Dict[int, Any] = Depends(get_trackers)) -> None:
     await ws.accept()
     tracker = next(iter(trackers.values()), None)
     if tracker is None:

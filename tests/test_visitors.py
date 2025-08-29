@@ -29,23 +29,17 @@ sys.modules.setdefault(
     "google.auth.transport",
     types.SimpleNamespace(requests=types.SimpleNamespace(Request=object)),
 )
-sys.modules.setdefault(
-    "google.auth.transport.requests", types.SimpleNamespace(Request=object)
-)
+sys.modules.setdefault("google.auth.transport.requests", types.SimpleNamespace(Request=object))
 sys.modules.setdefault(
     "google.oauth2",
     types.SimpleNamespace(credentials=types.SimpleNamespace(Credentials=object)),
 )
-sys.modules.setdefault(
-    "google.oauth2.credentials", types.SimpleNamespace(Credentials=object)
-)
+sys.modules.setdefault("google.oauth2.credentials", types.SimpleNamespace(Credentials=object))
 sys.modules.setdefault(
     "google_auth_oauthlib",
     types.SimpleNamespace(flow=types.SimpleNamespace(InstalledAppFlow=object)),
 )
-sys.modules.setdefault(
-    "google_auth_oauthlib.flow", types.SimpleNamespace(InstalledAppFlow=object)
-)
+sys.modules.setdefault("google_auth_oauthlib.flow", types.SimpleNamespace(InstalledAppFlow=object))
 sys.modules.setdefault("cv2", types.SimpleNamespace())
 
 from fastapi import HTTPException
@@ -69,9 +63,7 @@ def test_api_requires_feature(tmp_path):
     from fastapi.responses import JSONResponse
 
     res = asyncio.run(
-        registration.api_visitor_report(
-            include_pending=False, ctx=visitor.get_context()
-        )
+        registration.api_visitor_report(include_pending=False, ctx=visitor.get_context())
     )
     assert isinstance(res, JSONResponse)
     assert res.status_code == 403
@@ -422,9 +414,7 @@ def test_face_search(tmp_path):
 
     assert isinstance(resp, HTMLResponse)
     resp2 = asyncio.run(
-        visitor.face_search(
-            req, photo=None, captured="data:image/jpeg;base64,a", top_n=1
-        )
+        visitor.face_search(req, photo=None, captured="data:image/jpeg;base64,a", top_n=1)
     )
     assert isinstance(resp2, HTMLResponse)
 

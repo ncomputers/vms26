@@ -29,9 +29,7 @@ def test_identity_profile_endpoints(client: TestClient):
     assert data["name"] == "Bob"
     assert len(data["faces"]) == 2
 
-    resp = client.post(
-        f"/api/identities/{identity_id}", json={"name": "Bobby", "tags": ["x"]}
-    )
+    resp = client.post(f"/api/identities/{identity_id}", json={"name": "Bobby", "tags": ["x"]})
     assert resp.status_code == 200
     assert r.hget(f"identity:{identity_id}", "name") == "Bobby"
     assert r.hget(f"identity:{identity_id}", "tags") == "x"
@@ -43,4 +41,3 @@ def test_identity_profile_endpoints(client: TestClient):
     resp = client.post(f"/api/identities/{identity_id}/faces/face1/primary")
     assert resp.status_code == 200
     assert r.hget(f"identity:{identity_id}", "primary_face_id") == "face1"
-

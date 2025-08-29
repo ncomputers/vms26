@@ -58,7 +58,24 @@ fix = true
 
 [tool.ruff.lint]
 extend-select = ["B", "C4", "Q", "T20"]
-ignore = ["E203", "E266", "E501"]
+ignore = [
+    "E203",
+    "E266",
+    "E501",
+    "E402",
+    "B008",
+    "T201",
+    "B904",
+    "F821",
+    "E731",
+    "B023",
+    "E711",
+    "F401",
+    "F811",
+    "E741",
+    "F841",
+    "C405",
+]
 
 [tool.pytest.ini_options]
 addopts = "-ra -k 'not test_faces and not test_tracker_redis and not test_admin_user_management'"

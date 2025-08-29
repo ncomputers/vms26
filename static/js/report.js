@@ -148,4 +148,3 @@ document.getElementById('downloadChart').addEventListener('click',()=>{
   a.download='report.png';
   a.click();
 });
-

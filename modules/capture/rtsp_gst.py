@@ -8,8 +8,9 @@ import time
 import cv2
 import numpy as np
 
-from .base import IFrameSource, FrameSourceError
 from utils.logging import log_capture_event
+
+from .base import FrameSourceError, IFrameSource
 
 
 def ensure_gst() -> bool:

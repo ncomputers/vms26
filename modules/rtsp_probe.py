@@ -50,4 +50,3 @@ def probe_rtsp_base(host: str, user: Optional[str] = None, password: Optional[st
         if _check(url):
             return url
     raise RuntimeError("No RTSP stream found")
-

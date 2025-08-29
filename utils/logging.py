@@ -53,9 +53,10 @@ def get_logger(name: str) -> logging.Logger:
     """Return a module-level logger."""
     return logging.getLogger(name)
 
+
 import json
-import time
 import re
+import time
 
 _CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
 
@@ -73,5 +74,6 @@ def log_capture_event(cam, msg, lvl: str = "info", **extras) -> None:
         extras["uri"] = mask_uri(str(extras["uri"]))
     event.update(extras)
     logger.log(getattr(logging, lvl.upper(), logging.INFO), json.dumps(event))
+
 
 __all__ = ["setup_logging", "get_logger", "log_capture_event", "mask_uri"]

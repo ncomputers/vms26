@@ -1,5 +1,6 @@
 class KeyringBackend:
     """Minimal keyring backend interface for tests."""
+
     priority = 0
 
     def get_password(self, service, username):  # pragma: no cover - interface

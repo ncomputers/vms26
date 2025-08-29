@@ -13,9 +13,7 @@ def _patch(monkeypatch):
     r = fakeredis.FakeRedis()
     monkeypatch.setattr(cameras, "save_cameras", lambda *a, **k: None)
     monkeypatch.setattr(cameras, "start_tracker", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cameras, "cfg", {"license_info": {"features": {}}}, raising=False
-    )
+    monkeypatch.setattr(cameras, "cfg", {"license_info": {"features": {}}}, raising=False)
     monkeypatch.setattr(cameras, "redis", r, raising=False)
     monkeypatch.setattr(cameras, "trackers_map", {}, raising=False)
 

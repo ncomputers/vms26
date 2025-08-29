@@ -74,9 +74,7 @@ def start_ffmpeg():
     stop_ffmpeg()
     cmd = ffmpeg_cmd()
     print("Starting FFmpeg:", " ".join(cmd))
-    _proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0
-    )
+    _proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
 
 
 def stop_ffmpeg():

@@ -11,10 +11,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.core.diag import dump_threads
-
 from modules.overlay import abs_line_from_ratio, draw_boxes_pil
 from modules.registry import get_detector
-
 from modules.utils import require_admin
 from routers.cameras import get_camera_manager
 
@@ -50,9 +48,7 @@ async def diagnostics_overlay(
     model: str = Query(default="basic", pattern="^(basic|ppe)$"),
     conf: float = Query(default=0.25, ge=0.05, le=0.9),
     tracker: bool = Query(default=False),
-    line_orientation: str = Query(
-        default="vertical", pattern="^(vertical|horizontal)$"
-    ),
+    line_orientation: str = Query(default="vertical", pattern="^(vertical|horizontal)$"),
     line_ratio: float = Query(default=0.5, ge=0.0, le=1.0),
     src: str | None = Query(default=None),
     simulate: bool = Query(default=False),
@@ -132,9 +128,7 @@ async def diagnostics_overlay(
         try:
             if DeepSort is None:
                 raise RuntimeError("DeepSort not available")
-            det_tuples = [
-                (d["xyxy"], d.get("conf", 0.0), d.get("cls", "")) for d in dets
-            ]
+            det_tuples = [(d["xyxy"], d.get("conf", 0.0), d.get("cls", "")) for d in dets]
             ds = DeepSort(max_age=10)
             trks = ds.update_tracks(det_tuples, frame=frame_bgr)
             for t in trks:

@@ -57,9 +57,7 @@ def test_update_uses_same_validation():
 
 
 def test_camera_happy_path():
-    cam = CameraCreate(
-        name="ok", url="rtsp://a", line=[Point(x=0, y=0), Point(x=1, y=1)]
-    )
+    cam = CameraCreate(name="ok", url="rtsp://a", line=[Point(x=0, y=0), Point(x=1, y=1)])
     assert cam.orientation is Orientation.vertical
     assert cam.type == CameraType.rtsp
 

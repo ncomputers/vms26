@@ -41,9 +41,7 @@ def capture_frame(url: str, path: Path) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture a frame from an RTSP stream")
     parser.add_argument("url", help="RTSP URL")
-    parser.add_argument(
-        "-o", "--output", help="Output image path", default=None, metavar="PATH"
-    )
+    parser.add_argument("-o", "--output", help="Output image path", default=None, metavar="PATH")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -54,9 +52,7 @@ def main() -> int:
     else:
         logging.warning("Unable to determine stream resolution")
 
-    out_path = (
-        Path(args.output) if args.output else Path(f"frame_{int(time.time())}.jpg")
-    )
+    out_path = Path(args.output) if args.output else Path(f"frame_{int(time.time())}.jpg")
     if capture_frame(args.url, out_path):
         logging.info("Frame saved to %s", out_path.resolve())
         return 0

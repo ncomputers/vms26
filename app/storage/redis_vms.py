@@ -1,9 +1,8 @@
-import os
 import datetime as _dt
+import os
 from typing import Any, Dict, List, Optional
 
 from redis import Redis
-
 
 # ---------------------------------------------------------------------------
 # Redis helpers
@@ -120,9 +119,7 @@ GP_BYDATE = "vms26:index:gpass:bydate:{date}"
 GP_LOCK = "vms26:lock:gpass:{visitor_id}:{date}"
 
 
-def create_gate_pass(
-    visitor_id: int, host_name: str, purpose: str, visit_date: str
-) -> int:
+def create_gate_pass(visitor_id: int, host_name: str, purpose: str, visit_date: str) -> int:
     r = get_redis()
     gpid = r.incr(GP_ID_SEQ)
     now = _now_iso()
@@ -231,9 +228,7 @@ def soft_delete_gate_pass(gpid: int) -> None:
     r.srem(GP_BYDATE.format(date=data.get("visit_date")), gpid)
     status = data.get("status")
     if status in {"approved", "printed"}:
-        lock_key = GP_LOCK.format(
-            visitor_id=data.get("visitor_id"), date=data.get("visit_date")
-        )
+        lock_key = GP_LOCK.format(visitor_id=data.get("visitor_id"), date=data.get("visit_date"))
         if r.get(lock_key) == str(gpid):
             r.delete(lock_key)
     try:
@@ -262,9 +257,7 @@ def list_gate_passes(filters: Optional[Dict[str, Any]] = None) -> List[Dict[str,
         step = _dt.timedelta(days=1)
         cur = start
         while cur <= end:
-            ids.update(
-                r.smembers(GP_BYDATE.format(date=cur.strftime("%Y-%m-%d")))
-            )
+            ids.update(r.smembers(GP_BYDATE.format(date=cur.strftime("%Y-%m-%d"))))
             cur += step
     else:
         ids = set(r.smembers(GP_ALL))

@@ -47,4 +47,3 @@ describe('visitor report UI', () => {
     expect(() => document.dispatchEvent(new Event('DOMContentLoaded'))).not.toThrow();
   });
 });
-

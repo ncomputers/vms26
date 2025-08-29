@@ -38,8 +38,6 @@ from utils.time import parse_range
 # ruff: noqa
 
 
-
-
 # ruff: noqa: B008
 
 
@@ -117,9 +115,7 @@ async def fetch_stats(
     in_counts = [totals["in_count"]]
     out_counts = [totals["out_count"]]
     current_vals = [totals["current"]]
-    vehicle_counts = [
-        (totals["group_counts"].get("vehicle", {}) or {}).get("current", 0)
-    ]
+    vehicle_counts = [(totals["group_counts"].get("vehicle", {}) or {}).get("current", 0)]
     anomaly_totals: dict[str, int] = totals["anomaly_counts"]
     return (
         timeline,
@@ -166,9 +162,7 @@ def compute_group_counts(
     group_counts: dict[str, dict[str, int]] = {}
     for g in groups:
         in_g = sum(getattr(t, "in_counts", {}).get(g, 0) for t in trackers_map.values())
-        out_g = sum(
-            getattr(t, "out_counts", {}).get(g, 0) for t in trackers_map.values()
-        )
+        out_g = sum(getattr(t, "out_counts", {}).get(g, 0) for t in trackers_map.values())
         group_counts[g] = {"in": in_g, "out": out_g, "current": in_g - out_g}
     return group_counts
 
@@ -206,12 +200,9 @@ async def index(
         count_vals = await run_with_timeout(redis.mget, count_keys, timeout=5)
     except asyncio.TimeoutError:
         logger.error("Timed out fetching anomaly counts from Redis")
-        return RedirectResponse(
-            "/dashboard?error=Unable%20to%20load%20stats", status_code=303
-        )
+        return RedirectResponse("/dashboard?error=Unable%20to%20load%20stats", status_code=303)
     anomaly_counts = {
-        item: int(val or 0)
-        for item, val in zip(ANOMALY_ITEMS, count_vals, strict=False)
+        item: int(val or 0) for item, val in zip(ANOMALY_ITEMS, count_vals, strict=False)
     }
     return templates.TemplateResponse(
         "dashboard.html",
@@ -270,9 +261,7 @@ async def _stream_response(
                     last_buf = buf.tobytes()
                 else:
                     if not no_frame_logged:
-                        logger.warning(
-                            f"[{cam_id}] No frame for {'clean' if raw else 'preview'}"
-                        )
+                        logger.warning(f"[{cam_id}] No frame for {'clean' if raw else 'preview'}")
                         no_frame_logged = True
                     if last_buf is None:
                         await asyncio.sleep(0.1)

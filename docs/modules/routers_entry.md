@@ -8,7 +8,7 @@ Purpose: Entry module.
 None
 
 ## Key Functions
-- **init_context(cfg_obj, redis_client, templates_path)** - 
+- **init_context(cfg_obj, redis_client, templates_path)** -
 
 ## Inputs and Outputs
 Refer to function signatures above for inputs and outputs.

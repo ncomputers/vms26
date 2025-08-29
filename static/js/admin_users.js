@@ -58,4 +58,3 @@ table.querySelectorAll(".deleteUser").forEach((btn) => {
     }
   });
 });
-

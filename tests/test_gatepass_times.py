@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -39,9 +38,6 @@ def test_format_gatepass_times(valid_from, valid_to):
     else:
         assert "valid_from_str" not in data
     if valid_to is not None:
-        assert data["valid_to_str"] == time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime(valid_to)
-        )
+        assert data["valid_to_str"] == time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(valid_to))
     else:
         assert "valid_to_str" not in data
-

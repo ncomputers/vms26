@@ -16,9 +16,7 @@ def test_build_timeout_flags_both(monkeypatch):
 
 
 def test_build_timeout_flags_partial(monkeypatch):
-    monkeypatch.setattr(
-        ffmpeg_utils, "_ffmpeg_has_option", lambda opt: opt == "stimeout"
-    )
+    monkeypatch.setattr(ffmpeg_utils, "_ffmpeg_has_option", lambda opt: opt == "stimeout")
     assert ffmpeg_utils._build_timeout_flags(1.0) == ["-stimeout", "1000000"]
 
 

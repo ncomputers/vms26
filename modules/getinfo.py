@@ -158,16 +158,12 @@ def _choose_best(results: list[Dict[str, Any]]) -> Dict[str, Any]:
             continue
         if r["frames"] > best["frames"]:
             best = r
-        elif (
-            r["frames"] == best["frames"] and r["effective_fps"] > best["effective_fps"]
-        ):
+        elif r["frames"] == best["frames"] and r["effective_fps"] > best["effective_fps"]:
             best = r
     return best or {}
 
 
-def probe_rtsp(
-    url: str, sample_seconds: int = 8, enable_hwaccel: bool = True
-) -> Dict[str, Any]:
+def probe_rtsp(url: str, sample_seconds: int = 8, enable_hwaccel: bool = True) -> Dict[str, Any]:
     """Probe ``url`` and return metadata with effective FPS estimates."""
     _require_ffmpeg()
     meta = _ffprobe_video_stream_info(url, use_tcp=True)
@@ -177,9 +173,7 @@ def probe_rtsp(
         if hwaccel and not enable_hwaccel:
             continue
         attempts.append(
-            _measure_with_ffmpeg(
-                url, sample_seconds, transport=transport, hwaccel=hwaccel
-            )
+            _measure_with_ffmpeg(url, sample_seconds, transport=transport, hwaccel=hwaccel)
         )
     best = _choose_best(attempts)
     return {

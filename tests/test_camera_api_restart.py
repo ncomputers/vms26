@@ -45,9 +45,7 @@ def test_put_restart_vs_refresh(client, monkeypatch):
     camera_manager.update_cfg = Mock()
     cameras.trackers_map = {1: camera_manager}
     monkeypatch.setattr(cameras, "save_cameras", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cameras, "cfg", {"enable_person_tracking": True, "features": {}}
-    )
+    monkeypatch.setattr(cameras, "cfg", {"enable_person_tracking": True, "features": {}})
 
     resp = client.put("/cameras/1", json={"url": "rtsp://new"})
     assert resp.status_code == 200

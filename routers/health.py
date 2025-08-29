@@ -86,5 +86,3 @@ async def health() -> dict:
             status_code=500,
             content={"ok": False, "message": "internal error", "data": None},
         )
-
-

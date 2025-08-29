@@ -1,5 +1,7 @@
 """Tests for FrameBus ring buffer."""
+
 import time
+
 import numpy as np
 
 from modules.frame_bus import FrameBus

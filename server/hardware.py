@@ -8,7 +8,6 @@ from loguru import logger
 
 from utils.cpu import _calc_w
 
-
 logger = logger.bind(module="hardware")
 
 
