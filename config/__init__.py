@@ -17,6 +17,8 @@ from .constants import (
     PPE_TASKS,
     UI_CAMERA_TASKS,
     VEHICLE_LABELS,
+    WHATSAPP_SERVICE_URL,
+    WHATSAPP_SHARED_SECRET,
 )
 from .storage import (
     _sanitize_track_ppe,
@@ -93,4 +95,6 @@ __all__ = [
     "PPE_TASKS",
     "VEHICLE_LABELS",
     "UI_CAMERA_TASKS",
+    "WHATSAPP_SERVICE_URL",
+    "WHATSAPP_SHARED_SECRET",
 ]
