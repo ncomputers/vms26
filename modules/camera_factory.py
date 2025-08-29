@@ -91,18 +91,6 @@ async def _probe_rtsp(url: str) -> tuple[str, str, int, int, float]:
     return url, "udp", 0, 0, 0.0
 
 
-def probe_stream(src: str, *_, **__) -> dict:
-    """Placeholder probe function for tests."""
-    return {
-        "metadata": {},
-        "transport": "tcp",
-        "hwaccel": False,
-        "frames": 0,
-        "effective_fps": 0.0,
-        "trials": [],
-    }
-
-
 def _clamp_latency(value: int) -> int:
     return max(50, min(300, int(value)))
 
@@ -131,7 +119,6 @@ def open_capture(
     src_type: str | None = None,
     resolution: tuple[int, int] | None = None,
     rtsp_transport: str | None = None,
-    stream_mode: str = "full",
     use_gpu: bool = False,
     **kwargs: Any,
 ) -> tuple[IFrameSource, str]:
@@ -161,7 +148,6 @@ def open_capture(
         width, height = resolution
     latency = _clamp_latency(kwargs.pop("latency_ms", cam_cfg.get("latency_ms", 100)))
     capture_buffer = kwargs.pop("capture_buffer", None)
-    _ = kwargs.pop("local_buffer_size", None)  # parsed but currently unused
     backend_priority = kwargs.pop("backend_priority", None)
 
     if src_type == "rtsp" and transport is None and isinstance(src, str):

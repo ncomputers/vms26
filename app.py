@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from starlette.middleware.sessions import SessionMiddleware
 
-import logging_config  # noqa: F401
 from app.web import api_perf
 from core.config import get_config
 from core.logging import setup_json_logger

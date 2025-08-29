@@ -101,11 +101,13 @@ _preflight.check_dependencies = lambda *a, **k: None
 
 
 @pytest.fixture(autouse=True)
-def _stub_probe(monkeypatch):
-    import modules.camera_factory as cf
+def _stub_probe(monkeypatch, request):
+    if "test_stream_probe.py" in str(getattr(request.node, "fspath", "")):
+        return
+    import modules.stream_probe as stream_probe
 
     monkeypatch.setattr(
-        cf,
+        stream_probe,
         "probe_stream",
         lambda *a, **k: {
             "metadata": {},
