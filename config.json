@@ -51,7 +51,7 @@
   ],
   "redis_url": "redis://localhost:6379/0",
   "stream_mode": "gstreamer",
-  "use_gstreamer": true,
+  "use_gstreamer": false,
   "backend_priority": [
     "ffmpeg",
     "opencv"
