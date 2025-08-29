@@ -1,10 +1,36 @@
 """Utility functions for sending emails and handling templates."""
 
+import hashlib
+import hmac
 import logging
 import smtplib
+from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import make_msgid
 from typing import Any, Optional, Sequence
+
+
+@dataclass
+class EmailResult:
+    """Return type for :func:`send_email`."""
+
+    success: bool
+    error: Optional[str]
+    responses: Optional[dict[str, Any]]
+    message_id: Optional[str]
+
+    # Support tuple-like unpacking used throughout the codebase
+    def __iter__(self):  # pragma: no cover - simple generator
+        yield self.success
+        yield self.error
+        yield self.responses
+        yield self.message_id
+
+    def __getitem__(self, idx):  # pragma: no cover - tuple compatibility
+        return (self.success, self.error, self.responses, self.message_id)[idx]
+
+    def __len__(self):  # pragma: no cover - tuple compatibility
+        return 4
 
 
 # build message and auth helpers
@@ -79,7 +105,7 @@ def send_email(
     attachment: Optional[bytes] = None,
     attachment_name: Optional[str] = None,
     attachment_type: Optional[str] = None,
-) -> tuple[bool, Optional[str], Optional[dict[str, Any]], Optional[str]]:
+) -> EmailResult:
     """Send an email or log to console if SMTP is not configured.
 
     Parameters
@@ -106,17 +132,17 @@ def send_email(
 
     Returns
     -------
-    tuple[bool, Optional[str], Optional[dict], Optional[str]]
-        ``(True, None, responses, message_id)`` on success where ``responses``
-        contains SMTP command codes and messages. On failure returns
-        ``(False, error, responses, message_id)`` with any collected SMTP
-        responses and optional message id.
+    EmailResult
+        ``EmailResult(True, None, responses, message_id)`` on success where
+        ``responses`` contains SMTP command codes and messages. On failure
+        returns ``EmailResult(False, error, responses, message_id)`` with any
+        collected SMTP responses and optional message id.
     """
     host = cfg.get("smtp_host")
     if not host:
         err = "missing_smtp_host"
         logging.error("SMTP host not configured; email not sent")
-        return False, err
+        return EmailResult(False, err, None, None)
 
     msg = _build_message(
         subject,
@@ -147,7 +173,7 @@ def send_email(
 
             auth_err = _auth_smtp(s, cfg)
             if auth_err:
-                return False, auth_err, responses, msg_id
+                return EmailResult(False, auth_err, responses, msg_id)
 
             mail_code, mail_resp = s.mail(msg["From"])
             rcpt_responses: dict[str, Any] = {}
@@ -187,22 +213,13 @@ def send_email(
                 and 200 <= data_code < 300
             )
         return (
-            (True, None, responses, msg_id)
+            EmailResult(True, None, responses, msg_id)
             if success
-            else (
-                False,
-                "smtp_error",
-                responses,
-                msg_id,
-            )
+            else EmailResult(False, "smtp_error", responses, msg_id)
         )
     except Exception as exc:
         logging.error("Email send failed: %s", exc.__class__.__name__)
-        return False, exc.__class__.__name__
-
-
-import hashlib
-import hmac
+        return EmailResult(False, exc.__class__.__name__, responses, msg_id)
 
 
 # sign_token routine

@@ -5,15 +5,17 @@
 Purpose: Email utils module.
 
 ## Key Classes
-None
+- **EmailResult** - encapsulates the result of ``send_email`` including
+  success status, error message, SMTP responses and message id.
 
 ## Key Functions
-- **send_email(subject, body, recipients, cfg, html, image, attachment, attachment_name, attachment_type)** - Send an email or log to console if SMTP is not configured. Supports plain text, HTML, and attachments.
+- **send_email(subject, body, recipients, cfg, html, image, attachment, attachment_name, attachment_type) -> EmailResult** - Send an email or log to console if SMTP is not configured. Supports plain text, HTML, and attachments.
 - **sign_token(data, secret)** -
 - **verify_token(data, token, secret)** -
 
 ## Inputs and Outputs
-Refer to function signatures above for inputs and outputs.
+``send_email`` returns an ``EmailResult`` with fields ``success``, ``error``,
+``responses`` and ``message_id``.
 
 ## Redis Keys
 None
@@ -38,4 +40,3 @@ Provide SMTP settings under the `email` section of `config.json`:
 - `from_addr`
 
 If no SMTP host is configured, emails are not sent and a log entry is written instead.
-
