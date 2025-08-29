@@ -230,23 +230,6 @@ async def stream_metrics(cam_id: int, *_: Any, **__: Any) -> Dict[str, Any]:
     return await _wrap("stream_metrics", inner, "inspect stream quality")
 
 
-@register("overlay_health")
-async def overlay_health(cam_id: int, *_: Any, **__: Any) -> Dict[str, Any]:
-    async def inner():
-        redis = await _redis_client()
-        if redis is None:
-            return "fail", "no_redis", "", "start Redis"
-        key = f"overlay:{cam_id}:health"
-        val = await redis.get(key)
-        if val in {"1", "ok"}:
-            return "ok", "", "healthy", ""
-        if val is None:
-            return "fail", "missing", "", "check overlay service"
-        return "fail", val, "", "restart overlay"
-
-    return await _wrap("overlay_health", inner, "ensure overlay service running")
-
-
 @register("detector_warm")
 async def detector_warm(*_: Any, **__: Any) -> Dict[str, Any]:
     async def inner():

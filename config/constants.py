@@ -49,7 +49,6 @@ DEFAULT_CONFIG = {
     "stream_probe_timeout": 10,
     "stream_probe_fallback_ttl": 120,
     "camera": {"mode": "rtsp", "uri": "", "latency_ms": 100, "tcp": True},
-    "overlay_mode": "server",
 }
 
 MODEL_CLASSES = [
@@ -177,7 +176,6 @@ CONFIG_DEFAULTS = {
     "capture_buffer": 3,
     "local_buffer_size": 1,
     "camera": {"mode": "rtsp", "uri": "", "latency_ms": 100, "tcp": True},
-    "overlay_mode": "server",
     "person_model": "yolov8s.pt",
     "ppe_model": "mymodalv7.pt",
     "license_key": "TRIAL-123456",
