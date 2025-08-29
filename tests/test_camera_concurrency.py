@@ -50,8 +50,6 @@ def test_concurrent_toggle_show(monkeypatch):
             "tasks": [],
             "ppe": False,
             "visitor_mgmt": False,
-            "face_recognition": False,
-            "enable_face_counting": False,
             "enabled": True,
             "show": False,
             "reverse": False,

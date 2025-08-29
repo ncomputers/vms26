@@ -582,7 +582,6 @@ async def cameras_page(request: Request):
             cam_copy.setdefault("ppe", False)
             cam_copy.setdefault("visitor_mgmt", False)
             cam_copy.setdefault("face_recognition", False)
-            cam_copy.setdefault("enable_face_counting", cam_copy.get("face_recognition", False))
             cam_copy.setdefault("enabled", True)
             cam_copy.setdefault("orientation", "vertical")
             cam_copy.setdefault("rtsp_transport", "auto")
@@ -765,7 +764,6 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
             "ppe": ppe,
             "visitor_mgmt": visitor,
             "face_recognition": face_rec,
-            "enable_face_counting": face_rec,
             "enabled": enabled,
             "show": show,
             "reverse": reverse,
@@ -1008,7 +1006,6 @@ async def update_camera(
                     cam["visitor_mgmt"] = bool(visitor)
                 if "face_recognition" in data or "face_recog" in data:
                     cam["face_recognition"] = bool(face_rec)
-                    cam["enable_face_counting"] = bool(face_rec)
                 if "enabled" in data:
                     cam["enabled"] = bool(data["enabled"])
                 if "latitude" in data:

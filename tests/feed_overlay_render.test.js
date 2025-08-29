@@ -29,7 +29,7 @@ function makeCtx(){
 }
 
 beforeEach(()=>{
-  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_face_boxes:false, show_person:false, show_vehicle:false, show_faces:false };
+  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
   applyOverlay();
 });
 
@@ -66,22 +66,6 @@ test('show_lines and show_track_lines are independent', () => {
   expect(trailMove).toEqual([10,10]);
 });
 
-test('face boxes render only when enabled', () => {
-  const {ctx,calls}=makeCtx();
-  const canvas={width:100,height:100};
-  const info={src:{w:100,h:100}, tracks:[{id:1,box:[10,10,10,10],face:[12,12,4,4]}]};
-  overlayState.flags.show_track_lines = true;
-  applyOverlay();
-  renderOverlay(ctx,canvas,info);
-  expect(calls.strokeRect).toHaveLength(1);
-  calls.strokeRect.length=0;
-  overlayState.flags.show_track_lines = true;
-  overlayState.flags.show_face_boxes = true;
-  applyOverlay();
-  renderOverlay(ctx,canvas,info);
-  expect(calls.strokeRect).toHaveLength(2);
-});
-
 test('trail crossing center line sets color', () => {
   const {ctx,calls}=makeCtx();
   const canvas={width:100,height:100};
@@ -106,12 +90,12 @@ test('category flags filter tracks', () => {
   renderOverlay(ctx,canvas,info);
   expect(calls.strokeRect).toHaveLength(1);
   calls.strokeRect.length=0;
-  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_face_boxes:false, show_person:false, show_vehicle:true, show_faces:false };
+  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_person:false, show_vehicle:true, show_faces:false };
   applyOverlay();
   renderOverlay(ctx,canvas,info);
   expect(calls.strokeRect).toHaveLength(1);
   calls.strokeRect.length=0;
-  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_face_boxes:false, show_person:false, show_vehicle:false, show_faces:false };
+  overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
   applyOverlay();
   renderOverlay(ctx,canvas,info);
   expect(calls.strokeRect).toHaveLength(0);

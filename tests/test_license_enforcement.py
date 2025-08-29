@@ -33,7 +33,6 @@ def setup_app(tmp_path, enabled: bool):
         "features": {
             "ppe_detection": enabled,
             "visitor_mgmt": True,
-            "face_recognition": True,
         }
     }
     cams = [
@@ -45,7 +44,6 @@ def setup_app(tmp_path, enabled: bool):
             "tasks": [],
             "ppe": False,
             "visitor_mgmt": False,
-            "face_recognition": False,
         }
     ]
     r = fakeredis.FakeRedis()

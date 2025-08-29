@@ -44,8 +44,6 @@ def test_process_frame(monkeypatch):
 
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
-        face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=SimpleNamespace(update_tracks=update_tracks),
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -60,7 +58,6 @@ def test_process_frame(monkeypatch):
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=q,
         output_frame=None,
@@ -68,6 +65,9 @@ def test_process_frame(monkeypatch):
         reverse=False,
         count_cooldown=0,
         groups=["person"],
+        debug_stats={},
+        track_state_ttl=120.0,
+        track_states={},
     )
 
     manager.process_frame(tracker, frame, detections)
@@ -87,8 +87,6 @@ def test_process_frame_filters_invalid(monkeypatch):
 
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
-        face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=SimpleNamespace(update_tracks=update_tracks),
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -103,7 +101,6 @@ def test_process_frame_filters_invalid(monkeypatch):
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=queue.Queue(),
         output_frame=None,
@@ -111,6 +108,9 @@ def test_process_frame_filters_invalid(monkeypatch):
         reverse=False,
         count_cooldown=0,
         groups=["person"],
+        debug_stats={},
+        track_state_ttl=120.0,
+        track_states={},
     )
 
     manager.process_frame(tracker, frame, [det])
@@ -122,8 +122,6 @@ def test_process_frame_reinitializes_renderer_on_shape_change():
     q = queue.Queue()
     tracker = SimpleNamespace(
         _purge_counted=lambda: None,
-        face_tracking_enabled=False,
-        enable_face_counting=False,
         tracker=None,
         line_orientation="horizontal",
         line_ratio=0.5,
@@ -138,7 +136,6 @@ def test_process_frame_reinitializes_renderer_on_shape_change():
         show_ids=False,
         show_track_lines=False,
         show_counts=False,
-        show_face_boxes=False,
         renderer=None,
         out_queue=q,
         output_frame=None,
@@ -146,6 +143,9 @@ def test_process_frame_reinitializes_renderer_on_shape_change():
         reverse=False,
         count_cooldown=0,
         groups=["person"],
+        debug_stats={},
+        track_state_ttl=120.0,
+        track_states={},
     )
     frame1 = np.zeros((2, 2, 3), dtype=np.uint8)
     manager.process_frame(tracker, frame1, [])

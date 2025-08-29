@@ -34,8 +34,6 @@ def test_toggle_show_uses_stored_value(client, monkeypatch):
             "tasks": [],
             "ppe": False,
             "visitor_mgmt": False,
-            "face_recognition": False,
-            "enable_face_counting": False,
             "enabled": True,
             "show": False,
             "reverse": False,

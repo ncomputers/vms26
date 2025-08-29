@@ -45,7 +45,6 @@ def setup(tmp_path, features):
             "tasks": [],
             "ppe": False,
             "visitor_mgmt": False,
-            "face_recognition": False,
         }
     ]
     r = fakeredis.FakeRedis()
@@ -56,7 +55,6 @@ def setup(tmp_path, features):
     app = FastAPI()
     app.get("/cameras")(cameras.cameras_page)
     app.post("/cameras/{cam_id}/ppe")(cameras.toggle_ppe)
-    app.post("/cameras/{cam_id}/face_recog")(cameras.toggle_face_recog)
     return app, cams
 
 
@@ -64,7 +62,7 @@ def setup(tmp_path, features):
 def test_license_mapping(tmp_path, monkeypatch):
     app, cams = setup(
         tmp_path,
-        {"ppe_detection": False, "visitor_mgmt": True, "face_recognition": True},
+        {"ppe_detection": False, "visitor_mgmt": True},
     )
     monkeypatch.setattr(cameras, "require_roles", lambda r, roles: {"role": "admin"})
     client = TestClient(app)
@@ -73,11 +71,6 @@ def test_license_mapping(tmp_path, monkeypatch):
     soup = BeautifulSoup(html, "html.parser")
     row = soup.find("tbody").find("tr")
     ppe_input = row.find("input", {"data-feature": "ppe_detection"})
-    face_input = row.find("input", {"data-feature": "face_recognition"})
     assert ppe_input is None or ppe_input.has_attr("disabled")
-    assert face_input is not None and not face_input.has_attr("disabled")
 
     assert client.post("/cameras/1/ppe").status_code == 403
-    resp = client.post("/cameras/1/face_recog")
-    assert resp.status_code == 200
-    assert cams[0]["face_recognition"] is True

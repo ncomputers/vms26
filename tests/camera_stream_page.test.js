@@ -35,11 +35,11 @@ describe('camera stream page overlay buttons', () => {
         <img class="feed-img" data-cam="1" />
       </div>
       <pre id="yolo-log" class="yolo-log"></pre>`;
-    Object.assign(defaults, { show_lines: true, show_track_lines: false, show_counts: true, show_face_boxes: true, show_ids: false });
-    overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_face_boxes:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
+    Object.assign(defaults, { show_lines: true, show_track_lines: false, show_counts: true, show_ids: false });
+    overlayState.flags = { show_lines:false, show_track_lines:false, show_counts:false, show_ids:false, show_person:false, show_vehicle:false, show_faces:false };
     overlayState.key = 'overlayFlags:1';
     MockWebSocket.instances = [];
-    global.fetch = jest.fn().mockResolvedValue({ok:true, json:()=>Promise.resolve({ show_lines: true, show_track_lines: false, show_counts: true, show_face_boxes: true, show_ids: false })});
+    global.fetch = jest.fn().mockResolvedValue({ok:true, json:()=>Promise.resolve({ show_lines: true, show_track_lines: false, show_counts: true, show_ids: false })});
   });
 
   test('clicking buttons updates mode and storage', async () => {

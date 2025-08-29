@@ -4,7 +4,6 @@
     show_lines:false,
     show_track_lines:false,
     show_counts:false,
-    show_face_boxes:false,
     show_ids:false,
     debug_logs:false,
     enable_live_charts:false,
@@ -22,7 +21,6 @@
       show_track_lines: false,
       show_counts: false,
       show_ids: false,
-      show_face_boxes: false,
       show_person: false,
       show_vehicle: false,
       show_faces: false,
@@ -165,7 +163,6 @@
     settings.show_lines = overlayState.flags.show_lines;
     settings.show_track_lines = overlayState.flags.show_track_lines;
     settings.show_counts = overlayState.flags.show_counts;
-    settings.show_face_boxes = overlayState.flags.show_face_boxes;
     settings.show_ids = overlayState.flags.show_ids;
     const enabled = Object.values(overlayState.flags).some(Boolean);
     document.querySelectorAll('.feed-container[data-overlay="true"] img.feed-img').forEach(img=>{
@@ -237,14 +234,6 @@
         }
         ctx.strokeStyle = crossColor || 'yellow';
         ctx.strokeRect(offX + bx, offY + by, bw, bh);
-        if(settings.show_face_boxes && t.face){
-          const fb = scaleBox(t.face, src.w, src.h, imgW, imgH);
-          if(fb){
-            const [fx,fy,fw,fh] = fb;
-            ctx.strokeStyle = 'orange';
-            ctx.strokeRect(offX + fx, offY + fy, fw, fh);
-          }
-        }
         if(settings.show_track_lines && Array.isArray(t.trail)){
           const trail = t.trail;
           ctx.strokeStyle = crossColor || 'red';
@@ -334,7 +323,6 @@
         defaults.show_lines = settings.show_lines;
         defaults.show_track_lines = settings.show_track_lines;
         defaults.show_counts = settings.show_counts;
-        defaults.show_face_boxes = settings.show_face_boxes;
         defaults.show_ids = settings.show_ids;
       }
     }catch(err){/* ignore */}

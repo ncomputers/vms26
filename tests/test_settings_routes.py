@@ -54,7 +54,6 @@ class DummyRequest:
 def setup_context(tmp_path):
     cfg = {
         "settings_password": "pass",
-        "enable_face_counting": False,
         "max_capacity": 0,
         "branding": {},
     }
@@ -75,13 +74,10 @@ def setup_context(tmp_path):
 # Test update and export import
 def test_update_and_export_import(tmp_path):
     ctx = setup_context(tmp_path)
-    req = DummyRequest(
-        form={"password": "pass", "max_capacity": "50", "enable_face_counting": "on"}
-    )
+    req = DummyRequest(form={"password": "pass", "max_capacity": "50"})
     res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
     assert ctx.cfg["max_capacity"] == 50
-    assert ctx.cfg["enable_face_counting"] is True
 
     exp_resp = asyncio.run(settings.export_settings(DummyRequest(), ctx))
     import json
@@ -100,7 +96,7 @@ def test_misc_endpoints(tmp_path):
     ctx = setup_context(tmp_path)
     assert asyncio.run(settings.reset_endpoint(ctx)) == {"reset": True}
 
-    lic = generate_license("default_secret", 1, 1, {"face_recognition": True}, client="T")
+    lic = generate_license("default_secret", 1, 1, {}, client="T")
     resp = asyncio.run(settings.activate_license(DummyRequest(json_data={"key": lic}), ctx))
     assert resp["activated"]
     assert ctx.cfg["license_key"] == lic

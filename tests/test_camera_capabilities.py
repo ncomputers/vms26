@@ -12,7 +12,6 @@ def _patch(monkeypatch):
                 "features": {
                     "ppe_detection": True,
                     "visitor_mgmt": False,
-                    "face_recognition": True,
                     "in_out_counting": True,
                 }
             }

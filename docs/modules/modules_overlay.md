@@ -13,10 +13,10 @@ to Pillow's default font if the file is missing.
 None
 
 ## Key Functions
-- **draw_overlays(frame, tracks, show_ids, show_track_lines, show_lines, line_orientation, line_ratio, show_counts, counts, face_boxes=None)** - Draw tracking debug overlays and optional face bounding boxes on the frame. ``counts`` should map ``"entered"``, ``"exited"``, and ``"inside"``.
+- **draw_overlays(frame, tracks, show_ids, show_track_lines, show_lines, line_orientation, line_ratio, show_counts, counts)** - Draw tracking debug overlays on the frame. ``counts`` should map ``"entered"``, ``"exited"``, and ``"inside"``.
 
 ## Inputs and Outputs
-Refer to function signatures above for inputs and outputs. When any debug flag (lines, IDs, track lines, counts, or face boxes) is enabled the processed frame is streamed via `/stream/{cam_id}`; otherwise the dashboard requests `/stream/{cam_id}?raw=1`. Client-side scripts update the feed URL when these settings change.
+Refer to function signatures above for inputs and outputs. When any debug flag (lines, IDs, track lines, or counts) is enabled the processed frame is streamed via `/stream/{cam_id}`; otherwise the dashboard requests `/stream/{cam_id}?raw=1`. Client-side scripts update the feed URL when these settings change.
 
 ## Overlay Types
 
@@ -27,7 +27,6 @@ The diagnostics overlay page (`/diagnostics/overlay/{id}`) provides a button gro
 - **Center Line** – displays the configured counting line.
 - **Vehicle Count** – shows vehicle entry/exit counts.
 - **Person Count** – shows person entry/exit counts.
-- **Face Count** – shows the number of detected faces.
 - **ID** – labels tracks with their numeric IDs.
 
 Display preference settings no longer expose these toggles; choose the desired overlay directly from the diagnostics overlay page.

@@ -12,7 +12,6 @@ def _base_camera():
         "tasks": [],
         "ppe": False,
         "visitor_mgmt": False,
-        "face_recognition": False,
         "enabled": True,
         "show": True,
         "reverse": False,

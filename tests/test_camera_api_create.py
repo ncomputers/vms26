@@ -155,13 +155,3 @@ def test_create_camera_with_coordinates(client, monkeypatch):
     assert cams[0]["longitude"] == -56.78
 
 
-def test_face_recognition_requires_line(client):
-    from config import config as cfg
-
-    cfg.setdefault("license_info", {}).setdefault("features", {})["face_recognition"] = True
-    payload = _payload()
-    payload["face_recog"] = True
-    payload["profile"] = "main"
-    res = client.post("/api/cameras", json=payload)
-    assert res.status_code == 400
-    assert res.json()["error"] == "Face Attendance requires a virtual line."

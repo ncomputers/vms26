@@ -20,7 +20,6 @@ def test_generate_and_verify():
             "in_out_counting": True,
             "visitor_mgmt": True,
             "ppe_detection": True,
-            "face_recognition": False,
         },
         client="Test",
     )
