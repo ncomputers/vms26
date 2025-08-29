@@ -69,9 +69,7 @@ def client() -> TestClient:
         ),
         (
             "/api/rtsp/probe",
-            {
-                "url": "rtsp://admin:pass@192.168.31.11:554/cam/realmonitor?channel=1&subtype=1"
-            },
+            {"url": "rtsp://admin:pass@192.168.31.11:554/cam/realmonitor?channel=1&subtype=1"},
             {
                 "metadata": {
                     "codec": "h264",
