@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import json
 import time
+from functools import lru_cache
 from typing import Any, Dict
 
 from loguru import logger
+from redis.exceptions import RedisError
 
 from .redis import get_sync_client
 from .url import mask_creds
@@ -18,7 +20,12 @@ from .url import mask_creds
 # in-memory state for throttling helpers
 _last_times: Dict[str, float] = {}
 _last_values: Dict[str, Any] = {}
-_redis_client = None
+
+
+@lru_cache(maxsize=1)
+def get_redis_client():
+    """Return a cached Redis client."""
+    return get_sync_client()
 
 # required field map for known events
 _REQUIRED: dict[str, list[str]] = {
@@ -39,26 +46,25 @@ def _validate(event: str, fields: Dict[str, Any]) -> None:
 
 
 def push_redis(payload: Dict[str, Any]) -> None:
-    """Push *payload* to the Redis ``logs:events`` list.
+    """Push *payload* to the Redis ``logs:events`` list."""
 
-    The list is capped at 2000 entries to avoid unbounded growth. Errors are
-    swallowed so logging never interferes with the main application flow.
-    """
-
-    global _redis_client
-    if _redis_client is None:
-        try:
-            _redis_client = get_sync_client()
-        except Exception:
-            _redis_client = False  # sentinel for failed init
-    if not _redis_client:
+    try:
+        client = get_redis_client()
+    except RedisError as exc:
+        logger.warning("push_redis init failed: {}", exc)
+        get_redis_client.cache_clear()
         return
     try:
         data = json.dumps(payload)
-        _redis_client.lpush("logs:events", data)
-        _redis_client.ltrim("logs:events", 0, 1999)
-    except Exception:
-        pass
+    except (TypeError, ValueError) as exc:
+        logger.warning("push_redis encode failed: {}", exc)
+        return
+    try:
+        client.lpush("logs:events", data)
+        client.ltrim("logs:events", 0, 1999)
+    except RedisError as exc:
+        logger.warning("push_redis redis error: {}", exc)
+        get_redis_client.cache_clear()
 
 
 def _log(level: str, event: str, **fields: Any) -> None:

@@ -1,6 +1,9 @@
 import asyncio
 from typing import Any
 
+from loguru import logger
+from redis.exceptions import RedisError
+
 
 class RedisFacade:
     def __init__(
@@ -32,7 +35,8 @@ class RedisFacade:
         for attempt in range(self.max_retries + 1):
             try:
                 return await asyncio.to_thread(func, *args, **kwargs)
-            except Exception:
+            except RedisError as exc:
+                logger.warning("Redis call %s failed: %s", func_name, exc)
                 if attempt == self.max_retries:
                     raise
                 await asyncio.sleep(self.retry_delay)
@@ -77,7 +81,8 @@ class RedisFacade:
         try:
             await self.call("ping")
             return True
-        except Exception:
+        except RedisError as exc:
+            logger.warning("Redis ping failed: %s", exc)
             return False
 
 

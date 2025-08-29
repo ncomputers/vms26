@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-"""Helpers for managing application lifecycle and thread shutdown."""
-
 import logging
 import signal
 import threading
@@ -33,29 +31,6 @@ class StoppableThread(threading.Thread):
         return not (self.stop_event.is_set() or shutdown_event.is_set())
 
 
-_signals_registered = False
-
-
-def _handle_stop_signal(signum, frame) -> None:  # pragma: no cover - simple handler
-    shutdown_event.set()
-
-
-def register_signal_handlers() -> None:
-    """Register SIGINT/SIGTERM handlers to set the global stop flag."""
-    global _signals_registered
-    if _signals_registered:
-        return
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(sig, _handle_stop_signal)
-    _signals_registered = True
-
-
-# --- Watchdog ---------------------------------------------------------------
-
-_pipelines: Dict[int, Pipeline] = {}
-_watchdog: Watchdog | None = None
-
-
 class Watchdog(StoppableThread):
     """Monitor camera pipelines and log stalled processing."""
 
@@ -68,7 +43,7 @@ class Watchdog(StoppableThread):
     def run(self) -> None:  # pragma: no cover - simple loop
         while self.running:
             now = time.time()
-            for pipeline in list(_pipelines.values()):
+            for pipeline in list(lifecycle_manager._pipelines.values()):
                 last_ts = getattr(pipeline.process, "last_processed_ts", 0.0)
                 cam_id = pipeline.cam_cfg.get("id", id(pipeline))
                 if now - last_ts > self.stale_after:
@@ -80,15 +55,39 @@ class Watchdog(StoppableThread):
             self.stop_event.wait(self.interval)
 
 
-def register_pipeline(pipeline: Pipeline) -> None:
-    """Add a pipeline to be monitored by the watchdog."""
-    _pipelines[id(pipeline)] = pipeline
-    global _watchdog
-    if _watchdog is None or not _watchdog.is_alive():
-        _watchdog = Watchdog()
-        _watchdog.start()
+class LifecycleManager:
+    """Manage signal handlers and pipeline watchdog."""
+
+    def __init__(self) -> None:
+        self._signals_registered = False
+        self._pipelines: Dict[int, Pipeline] = {}
+        self._watchdog: Watchdog | None = None
+
+    def register_signal_handlers(self) -> None:
+        """Register SIGINT/SIGTERM handlers once."""
+        if self._signals_registered:
+            return
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, _handle_stop_signal)
+        self._signals_registered = True
+
+    def register_pipeline(self, pipeline: Pipeline) -> None:
+        """Add a pipeline to watchdog monitoring."""
+        self._pipelines[id(pipeline)] = pipeline
+        if self._watchdog is None or not self._watchdog.is_alive():
+            self._watchdog = Watchdog()
+            self._watchdog.start()
+
+    def unregister_pipeline(self, pipeline: Pipeline) -> None:
+        self._pipelines.pop(id(pipeline), None)
+        if not self._pipelines and self._watchdog:
+            self._watchdog.stop()
+            self._watchdog.join(timeout=1)
+            self._watchdog = None
 
 
-def unregister_pipeline(pipeline: Pipeline) -> None:
-    """Remove a pipeline from watchdog monitoring."""
-    _pipelines.pop(id(pipeline), None)
+def _handle_stop_signal(signum, frame) -> None:  # pragma: no cover - simple handler
+    shutdown_event.set()
+
+
+lifecycle_manager = LifecycleManager()

@@ -1,7 +1,12 @@
 import json
+import multiprocessing as mp
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from loguru import logger
 import routers.troubleshooter as ts
+
+from modules.troubleshooter_runner import _run_stage
 
 
 def _cameras():
@@ -36,3 +41,11 @@ def test_troubleshooter_runner_stream(monkeypatch):
     stages = [e["stage"] for e in events]
     assert stages[0] == "ping"
     assert stages[-1] == "complete"
+
+
+def test_run_stage_logs(caplog):
+    logger.remove()
+    logger.add(caplog.handler, level="INFO")
+    q = mp.Queue()
+    assert _run_stage("test", lambda: None, q)
+    assert '"stage": "test"' in caplog.text

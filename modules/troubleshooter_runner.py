@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import multiprocessing as mp
 import os
+import shutil
 import subprocess
 import threading
 import time
 import uuid
-from typing import Dict, Any
+from typing import Any, Dict
 from urllib.parse import urlparse
-import shutil
 
+from loguru import logger
+
+logger = logger.bind(module="troubleshooter")
 
 # Map of active runs: run_id -> {"queue": mp.Queue, "process": mp.Process}
 _RUNS: Dict[str, Dict[str, Any]] = {}
@@ -43,8 +46,7 @@ def _run_stage(name: str, func, queue: mp.Queue, timeout: float = 10.0) -> bool:
         "duration_ms": duration_ms,
         "detail": detail,
     }
-    # emit compact JSON log line
-    print(json.dumps(event), flush=True)
+    logger.info(json.dumps(event))
     queue.put(event)
     return status == "PASS"
 
