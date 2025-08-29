@@ -78,9 +78,10 @@ Examples:
   {"camera": {"mode": "http", "uri": "http://cam/mjpg"}}
   ```
 
-Toggle `use_gstreamer` to switch RTSP backends. Hardware decode options are
-available via the GStreamer backend. Set `overlay_mode` to `"none"` to stream
-raw frames without server-side overlays.
+Toggle `use_gstreamer` to switch RTSP backends. Only one pipeline is active at a
+time; set it to `true` for GStreamer or `false` to use FFmpeg. Hardware decode
+options are available via the GStreamer backend. Set `overlay_mode` to `"none"`
+to stream raw frames without server-side overlays.
 - **Counting and alerts**: Tracks entries/exits and can send email alerts based on customizable rules.
 - **Duplicate frame filter**: Skips nearly identical frames to reduce GPU/CPU load.
 - **Dashboard and reports**: Live counts, recent anomalies, and historical reports are available in the web interface.
@@ -117,6 +118,32 @@ raw frames without server-side overlays.
 - **Branding → Company Logo now updates live; if you still see the old image, clear browser cache.**
 - **Visitor dashboard revamp**: animated KPI cards and auto-refreshing charts provide a livelier overview.
 - **GStreamer streaming**: RTSP cameras use `avdec_h264` for software decoding and a leaky queue to drop stale frames for low latency.
+
+## Quick Start
+
+Minimal configuration examples for RTSP cameras:
+
+```json
+{"camera": {"mode": "rtsp", "uri": "rtsp://user:pass@host/stream"}, "use_gstreamer": false}
+```
+
+Set `use_gstreamer` to `true` to run the GStreamer pipeline instead of FFmpeg.
+Only one pipeline runs at a time; restart after changing this flag.
+
+## Camera Configuration Recommendations
+
+- Use an H.264 substream.
+- Limit the frame rate to 10–15 fps.
+- Prefer constant bit rate (CBR).
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Resolution |
+| --- | --- | --- |
+| 401/403 errors | Authentication failure | Verify credentials in the URL. |
+| Unsupported codec or blank feed | Codec mismatch | Configure the camera for H.264. |
+| Connection refused or 404 | Invalid URL | Check host, port, and stream path. |
+| Frozen video or frequent reconnects | Transport issues or timeouts | Confirm `transport` setting and adjust RTSP timeouts. |
 
 ## Camera API
 
