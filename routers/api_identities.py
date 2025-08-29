@@ -34,16 +34,6 @@ def get_identity(identity_id: str, ctx: AppContext = Depends(get_app_context)): 
     if not data:
         raise HTTPException(status_code=404, detail="identity_not_found")
     tags = data.get("tags", "")
-    faces = []
-    for fid in r.lrange(f"identity:{identity_id}:faces", 0, -1):
-        fdata = r.hgetall(f"identity_face:{fid}")
-        faces.append(
-            {
-                "id": fid,
-                "url": fdata.get("url", ""),
-                "is_primary": fid == data.get("primary_face_id"),
-            }
-        )
     visits = r.lrange(f"identity:{identity_id}:visits", 0, -1)
     cams = list(r.smembers(f"identity:{identity_id}:cameras"))
     return {
@@ -51,7 +41,6 @@ def get_identity(identity_id: str, ctx: AppContext = Depends(get_app_context)): 
         "name": data.get("name", ""),
         "company": data.get("company", ""),
         "tags": tags.split(",") if tags else [],
-        "faces": faces,
         "visits": visits,
         "cameras": cams,
     }
@@ -78,32 +67,3 @@ def update_identity(
     if fields:
         r.hset(f"identity:{identity_id}", mapping=fields)
     return {"updated": True}
-
-
-@router.delete("/api/identities/{identity_id}/faces/{face_id}")
-def remove_face(
-    identity_id: str,
-    face_id: str,
-    ctx: AppContext = Depends(get_app_context),  # noqa: B008
-):
-    r = ctx.redis
-    if r is None:
-        return JSONResponse({"error": "unavailable"}, status_code=500)
-    r.lrem(f"identity:{identity_id}:faces", 0, face_id)
-    r.delete(f"identity_face:{face_id}")
-    if r.hget(f"identity:{identity_id}", "primary_face_id") == face_id:
-        r.hdel(f"identity:{identity_id}", "primary_face_id")
-    return {"removed": True}
-
-
-@router.post("/api/identities/{identity_id}/faces/{face_id}/primary")
-def set_primary_face(
-    identity_id: str,
-    face_id: str,
-    ctx: AppContext = Depends(get_app_context),  # noqa: B008
-):
-    r = ctx.redis
-    if r is None:
-        return JSONResponse({"error": "unavailable"}, status_code=500)
-    r.hset(f"identity:{identity_id}", "primary_face_id", face_id)
-    return {"primary_set": True}

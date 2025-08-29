@@ -12,7 +12,6 @@
 <!-- ===== Section: Main Content ===== -->
 <div class="container mt-4">
     <h1 class="mb-4">Register Visitor</h1>
-    <img src="data:image/jpeg;base64,{{ record.image }}" class="mb-3 img-fluid" style="width:10rem" alt="face"/>
     <form method="post" action="/visitor_register">
         <p><strong>Gatepass ID:</strong> {{ record.gate_id }}</p>
         <div class="mb-2"><input class="form-control" name="name" placeholder="Name" list="regNameSuggestions" required><datalist id="regNameSuggestions"></datalist></div>

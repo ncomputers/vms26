@@ -18,7 +18,6 @@ from config import config as cfg
 from modules import export, gatepass_service, visitor_db
 from modules.email_utils import send_email
 from modules.utils import require_roles
-from utils.ids import generate_id
 from utils.image import decode_base64_image
 from utils.redis import trim_sorted_set_async as trim_sorted_set
 
@@ -189,7 +188,6 @@ async def _parse_visitor_form(form: RegisterVisitorForm, photo: Optional[UploadF
     if img_bytes:
         b64 = base64.b64encode(img_bytes).decode()
     ts = int(time.time())
-    face_id = generate_id()
     valid_from = ts
     try:
         valid_to_ts = (
@@ -204,7 +202,6 @@ async def _parse_visitor_form(form: RegisterVisitorForm, photo: Optional[UploadF
     )
     entry = {
         "gate_id": f"GP{ts}",
-        "face_id": face_id,
         "visitor_id": vid,
         "name": form.name,
         "phone": form.phone,

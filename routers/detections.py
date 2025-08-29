@@ -143,11 +143,6 @@ async def _build_payload(
             }
             if isinstance(info, dict) and info.get("trail") is not None:
                 track["trail"] = info["trail"]
-            if isinstance(info, dict) and info.get("face") is not None:
-                face = info["face"]
-                if isinstance(face, (list, tuple)) and len(face) == 4:
-                    fx, fy, fw, fh = face
-                    track["face"] = [fx, fy, fw, fh]
             tracks.append(track)
 
     ppe_items: list[dict[str, Any]] = []

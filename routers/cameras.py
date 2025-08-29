@@ -39,7 +39,7 @@ from modules.capture.base import FrameSourceError
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
-from modules.tracker import start_face_tracker, stop_face_tracker, tracker
+from modules.tracker import tracker
 
 # Import role helpers directly so tests can monkeypatch ``require_roles`` on
 # this module and affect the admin dependency used below.
@@ -162,27 +162,20 @@ async def _restart_preview_cap(cam_id: int) -> None:
 cfg = config
 cams: List[dict] = []
 trackers_map: Dict[int, object] = {}
-face_trackers_map: Dict[int, object] = {}
 redis = None
 redisfx = None
 
 # camera manager instance for API routes
 start_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_tracker(cam, cfg, trackers, r, cb)
 stop_tracker_fn = lambda cid, trackers: stop_tracker(cid, trackers)
-start_face_tracker_fn = lambda cam, cfg, trackers, r, cb=None: start_face_tracker(
-    cam, cfg, trackers, r
-)
-stop_face_tracker_fn = lambda cid, trackers: stop_face_tracker(cid, trackers)
 camera_manager = CameraManager(
     cfg,
     trackers_map,
-    face_trackers_map,
+    {},
     redis,
     lambda: cams,
     start_tracker_fn,
     stop_tracker_fn,
-    start_face_tracker_fn,
-    stop_face_tracker_fn,
 )
 manager = camera_manager
 
@@ -290,14 +283,13 @@ def init_context(
     templates_path,
     redis_facade=None,
 ):
-    global cfg, cams, trackers_map, face_trackers_map, redis, templates, cams_lock, camera_manager, redisfx
+    global cfg, cams, trackers_map, redis, templates, cams_lock, camera_manager, redisfx
     from config import config as global_config
 
     cfg = global_config
     cfg = get_config()
     cams = cameras
     trackers_map = trackers
-    face_trackers_map = {}
     redis = redis_client
     redisfx = redis_facade
     templates = Jinja2Templates(directory=templates_path)
@@ -307,13 +299,11 @@ def init_context(
     camera_manager = CameraManager(
         cfg,
         trackers_map,
-        face_trackers_map,
+        {},
         redis,
         lambda: cams,
         start_tracker_fn,
         stop_tracker_fn,
-        start_face_tracker_fn,
-        stop_face_tracker_fn,
     )
     if USE_PIPELINE:
         try:
@@ -401,10 +391,8 @@ async def create_camera_api(camera: dict):
         f"[create_camera_api] saving camera {cam_obj.name} url={sanitized} transport={cam_obj.transport}"
     )
     cam_dict = cam_obj.model_dump()
-    cam_dict["face_recognition"] = cam_dict.pop("face_recog", False)
+    cam_dict.pop("face_recog", None)
     cam_dict["site_id"] = cam_dict.get("site_id") or cfg.get("site_id", 1)
-    if cam_dict.get("face_recognition") and not cam_dict.get("line"):
-        return JSONResponse({"error": "Virtual line required"}, status_code=400)
     now = datetime.utcnow().isoformat()
     cam_dict["created_at"] = now
     cam_dict["updated_at"] = now
@@ -581,8 +569,6 @@ async def cameras_page(request: Request):
             cam_copy["packet_loss"] = int(h.get("packet_loss", 0) or 0)
             cam_copy.setdefault("ppe", False)
             cam_copy.setdefault("visitor_mgmt", False)
-            cam_copy.setdefault("face_recognition", False)
-            cam_copy.setdefault("enable_face_counting", cam_copy.get("face_recognition", False))
             cam_copy.setdefault("enabled", True)
             cam_copy.setdefault("orientation", "vertical")
             cam_copy.setdefault("rtsp_transport", "auto")
@@ -609,7 +595,6 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
     src_type = data.get("type", "http")
     ppe = bool(data.get("ppe"))
     visitor = bool(data.get("visitor_mgmt"))
-    face_rec = bool(data.get("face_recognition") or data.get("face_recog"))
     features = lic.get("features", {})
     counting = data.get("counting", True)
     enabled = bool(data.get("enabled", True))
@@ -622,27 +607,18 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
         if not features.get("ppe_detection", True):
             return JSONResponse({"error": "PPE detection not licensed"}, status_code=403)
         tasks += _expand_ppe_tasks(cfg.get("track_ppe", []))
-    if visitor or face_rec:
+    if visitor:
         if not features.get("visitor_mgmt", True):
             return visitor_disabled_response()
-    if face_rec and not features.get("face_recognition", True):
-        return JSONResponse({"error": "Face recognition not licensed"}, status_code=403)
 
     if visitor:
         tasks.append("visitor_mgmt")
-    if face_rec:
-        tasks.append("face_recognition")
     reverse = bool(data.get("reverse"))
     show = bool(data.get("show", False))
     line_orientation = data.get("line_orientation", "vertical")
     orientation = data.get("orientation", "vertical")
     transport = data.get("transport", "tcp")
     line = data.get("line")
-    if face_rec and not line:
-        return JSONResponse(
-            {"error": "Virtual line required"},
-            status_code=400,
-        )
     resolution = await _resolve_resolution(url, data.get("resolution"))
     if not url:
         return JSONResponse({"error": "Missing URL"}, status_code=400)
@@ -764,8 +740,6 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
             "tasks": tasks,
             "ppe": ppe,
             "visitor_mgmt": visitor,
-            "face_recognition": face_rec,
-            "enable_face_counting": face_rec,
             "enabled": enabled,
             "show": show,
             "reverse": reverse,
@@ -854,8 +828,6 @@ async def delete_camera(cam_id: int, request: Request):
         )
 
     await asyncio.to_thread(camera_manager.stop_tracker_fn, cam_id, trackers_map)
-    if getattr(camera_manager, "stop_face_tracker_fn", None):
-        await asyncio.to_thread(camera_manager.stop_face_tracker_fn, cam_id, face_trackers_map)
     return {"deleted": True}
 
 
@@ -941,20 +913,6 @@ async def toggle_vms(cam_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Not found")
 
 
-@router.post("/cameras/{cam_id}/face_recog")
-@require_feature("face_recognition")
-async def toggle_face_recog(cam_id: int, request: Request):
-    async with cams_lock:
-        for cam in cams:
-            if cam["id"] == cam_id:
-                cam["face_recognition"] = not cam.get("face_recognition", False)
-                save_cameras(cams, redis)
-                return {"face_recognition": cam["face_recognition"]}
-    from fastapi import HTTPException
-
-    raise HTTPException(status_code=404, detail="Not found")
-
-
 @router.put("/cameras/{cam_id}")
 async def update_camera(
     cam_id: int, request: Request, manager: CameraManager = Depends(get_camera_manager)
@@ -988,27 +946,15 @@ async def update_camera(
                     if "visitor_mgmt" in data
                     else cam.get("visitor_mgmt", False)
                 )
-                if "face_recognition" in data or "face_recog" in data:
-                    face_rec = bool(data.get("face_recognition") or data.get("face_recog"))
-                else:
-                    face_rec = cam.get("face_recognition", False)
                 line = data.get("line")
                 if line is None:
                     line = cam.get("line") or cam.get("inout_line")
-                if face_rec and not line:
-                    return JSONResponse(
-                        {"error": "Virtual line required"},
-                        status_code=400,
-                    )
                 if line and (not cam.get("line") or cam.get("line") != line):
                     cam["line"] = line
                 if "ppe" in data:
                     cam["ppe"] = bool(ppe)
                 if "visitor_mgmt" in data:
                     cam["visitor_mgmt"] = bool(visitor)
-                if "face_recognition" in data or "face_recog" in data:
-                    cam["face_recognition"] = bool(face_rec)
-                    cam["enable_face_counting"] = bool(face_rec)
                 if "enabled" in data:
                     cam["enabled"] = bool(data["enabled"])
                 if "latitude" in data:
@@ -1027,8 +973,6 @@ async def update_camera(
                         "counting",
                         "ppe",
                         "visitor_mgmt",
-                        "face_recognition",
-                        "face_recog",
                         "tasks",
                     ]
                 ):
@@ -1048,18 +992,10 @@ async def update_camera(
                                 {"error": "PPE detection not licensed"}, status_code=403
                             )
                         tasks_upd += _expand_ppe_tasks(cfg.get("track_ppe", []))
-                    if cam.get("visitor_mgmt") or cam.get("face_recognition"):
+                    if cam.get("visitor_mgmt"):
                         if not features.get("visitor_mgmt", True):
                             return visitor_disabled_response()
-                    if cam.get("face_recognition") and not features.get("face_recognition", True):
-                        return JSONResponse(
-                            {"error": "Face recognition not licensed"}, status_code=403
-                        )
-
-                    if cam.get("visitor_mgmt"):
                         tasks_upd.append("visitor_mgmt")
-                    if cam.get("face_recognition"):
-                        tasks_upd.append("face_recognition")
                     cam["tasks"] = tasks_upd
 
                 if "url" in data:
@@ -1201,7 +1137,6 @@ async def import_cameras(request: Request):
     for cam in data:
         cam.setdefault("ppe", False)
         cam.setdefault("visitor_mgmt", False)
-        cam.setdefault("face_recognition", False)
         cam.setdefault("enabled", False)
         counting = cam.get(
             "counting",
@@ -1219,16 +1154,10 @@ async def import_cameras(request: Request):
             if not features.get("ppe_detection", True):
                 return JSONResponse({"error": "PPE detection not licensed"}, status_code=403)
             tasks += _expand_ppe_tasks(cfg.get("track_ppe", []))
-        if cam["visitor_mgmt"] or cam["face_recognition"]:
+        if cam["visitor_mgmt"]:
             if not features.get("visitor_mgmt", True):
                 return visitor_disabled_response()
-        if cam["face_recognition"] and not features.get("face_recognition", True):
-            return JSONResponse({"error": "Face recognition not licensed"}, status_code=403)
-
-        if cam["visitor_mgmt"]:
             tasks.append("visitor_mgmt")
-        if cam["face_recognition"]:
-            tasks.append("face_recognition")
         cam["tasks"] = tasks
         cam.pop("in_count", None)
         cam.pop("out_count", None)
@@ -1779,7 +1708,6 @@ async def camera_capabilities(request: Request):
     license_info = {
         "ppe_detection": bool(lic_feats.get("ppe_detection", True)),
         "visitor_mgmt": bool(lic_feats.get("visitor_mgmt", True)),
-        "face_recognition": bool(lic_feats.get("face_recognition", True)),
         "in_out_counting": bool(lic_feats.get("in_out_counting", True)),
     }
 

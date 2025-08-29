@@ -58,12 +58,7 @@ async def report_page(
     error_message = None
     try:
         r = ctx.redis
-        if (
-            r.zcard("history")
-            or r.zcard("person_logs")
-            or r.zcard("vehicle_logs")
-            or r.zcard("face_logs")
-        ):
+        if r.zcard("history") or r.zcard("person_logs") or r.zcard("vehicle_logs"):
             no_data = False
     except Exception as exc:
         error_message = "Error retrieving report data"
@@ -78,7 +73,6 @@ async def report_page(
         {
             "request": request,
             "vehicle_enabled": "vehicle" in ctx.config.get("track_objects", ["person", "vehicle"]),
-            "face_enabled": "face" in ctx.config.get("track_objects", []),
             "plate_enabled": "number_plate" in ctx.config.get("track_objects", []),
             "cameras": cam_list,
             "labels": ctx.config.get("count_classes", []),
@@ -137,8 +131,6 @@ async def _report_data(query: ReportQuery, ctx: AppContext):
             key = "person_logs"
         elif query.label == "vehicle":
             key = "vehicle_logs"
-        elif query.label == "face":
-            key = "face_logs"
 
         if last_ts is None:
             raw_entries = ctx.redis.zrevrangebyscore(key, end_ts, start_ts, start=0, num=query.rows)
@@ -247,13 +239,10 @@ async def report_export(
             ("track_id", "Track"),
             ("direction", "Direction"),
         ]
-        if query.type == "face":
-            columns.append(("label", "Face ID"))
-        else:
-            columns.append(("label", "Label"))
+        columns.append(("label", "Label"))
         try:
             # export first image column, ignore second due to simplicity
-            img_label = "Snapshot" if query.type == "face" else "Image"
+            img_label = "Image"
             return export.export_excel(
                 rows,
                 columns,
