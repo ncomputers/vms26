@@ -769,6 +769,7 @@ class PersonTracker:
         resolution: str = "original",
         rtsp_transport: str = "tcp",
         update_callback=None,
+        frame_callback=None,
     ):
         self.cfg = cfg
         for k, v in cfg.items():
@@ -836,6 +837,7 @@ class PersonTracker:
         self.duplicate_bypass_seconds = cfg.get("duplicate_bypass_seconds", 2)
         self.max_retry = cfg.get("max_retry", 5)
         self.update_callback = update_callback
+        self.frame_callback = frame_callback
         self.online = False
         self.restart_capture = False
         self.first_frame_ok = False
