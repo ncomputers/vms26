@@ -103,9 +103,9 @@ class HttpMjpegSource(IFrameSource):
 
     def close(self) -> None:
         self._stop.set()
-        if self._thread:
+        if self._thread and self._thread.is_alive():
             self._thread.join(timeout=1)
-            self._thread = None
+        self._thread = None
         if self._resp:
             self._resp.close()
             self._resp = None

@@ -235,7 +235,8 @@ class RtspFfmpegSource(IFrameSource):
             raise FrameSourceError("READ_TIMEOUT")
 
     def _reader_loop(self) -> None:
-        assert self.proc and self.proc.stdout
+        if not self.proc or not self.proc.stdout:
+            return
         expected = (self.width or 0) * (self.height or 0) * 3
         buf = bytearray(expected)
         mv = memoryview(buf)
@@ -299,9 +300,9 @@ class RtspFfmpegSource(IFrameSource):
     def close(self) -> None:
         if self._stop_event:
             self._stop_event.set()
-        if self._reader_thread:
+        if self._reader_thread and self._reader_thread.is_alive():
             self._reader_thread.join(timeout=1)
-            self._reader_thread = None
+        self._reader_thread = None
         self._stop_proc()
         if self._frame_queue:
             while not self._frame_queue.empty():
@@ -332,7 +333,7 @@ class RtspFfmpegSource(IFrameSource):
             proc.stdout.close()
         if proc.stderr:
             proc.stderr.close()
-        if stderr_thread:
+        if stderr_thread and stderr_thread.is_alive():
             stderr_thread.join(timeout=1)
         self._stderr_buffer.clear()
 

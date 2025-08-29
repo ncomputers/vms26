@@ -20,6 +20,7 @@ from app.core.perf import PERF
 from core.events import CAPTURE_ERROR, CAPTURE_READ_FAIL, CAPTURE_START, CAPTURE_STOP
 from modules.camera_factory import StreamUnavailable, open_capture
 from modules.profiler import register_thread
+from utils.api_errors import stream_error_message
 from utils.logx import error as log_error
 from utils.logx import event as log_event
 from utils.logx import warn as log_warn
@@ -135,6 +136,7 @@ class CaptureWorker:
                             count=fail_count,
                         )
                         if status and status != "ok":
+                            msg = stream_error_message(status) or err
                             log_error(
                                 CAPTURE_ERROR,
                                 camera_id=t.cam_id,
@@ -142,13 +144,13 @@ class CaptureWorker:
                                 url=t.src,
                                 code="status",
                                 status=status,
-                                error=err,
+                                error=msg,
                                 cmd=t.pipeline_info,
                                 rc=getattr(cap, "rc", 0),
                                 ffmpeg_tail="\n".join(getattr(cap, "_stderr_buffer", [])),
                             )
                             t.stream_status = status
-                            t.stream_error = err
+                            t.stream_error = msg
                             break
                         if fail_count > max_failures:
                             log_warn(
@@ -246,18 +248,21 @@ class CaptureWorker:
                 _shutdown_capture(cap)
                 t.online = False
             except StreamUnavailable as e:
+                status = "timeout" if "timeout" in str(e).lower() else "error"
+                msg = stream_error_message(status) or str(e)
                 log_error(
                     CAPTURE_ERROR,
                     camera_id=t.cam_id,
                     mode=t.stream_mode,
                     url=t.src,
                     code="unavailable",
-                    error=str(e),
+                    status=status,
+                    error=msg,
                     rc=getattr(cap, "rc", 0),
                     ffmpeg_tail="",
                 )
-                t.stream_status = "timeout" if "timeout" in str(e).lower() else "error"
-                t.stream_error = str(e)
+                t.stream_status = status
+                t.stream_error = msg
                 t.running = False
                 t.online = False
             except Exception as e:
@@ -266,6 +271,7 @@ class CaptureWorker:
                 cmd = getattr(cap, "pipeline", None) or getattr(cap, "cmd", None)
                 if isinstance(cmd, list):
                     cmd = " ".join(cmd)
+                msg = stream_error_message(status) or err or str(e)
                 log_error(
                     CAPTURE_ERROR,
                     camera_id=t.cam_id,
@@ -273,13 +279,13 @@ class CaptureWorker:
                     url=t.src,
                     code="exception",
                     status=status,
-                    error=err or str(e),
+                    error=msg,
                     cmd=cmd,
                     rc=getattr(cap, "rc", 0),
                     ffmpeg_tail="\n".join(getattr(cap, "_stderr_buffer", [])),
                 )
                 t.stream_status = status or "error"
-                t.stream_error = err or str(e)
+                t.stream_error = msg
                 t.running = False
                 t.online = False
                 if cap:
