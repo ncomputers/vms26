@@ -6,7 +6,6 @@
   {"question": "How do I generate a gatepass?", "answer": "Click on 'Generate Gatepass' after approving a visitor request."},
   {"question": "How do I revoke visitor access?", "answer": "Open the visitor's profile and select the 'Revoke Access' option."},
   {"question": "Does the system support license plate recognition?", "answer": "Yes, the camera module can detect license plates if configured."},
-  {"question": "How can I configure cameras for face capture?", "answer": "Visit Settings → Cameras and specify the capture parameters."},
   {"question": "Can the system send email invitations automatically?", "answer": "Yes, email notifications are sent when visitors are invited or checked in."},
   {"question": "How do I view visitor history?", "answer": "Use the Visitor Report page to filter and view past visits."},
   {"question": "How do I export visitor logs?", "answer": "In the Visitor Report page, click 'Export' to download CSV records."},

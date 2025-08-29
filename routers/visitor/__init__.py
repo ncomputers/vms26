@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import time
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -14,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 from config import config
-from modules import face_db, visitor_db
+from modules import visitor_db
 from utils.redis import trim_sorted_set
 
 from .face_loader import load_faces
@@ -28,8 +26,6 @@ redisfx = None
 
 # Shared context populated via ``init_context``
 _ctx = SimpleNamespace(config={}, redis=None, templates=None, cam_list=[], redisfx=None)
-face_app = None
-_face_search_enabled = False
 require_roles = None
 
 
@@ -250,56 +246,7 @@ def init_context(
     except Exception:
         pass
 
-    face_app = None
-
     visitor_db.init_db(redis_client)
-    try:  # pragma: no cover - init failures
-        face_db.init(cfg, redis_client)
-        face_app = face_db.face_app
-        _face_search_enabled = True
-    except Exception as exc:  # pragma: no cover - init failures
-        _face_search_enabled = False
-        face_app = None
-        logger.warning("face_db init failed: {}", exc)
-
-
-def _search_embeddings(
-    img_bytes: bytes | None, top_n: int, threshold: float | None = None
-) -> list[dict]:
-    """Return top matches for provided image bytes."""
-    if not img_bytes or not _face_search_enabled:
-        return []
-    try:
-        matches = face_db.search_faces(img_bytes, top_n, threshold)
-        results: list[dict] = []
-        for m in matches:
-            raw_id = m.get("id", "")
-            visitor_id = raw_id.split(":", 1)[-1]
-            data = {
-                k.decode() if isinstance(k, bytes) else k: (
-                    v.decode() if isinstance(v, bytes) else v
-                )
-                for k, v in _ctx.redis.hgetall(f"face:known:{visitor_id}").items()
-            }
-            if not data:
-                continue
-            img_b64 = data.get("image") or data.get("image_b64", "")
-            img_path = data.get("image_path")
-            if not img_b64 and img_path and Path(img_path).exists():
-                with open(img_path, "rb") as f:
-                    img_b64 = base64.b64encode(f.read()).decode()
-            results.append(
-                {
-                    "id": visitor_id,
-                    "name": data.get("name", ""),
-                    "image": img_b64,
-                    "score": m.get("score", 0.0),
-                }
-            )
-        return results
-    except Exception as exc:  # pragma: no cover - search errors
-        logger.exception("face search failed: {}", exc)
-        return []
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +254,7 @@ def _search_embeddings(
 # ---------------------------------------------------------------------------
 router = APIRouter()
 
-from . import faces, invites, registration, visit_requests  # noqa: E402
+from . import invites, registration, visit_requests  # noqa: E402
 
 # Re-export invite creation helper for external access/tests
 from .invites import (  # noqa: F401
@@ -323,7 +270,6 @@ from .invites import (  # noqa: F401
 from .registration import custom_report  # noqa: F401
 
 router.include_router(registration.router)
-router.include_router(faces.router)
 router.include_router(invites.router)
 router.include_router(visit_requests.router)
 
@@ -336,7 +282,6 @@ __all__ = [
     "_save_host_master",
     "VISITOR_LOG_RETENTION_SECS",
     "_trim_visitor_logs",
-    "_search_embeddings",
     "get_context",
     "face_app",
     "invite_create",

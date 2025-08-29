@@ -220,15 +220,8 @@ def test_gatepass_create_without_photo(tmp_path, monkeypatch):
     def fail_add(**k):  # pragma: no cover - ensure not called
         raise AssertionError("add_face_to_known_db should not run")
 
-    def fail_insert(*a, **k):  # pragma: no cover - ensure not called
-        raise AssertionError("face_db.insert should not run")
-
-    class DummyFaceDB:
-        insert = fail_insert
-
     monkeypatch.setattr(gatepass, "save_base64_to_image", fail_save)
     monkeypatch.setattr(gatepass, "add_face_to_known_db", fail_add)
-    monkeypatch.setattr(gatepass, "face_db", DummyFaceDB())
 
     res = asyncio.run(
         gatepass.gatepass_create(

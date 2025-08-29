@@ -90,10 +90,9 @@ async def test_visit_requests_page_after_context_reload(monkeypatch, tmp_path):
             return SimpleNamespace(template=name, context=context)
 
     monkeypatch.setattr(visitor, "Jinja2Templates", lambda directory: DummyTemplates())
-    from modules import face_db, visitor_db
+    from modules import visitor_db
 
     monkeypatch.setattr(visitor_db, "init_db", lambda r: None)
-    monkeypatch.setattr(face_db, "init", lambda c, r: None)
 
     cfg = {"features": {"visitor_mgmt": True}}
     r1 = DummyRedis([])

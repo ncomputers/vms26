@@ -404,12 +404,7 @@ async def invite_create(
     ctx.redis.zadd("visit_requests", {json.dumps(req): req["ts"]})
     await _trim(ctx.redis, "visit_requests", req["ts"])
     if img_bytes:
-        try:
-            from modules import face_db
-
-            face_db.add_face_if_single_detected(img_bytes, invite_id)
-        except Exception:
-            pass
+        pass
     # notify host for approval
     try:
         host_info = visitor_db.get_host(host or "") or {}
@@ -834,10 +829,7 @@ async def invite_public_submit(
         ctx.redis.zadd("visit_requests", {json.dumps(req): ts})
         await _trim(ctx.redis, "visit_requests", ts)
     if img_bytes:
-        try:
-            face_db.add_face_if_single_detected(img_bytes, id)
-        except Exception:
-            pass
+        pass
     if prev_status == "accepted_pending_details":
         from routers import gatepass
 

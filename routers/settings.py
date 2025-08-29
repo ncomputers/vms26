@@ -148,7 +148,6 @@ def parse_basic_settings(data: dict, cfg: dict) -> dict:
         "show_face_boxes",
         "enable_live_charts",
         "debug_logs",
-        "enable_face_recognition",
         "enable_face_counting",
         "enable_profiling",
         "enable_person_tracking",

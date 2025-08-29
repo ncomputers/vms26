@@ -87,7 +87,7 @@ raw frames without server-side overlays.
 - **Dashboard polling**: The dashboard refreshes counts by polling `/api/stats` every 2 seconds.
 - **Dashboard history API**: Aggregated metrics are available via `/api/dashboard/stats?range=7d` where `range` may be `today`, `7d`, or `this_month`.
 - **Debug stats**: Visit `/debug` to monitor raw SSE data, connection status, and camera backend info. For YOLO detection logs, open `/debug/yolo`.
-- **Debug overlays**: Select Vehicle, Person, Center Line, Vehicle/Person/Face counts, ID, Face Recognition, or Face ID overlays directly on the camera stream page; these options are no longer in Display Preferences.
+- **Debug overlays**: Select Vehicle, Person, Center Line, Vehicle/Person/Face counts or ID overlays directly on the camera stream page; these options are no longer in Display Preferences.
 - **Live feed optimization**: Dashboard streams the raw camera feed via `/stream/{cam_id}?raw=1` while analysis runs separately.
 - **Per-camera resolution**: Choose 480p, 720p, 1080p, or original when adding a camera.
 - **Camera status**: Online/offline indicators appear in the Cameras page for quick troubleshooting.
@@ -97,7 +97,7 @@ raw frames without server-side overlays.
   the reports page can graph occupancy over time. Log entries are stored in Redis
   sorted sets for efficient range queries.
 - **Redis stream debug**: Stats are also written to `stats_stream` for reliable debugging.
-- **Visitor management**: Unknown faces are queued and can be reviewed and labeled through the Face DB page.
+- **Visitor management**: Manage visitor registrations and gate passes through the web interface.
 - **Pre-registration & approval**: Hosts can pre-register visitors, approve or reject requests, and receive email notifications.
 - **Gatepass creation**: Register visitors with a gatepass ID and print passes with your company logo.
 - **Gatepass expiry**: Specify a validity period when creating passes so they automatically expire.
@@ -105,13 +105,6 @@ raw frames without server-side overlays.
 - **Multi-format exports**: Visitor and gate pass logs can be downloaded as CSV, XLSX (with photos) or PDF.
 - **SaaS-style VMS dashboard**: `/vms` shows occupancy widgets and charts built from `/api/vms/stats`.
 - **Dashboard timeframe filter**: Choose Today, Last 7 Days, Last 30 Days, This Month or Year for stats.
-- **Face Search**: Upload or capture a face image within the **Face DB** page to search stored visitors.
-- **Face DB redesign**: Faces display in a responsive card grid with an optional search toggle.
-- **Captured face thumbnails**: Unknown faces are saved with their thumbnails so the Face DB lists them for later review.
-- **Validated snapshots**: Frames are queued only when a human face is detected with sufficient clarity and size, preventing junk data.
-
-- **Redis hash storage**: Known and unregistered faces are stored as hashes for efficient access.
-- **Face embeddings**: Each face record saves an `embedding` vector for similarity searches.
 - **Phone lookup**: Enter a phone number to auto-fill visitor details and reuse the same `visitor_id` for history.
 - **Visitor invitations**: Generate appointment links with expiry so guests can self-fill details.
 - **Invite page**: Create invites and view pending invitations with quick links.
@@ -122,7 +115,6 @@ raw frames without server-side overlays.
 - **Export module**: CSV and Excel exports share a common implementation for reports and logs.
 - **Collapsible email settings**: The Email & Alerts page hides SMTP fields until you click **Configure Email**. Alert rules now include visitor registration events.
 - **Branding → Company Logo now updates live; if you still see the old image, clear browser cache.**
-- **Adding faces via Gate-Pass or Camera**: uploaded photos immediately update the face database and live camera modal.
 - **Visitor dashboard revamp**: animated KPI cards and auto-refreshing charts provide a livelier overview.
 - **GStreamer streaming**: RTSP cameras use `avdec_h264` for software decoding and a leaky queue to drop stale frames for low latency.
 
@@ -141,13 +133,12 @@ Fields accepted by the camera creation endpoint:
 - `resolution`
 - `ppe`
 - `vms`
-- `face_recog`
 - `inout_count`
 - `reverse`
 - `show`
 - `enabled`
 - `line`
-  (shared virtual line for In/Out counting and face recognition). Update via
+  (shared virtual line for In/Out counting). Update via
   `PATCH /api/cameras/{id}/line`; running trackers apply changes immediately,
   otherwise changes load on restart.
 - `profile`
@@ -171,67 +162,6 @@ curl -X POST http://localhost:8000/cameras \
   -H "Content-Type: application/json" \
 -d '{"name":"Gate","url":"rtsp://cam/stream","orientation":"normal","transport":"tcp","resolution":"original","enabled":true}'
 ```
-
-## Faces API
-
-`GET /api/faces` returns paginated face records.
-
-### Query Parameters
-
-- `status` – one of `known`, `unregistered`, `pending`, or `deleted` (default `known`).
-- `q` – optional substring match on the face name.
-- `from`, `to` – ISO 8601 datetimes to bound `last_seen_at`.
-- `camera_ids` – repeatable camera ID filter.
-- `sort` – `last_seen_desc` (default), `last_seen_asc`, `first_seen_asc`,
-  `first_seen_desc`, `name_asc`, or `name_desc`.
-- `limit` – results per page (1–100, default 20).
-- `cursor` – opaque token for cursor-based pagination.
-
-### Cursor Pagination
-
-Responses include `next_cursor` and `prev_cursor`. Pass either value to the
-`cursor` parameter to navigate forward or backward.
-
-### Example
-
-```bash
-curl 'http://localhost:8000/api/faces?status=known&limit=2'
-```
-
-```json
-{
-  "faces": [
-    {
-      "id": "abc123",
-      "name": "Jane Doe",
-      "thumbnail_url": "/faces/abc123.jpg",
-      "last_seen_at": 1700000000,
-      "first_seen_at": 1699990000,
-      "camera": { "id": "1", "label": "Lobby" },
-      "status": "known"
-    }
-  ],
-  "counts": {
-    "known_count": 1,
-    "unregistered_count": 0,
-    "pending_count": 0,
-    "deleted_count": 0
-  },
-  "total_estimate": 1,
-  "next_cursor": "eyJ2IjoxfQ",
-  "prev_cursor": null
-}
-```
-
-## Face DB UI
-
-The Face DB page provides a filter bar with:
-
-- search, date range, and camera filters
-- sorting by last or first seen time or by name
-- page size choices of 20, 50, or 100 results
-
-Accessible labels and live region updates ensure screen reader support.
 
 ## Invite Lifecycle
 
@@ -320,7 +250,6 @@ Edit `config.json` to set camera URLs, model paths, thresholds, and email settin
 - `enable_face_counting` – Turn on face counting mode.
 - `face_count_conf`, `face_count_similarity`, `face_count_min_size` –
   Detection confidence, match threshold and minimum face size for counting.
-  See [face threshold docs](docs/modules/modules_face_engine_utils.md#thresholds-defaults-and-usage)
   for details.
 - `show_counts` – Display "Entered"/"Exited"/"Inside" labels on the live feed when enabled.
 - `license_key` – JWT license token controlling maximum cameras and feature access.
@@ -433,7 +362,7 @@ Set `VMS21_COUNTING_PURE=1` to enable the new counting-only pipeline which emits
 
 ## Licensing
 
-The application verifies the `license_key` on startup but will still run if the token is missing or invalid. Feature limits remain disabled until a valid key is activated. Use the **Settings** page (or `/license` endpoint) to update the key at runtime. The page shows license details such as client name, enabled features and expiration. Administrators can generate keys with `key_gen.py` or `license_generator.py`, enabling optional modules like PPE Detection, Visitor Management and Face Recognition.
+The application verifies the `license_key` on startup but will still run if the token is missing or invalid. Feature limits remain disabled until a valid key is activated. Use the **Settings** page (or `/license` endpoint) to update the key at runtime. The page shows license details such as client name, enabled features and expiration. Administrators can generate keys with `key_gen.py` or `license_generator.py`, enabling optional modules like PPE Detection and Visitor Management.
 
 ## Running
 
@@ -490,53 +419,17 @@ networks, or lower for minimal latency. Worst-case latency is roughly
 When the `visitor_mgmt` feature is licensed, the navigation bar includes a
 **VMS** link. This link is hidden if the feature is disabled. The VMS page
 provides visitor registration with optional photo capture and shows recent
-visitors. Records are stored in Redis and can be exported as CSV. Known faces
-can still be managed separately on the **Face DB** page.
+visitors. Records are stored in Redis and can be exported as CSV.
 
 ### Configuration
 
 - `features.visitor_mgmt` – Enable the visitor management interface and
   invitation workflows; must be licensed and set to `true` to expose VMS
   navigation links.
-- `face_match_thresh` – Recognition threshold for matching faces (0–1, default 0.6)
 
 ### Invite links
 
 Visitor invite creation is available only when `features.visitor_mgmt` is enabled in the configuration. Set `base_url` to the externally accessible address so that generated links are absolute. If `base_url` is omitted, the service falls back to the request URL and scheme.
-
-### Face Recognition
-
-Visitor photos from gate passes, invites and the camera modal are processed with
-the `buffalo_l` model. When a single face is detected the embedding is saved in
-Redis under `face_db` and appended to an in-memory FAISS index that is
-reconstructed from Redis on startup. Similarity search is exposed via
-`/api/faces/search` which returns the top matches and cosine scores. A score of
-`0.4` or greater is typically considered a strong match.
-
-#### Detection-Only Mode
-
-Set `enable_face_matching` to `false` to bypass FAISS lookups and return only
-detected face boxes with their confidence scores. This is useful when the face
-database or FAISS index is unavailable.
-
-#### FAISS Index Maintenance
-
-The FAISS index mirrors embeddings stored in Redis. `id_map` ordering is
-persisted in the `face:id_map` list and the index is rebuilt automatically on
-startup. If the index becomes corrupted or desynchronized, clear the list and
-reinitialize:
-
-```python
-from modules import face_db
-from config import config
-import redis
-
-r = redis.Redis()  # configure as needed
-r.delete('face:id_map')
-face_db.init(config, r)
-```
-
-Restarting the service will load the regenerated index.
 
 ## Development Tips
 
@@ -599,7 +492,6 @@ The repository contains the following files:
 - `modules/ppe_worker.py` – process person logs for PPE detection.
 - `modules/profiler.py` – lightweight profiling utilities.
 - `modules/utils.py` – misc helpers (password hashing, email, etc.).
-- `workers/visitor/__init__.py` – visitor face recognition worker.
 - `modules/export.py` – helper functions for CSV, Excel and PDF exports.
 - `modules/visitor_db.py` – Redis storage for frequent visitors and hosts.
 
@@ -622,7 +514,6 @@ The repository contains the following files:
 
 - `templates/*.html` – Jinja2 templates for the web UI.
 - `templates/partials/header.html` and `footer.html` – shared layout pieces.
-- `templates/face_search.html` – standalone template used for the Face DB search form.
 - `templates/appointment.html` – visitor self-fill appointment form.
 - `templates/gatepass_print.html` – printable gate pass used by `/gatepass/print/{id}`.
 
@@ -686,12 +577,6 @@ Detailed documentation for internal modules and routers is available below.
 - [email_utils](docs/modules/modules_email_utils.md)
 - [export](docs/modules/modules_export.md)
 - [feedback_db](docs/modules/modules_feedback_db.md)
-- [face_db](docs/modules/modules_face_db.md)
-- [face_engine**\_init**](docs/modules/modules_face_engine___init__.md)
-- [face_engine_detector](docs/modules/modules_face_engine_detector.md)
-- [face_engine_embedder](docs/modules/modules_face_engine_embedder.md)
-- [face_engine_router](docs/modules/modules_face_engine_router.md)
-- [face_engine_utils](docs/modules/modules_face_engine_utils.md)
 - [ffmpeg_stream](docs/modules/modules_ffmpeg_stream.md)
 - [gatepass_service](docs/modules/modules_gatepass_service.md)
 - [getinfo](docs/modules/modules_getinfo.md)
@@ -714,7 +599,6 @@ Detailed documentation for internal modules and routers is available below.
 
 - [**init**](docs/modules/routers___init__.md)
 - [alerts](docs/modules/routers_alerts.md)
-- [api_faces](docs/modules/routers_api_faces.md)
 - [auth](docs/modules/routers_auth.md)
 - [blueprints](docs/modules/routers_blueprints.md)
 - [cameras](docs/modules/routers_cameras.md)
