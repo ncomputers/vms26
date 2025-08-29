@@ -6,7 +6,6 @@ import asyncio
 import base64
 import json
 import os
-import re
 import secrets
 import shlex
 import subprocess
@@ -51,7 +50,10 @@ from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.jpeg import encode_jpeg
 from utils.logx import log_throttled
-from utils.url import get_stream_type
+from utils.overlay import draw_boxes_np
+from utils.url import get_stream_type, mask_credentials
+from utils.api_errors import stream_error_message
+
 
 # utility for resolving stream dimensions
 from utils.video import async_get_stream_resolution
@@ -59,7 +61,6 @@ from utils.video import async_get_stream_resolution
 # ruff: noqa
 
 
-_CRED_RE = re.compile(r"(?<=://)([^:@\s]+):([^@/\s]+)@")
 
 TARGET_FPS = getenv_num("VMS26_TARGET_FPS", 15, int)
 FRAME_JPEG_QUALITY = getenv_num("FRAME_JPEG_QUALITY", 80, int)
@@ -68,13 +69,6 @@ HEARTBEAT_INTERVAL_MS = getenv_num("HEARTBEAT_INTERVAL_MS", 1500, int)
 HEARTBEAT_JPEG = base64.b64decode(
     b"/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5/ooooA//2Q=="
 )
-
-
-def mask_credentials(text: str) -> str:
-    """Redact credentials in ``text`` for safe logging."""
-    return _CRED_RE.sub("***:***@", text)
-
-
 def require_admin(request: Request):
     """Ensure the current user has the ``admin`` role."""
     return require_roles(request, ["admin"])
@@ -700,22 +694,14 @@ async def add_camera(request: Request, manager: CameraManager = Depends(get_came
 
     ok, status, err, hint = await _probe_url()
     if not ok:
+        msg = stream_error_message(status) or err or "unable to read"
         if status == "auth":
-            return JSONResponse(
-                {"error": err or "Authentication failed", "hint": hint},
-                status_code=401,
-            )
+            return JSONResponse({"error": msg, "hint": hint}, status_code=401)
         if status == "timeout":
-            return JSONResponse(
-                {"error": err or "Connection timed out", "hint": hint},
-                status_code=504,
-            )
+            return JSONResponse({"error": msg, "hint": hint}, status_code=504)
         if status == "dns":
-            return JSONResponse(
-                {"error": err or "DNS lookup failed", "hint": hint},
-                status_code=502,
-            )
-        return JSONResponse({"error": err or "unable to read", "hint": hint}, status_code=500)
+            return JSONResponse({"error": msg, "hint": hint}, status_code=502)
+        return JSONResponse({"error": msg, "hint": hint}, status_code=500)
 
     async with cams_lock:
         if lic:
@@ -1604,7 +1590,7 @@ async def test_camera(request: Request):
     if not result:
         tail_lines = mask_credentials(stderr or "").splitlines()[-50:]
         stderr_tail = "\n".join(tail_lines)
-        payload = {}
+        msg = stream_error_message(status) or err
         code = 400
         suggestion = "Check stream URL or camera accessibility"
 
@@ -1612,16 +1598,17 @@ async def test_camera(request: Request):
             code = 401
             suggestion = "Verify camera credentials"
         elif status == "timeout":
-            payload["error"] = err or "Connection timed out"
+            msg = msg or "Connection timed out"
             suggestion = "Check network connectivity or increase timeout"
         elif status == "dns":
-            payload["error"] = err or "DNS lookup failed"
+            msg = msg or "DNS lookup failed"
             suggestion = "Verify hostname or DNS settings"
         elif status == "network":
-            payload["error"] = err or "Network error"
+            msg = msg or "Network error"
             suggestion = "Check network connectivity or try different transport"
         else:
-            payload["error"] = err or "unable to read"
+            msg = msg or "unable to read"
+        payload = {"error": msg}
         if cmd:
             payload["ffmpeg_cmd"] = mask_credentials(cmd)
         if stderr_tail:
