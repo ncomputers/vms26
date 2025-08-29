@@ -6,12 +6,7 @@ from typing import Deque, Optional
 
 import numpy as np
 
-from app.core.lifecycle import (
-    StoppableThread,
-    register_pipeline,
-    register_signal_handlers,
-    unregister_pipeline,
-)
+from app.core.lifecycle import StoppableThread, lifecycle_manager
 from app.core.utils import getenv_num
 
 try:
@@ -89,14 +84,14 @@ class Pipeline:
 
     def start(self) -> None:
         """Start capture and processing threads."""
-        register_signal_handlers()
-        register_pipeline(self)
+        lifecycle_manager.register_signal_handlers()
+        lifecycle_manager.register_pipeline(self)
         self.capture.start()
         self.process.start()
 
     def stop(self) -> None:
         """Stop all threads."""
-        unregister_pipeline(self)
+        lifecycle_manager.unregister_pipeline(self)
         self.capture.stop()
         self.process.stop()
         self.capture.join(timeout=2.0)

@@ -15,7 +15,6 @@ from loguru import logger
 from redis import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-import logging_config  # noqa: F401
 from config import load_branding, load_config, save_config
 from config.license_storage import get as load_license
 from config.license_storage import set as save_license
@@ -31,10 +30,12 @@ from utils.gpu import configure_onnxruntime
 from utils.gstreamer import probe_gstreamer
 from utils.preflight import DependencyError, check_dependencies
 from utils.redis_facade import make_facade_from_url
+from logging_config import LOG_LEVEL, set_log_level, setup_json_logger
 
 from .config import _apply_license, _connect_redis, _load_camera_profiles, _read_initial_config
 from .hardware import _early_cpu_setup
 
+setup_json_logger()
 logger = logger.bind(module="startup")
 
 # perform CPU setup before heavy imports
@@ -167,7 +168,7 @@ def init_app(
         raise SystemExit(1) from e
     cfg["secret_key"] = os.getenv("CSRF_SECRET_KEY", cfg.get("secret_key", ""))
 
-    logging_config.set_log_level(cfg.get("log_level", logging_config.LOG_LEVEL))
+    set_log_level(cfg.get("log_level", LOG_LEVEL))
     probe_gstreamer(cfg)
 
     branding_path = str(Path(config_path_local).with_name("branding.json"))

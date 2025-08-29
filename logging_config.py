@@ -30,14 +30,13 @@ _sink_ids: list[int] = []
 
 
 def _configure(level: str = LOG_LEVEL) -> None:
-    """Configure Loguru sinks with structured JSON output in a thread-safe manner."""
+    """Configure Loguru sinks with structured JSON output."""
     global _sink_ids
     with _lock:
         for sink_id in _sink_ids:
             try:
                 logger.remove(sink_id)
             except ValueError:
-                # Sink might have been removed elsewhere; ignore missing handlers
                 continue
         _sink_ids = [
             logger.add(
@@ -76,9 +75,13 @@ def _configure(level: str = LOG_LEVEL) -> None:
         )
 
 
+def setup_json_logger(level: str = LOG_LEVEL) -> None:
+    """Initialise structured logging sinks."""
+    _configure(level)
+
+
 def set_log_level(level: str) -> None:
     """Update logger level at runtime."""
     _configure(level)
 
 
-_configure()

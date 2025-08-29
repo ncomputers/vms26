@@ -6,6 +6,7 @@ import types
 import pytest
 
 from utils import logx
+from redis.exceptions import RedisError
 
 
 def test_push_redis_masks_and_trims(monkeypatch):
@@ -19,7 +20,15 @@ def test_push_redis_masks_and_trims(monkeypatch):
             calls.append(("ltrim", key, start, end))
 
     dummy = Dummy()
-    monkeypatch.setattr(logx, "_redis_client", dummy)
+
+    class ClientStub:
+        def __call__(self):
+            return dummy
+
+        def cache_clear(self):
+            pass
+
+    monkeypatch.setattr(logx, "get_redis_client", ClientStub())
     logx.event(
         "capture_start",
         camera_id=1,
@@ -45,3 +54,29 @@ def test_every_and_on_change(monkeypatch):
     assert logx.on_change("a", 1)
     assert not logx.on_change("a", 1)
     assert logx.on_change("a", 2)
+
+
+def test_push_redis_failure_logs_and_clears(monkeypatch, caplog):
+    calls = {"cleared": False}
+
+    class Failing:
+        def lpush(self, *args, **kwargs):
+            raise RedisError("boom")
+
+        def ltrim(self, *args, **kwargs):
+            pass
+
+    class Stub:
+        def __call__(self):
+            return Failing()
+
+        def cache_clear(self):
+            calls["cleared"] = True
+
+    monkeypatch.setattr(logx, "get_redis_client", Stub())
+    logger = logx.logger
+    logger.remove()
+    logger.add(caplog.handler, level="WARNING")
+    logx.event("capture_start", camera_id=1, mode="m", url="rtsp://a")
+    assert "push_redis redis error" in caplog.text
+    assert calls["cleared"]

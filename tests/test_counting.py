@@ -1,14 +1,6 @@
 import importlib
-import sys
-from pathlib import Path
 
-# Add app directory to path so ``vision`` package can be imported without
-# interfering with existing ``app.py`` module.
-APP_DIR = Path(__file__).resolve().parents[1] / "app"
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
-
-counting = importlib.import_module("vision.counting")
+counting = importlib.import_module("app.vision.counting")
 
 
 def test_side_of_line():
