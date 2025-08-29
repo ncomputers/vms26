@@ -6,7 +6,6 @@ from typing import Any, Mapping
 
 from fastapi.responses import JSONResponse
 
-
 STREAM_ERROR_MESSAGES: dict[str, str] = {
     "auth": "auth failed",
     "codec": "codec unsupported; set camera to H.264 or enable hevc",
