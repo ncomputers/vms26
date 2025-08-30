@@ -303,6 +303,7 @@ class RtspFfmpegSource(IFrameSource):
         self._log_stderr()
         stderr = mask_credentials(self.last_stderr)
         invalid_stream = "invalid data found when processing input" in stderr.lower()
+        perm_denied = "operation not permitted" in stderr.lower()
         self._stop_proc()
         self.restarts += 1
         self._restart_failures += 1
@@ -310,6 +311,14 @@ class RtspFfmpegSource(IFrameSource):
             logger.warning("ffmpeg stderr:\n%s", stderr)
             self._error = FrameSourceError(
                 f"INVALID_STREAM: {stderr} -- check credentials or stream format"
+            )
+            if self._stop_event:
+                self._stop_event.set()
+            raise self._error
+        if perm_denied:
+            logger.warning("ffmpeg connect failed: %s", stderr)
+            self._error = FrameSourceError(
+                "CONNECT_FAILED: Operation not permitted - check firewall rules, credentials, or camera permissions"
             )
             if self._stop_event:
                 self._stop_event.set()
@@ -376,10 +385,11 @@ class RtspFfmpegSource(IFrameSource):
             pass
         if proc.stdout:
             proc.stdout.close()
-        if proc.stderr:
-            proc.stderr.close()
+        stderr = proc.stderr
         if stderr_thread and stderr_thread.is_alive():
             stderr_thread.join(timeout=1)
+        if stderr:
+            stderr.close()
         self._stderr_buffer.clear()
 
     def _invalid_stream(self) -> bool:
@@ -388,11 +398,15 @@ class RtspFfmpegSource(IFrameSource):
     def _drain_stderr(self) -> None:
         if not self.proc or not self.proc.stderr:
             return
-        for line in self.proc.stderr:
-            if not line:
-                break
-            sanitized = mask_credentials(line.decode("utf-8", "replace").rstrip())
-            self._stderr_buffer.append(sanitized)
+        try:
+            while True:
+                line = self.proc.stderr.readline()
+                if line == b"":
+                    break
+                sanitized = mask_credentials(line.decode("utf-8", "replace").rstrip())
+                self._stderr_buffer.append(sanitized)
+        except (ValueError, OSError):
+            pass
 
     def _log_stderr(self) -> None:
         if self._stderr_buffer:
