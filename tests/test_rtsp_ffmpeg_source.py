@@ -84,3 +84,17 @@ def test_restart_attempt_threshold(monkeypatch):
         src._restart_proc()
     assert "CONNECT_FAILED" in str(exc.value)
     assert "***:***@" in str(exc.value)
+
+
+def test_operation_not_permitted_error(monkeypatch):
+    src = RtspFfmpegSource("rtsp://demo")
+    src._stderr_buffer.append("Operation not permitted")
+    src._stop_event = threading.Event()
+    monkeypatch.setattr(src, "_stop_proc", lambda: None)
+    monkeypatch.setattr(src, "_start_proc", lambda: None)
+    with pytest.raises(FrameSourceError) as exc:
+        src._restart_proc()
+    msg = str(exc.value).lower()
+    assert "connect_failed" in msg
+    assert "operation not permitted" in msg
+    assert "firewall" in msg
