@@ -401,7 +401,7 @@ The application verifies the `license_key` on startup but will still run if the 
 Launch the FastAPI application:
 
 ```bash
-python3 app.py
+python3 main.py
 ```
 
 Then open `http://localhost:5002` in your browser. Use the **Cameras** page to add streams (HTTP, RTSP or local webcams) and **Settings** to adjust options. Install development dependencies and run tests with `pytest`:
@@ -438,7 +438,7 @@ networks, or lower for minimal latency. Worst-case latency is roughly
 
 ## Directory Structure
 
-- `app.py` – FastAPI entry point.
+- `main.py` – FastAPI entry point.
 - `core/` – Helper modules such as configuration and tracker manager.
 - `modules/` – Tracking, alerts, and utilities.
 - `routers/` – API routes for dashboard, settings, reports, and cameras.
@@ -489,7 +489,7 @@ The repository contains the following files:
 
 ### Root files
 
-- `app.py` – main FastAPI application.
+- `main.py` – main FastAPI application.
 - `config.py` – shared configuration dictionary.
 - `config.json` – example configuration used at startup.
 - `key_gen.py` – interactive license token generator.

@@ -11,7 +11,7 @@ trap cleanup EXIT
 ruff check key_gen.py
 pytest
 
-uvicorn app:app --host 0.0.0.0 --port 5000 &
+uvicorn main:app --host 0.0.0.0 --port 5000 &
 UVICORN_PID=$!
 # Wait for server to start
 sleep 3
