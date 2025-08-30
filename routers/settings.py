@@ -34,6 +34,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 LOGO_DIR = BASE_DIR / "static" / "logos"
 URL_RE = re.compile(r"^https?://")
 
+# Global configuration used when parsing basic settings in tests or scripts.
+cfg: dict = {}
+
 
 @dataclass
 class SettingsContext:
@@ -110,8 +113,9 @@ def set_branding(ctx: SettingsContext, new_branding: dict) -> None:
     ctx.branding = new_branding
 
 
-def parse_basic_settings(data: dict, cfg: dict) -> dict:
+def parse_basic_settings(data: dict, cfg: dict | None = None) -> dict:
     """Return a new configuration with basic settings applied."""
+    cfg = cfg or globals().get("cfg", {})
     new_cfg = cfg.copy()
     for key in [
         "max_capacity",

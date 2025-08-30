@@ -97,7 +97,7 @@ message including prune counts.
 2. Ensure a Redis instance is running and configured in `config.json`.
 3. Start the application:
    ```bash
-   uvicorn app:app
+   uvicorn main:app
    ```
    For HTTPS, pass `--ssl-certfile` and `--ssl-keyfile` or run behind a reverse proxy.
 4. Run the test suite to verify your environment:

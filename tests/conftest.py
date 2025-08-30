@@ -42,12 +42,6 @@ sys.modules.setdefault(
     ),
 )
 
-import importlib.util
-
-spec = importlib.util.spec_from_file_location("app", ROOT / "app.py")
-app = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(app)
-sys.modules["app"] = app
 
 import server.startup as startup
 from utils.redis_facade import RedisFacade
@@ -129,7 +123,7 @@ def _stub_probe(monkeypatch, request):
 def client() -> TestClient:
     mp = pytest.MonkeyPatch()
 
-    import app
+    import main as app
     from config import config as cfg
     from routers import entry
     from utils import preflight
@@ -163,7 +157,7 @@ def client() -> TestClient:
     mp.setattr(startup, "check_dependencies", lambda *a, **k: None)
 
     orig = sys.argv
-    sys.argv = ["app.py"]
+    sys.argv = ["main.py"]
     preflight.check_dependencies = lambda *a, **k: None
     try:
         app.init_app()

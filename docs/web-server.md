@@ -1,6 +1,6 @@
 # Web Server
 
-The FastAPI application defined in [app.py](../app.py) exposes HTTP routes and serves the dashboard.
+The FastAPI application defined in [main.py](../main.py) exposes HTTP routes and serves the dashboard.
 
 * Routes are organized under the [routers](../routers) package.
 * Static assets and templates live in [static](../static) and [templates](../templates).
@@ -12,7 +12,7 @@ secure context. The server can be started with TLS by passing certificate and ke
 directly to Uvicorn:
 
 ```bash
-uvicorn app:app --ssl-certfile cert.pem --ssl-keyfile key.pem
+uvicorn main:app --ssl-certfile cert.pem --ssl-keyfile key.pem
 ```
 
 For local testing a self‑signed certificate can be generated with OpenSSL:
