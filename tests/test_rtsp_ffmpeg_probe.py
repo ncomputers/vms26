@@ -8,7 +8,7 @@ from modules.capture.rtsp_ffmpeg import RtspFfmpegSource
 def test_probe_retries_on_unspecified_size(monkeypatch, caplog):
     calls = []
 
-    def fake_probe(uri, probesize=None, analyzeduration=None):
+    def fake_probe(uri, probesize=None, analyzeduration=None, **kwargs):
         calls.append((probesize, analyzeduration))
         return {"streams": [{"codec_type": "video"}]}
 
