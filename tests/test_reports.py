@@ -337,5 +337,3 @@ def test_vehicle_report_plate_included(redis_client, tmp_path):
     query = ReportQuery(start=start, end=end, type="vehicle", view="table", rows=10)
     res = asyncio.run(reports._report_data(query))
     assert res["rows"][0]["plate_path"].endswith("plate.jpg")
-
-
