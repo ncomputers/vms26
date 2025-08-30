@@ -396,11 +396,21 @@ class RtspFfmpegSource(IFrameSource):
         return "invalid data found when processing input" in self.last_stderr.lower()
 
     def _drain_stderr(self) -> None:
-        if not self.proc or not self.proc.stderr:
+        """Drain stderr from ``ffmpeg`` into the internal buffer.
+
+        The subprocess handle is captured at thread start to avoid races where
+        ``self.proc`` is cleared by :meth:`_stop_proc` before the thread runs.
+        Without this, the background thread may attempt to access
+        ``self.proc.stderr`` after ``self.proc`` is set to ``None`` resulting in
+        ``AttributeError`` errors.  Using a local reference ensures the thread
+        exits cleanly once the process terminates.
+        """
+        proc = self.proc
+        if not proc or not proc.stderr:
             return
         try:
             while True:
-                line = self.proc.stderr.readline()
+                line = proc.stderr.readline()
                 if line == b"":
                     break
                 sanitized = mask_credentials(line.decode("utf-8", "replace").rstrip())
