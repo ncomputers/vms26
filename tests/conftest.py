@@ -42,6 +42,13 @@ sys.modules.setdefault(
     ),
 )
 
+import importlib.util
+
+spec = importlib.util.spec_from_file_location("app", ROOT / "app.py")
+app = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(app)
+sys.modules["app"] = app
+
 import server.startup as startup
 from utils.redis_facade import RedisFacade
 
