@@ -384,41 +384,6 @@ def test_invite_flow(tmp_path):
     assert detail["company"] == "ACME"
 
 
-# Test face search
-def test_face_search(tmp_path):
-    cfg = {"features": {"visitor_mgmt": True}, "visitor_model": "buffalo_l"}
-    r = fakeredis.FakeRedis()
-    (tmp_path / "face_search.html").write_text("{{results}}")
-    visitor.init_context(cfg, r, str(tmp_path), [])
-    rid = "id1"
-    r.hset(
-        f"face:known:{rid}",
-        mapping={"name": "A", "embedding": json.dumps([0.1, 0.1]), "image_path": ""},
-    )
-    r.sadd("face:known_ids", rid)
-
-    # Face class encapsulates face behavior
-    class Face:
-        embedding = np.array([0.1, 0.1], dtype=np.float32)
-
-    # App class encapsulates app behavior
-    class App:
-        # get routine
-        def get(self, img):
-            return [Face]
-
-    visitor.face_app = App()
-    req = DummyRequest()
-    resp = asyncio.run(visitor.face_search_form(req))
-    from fastapi.responses import HTMLResponse
-
-    assert isinstance(resp, HTMLResponse)
-    resp2 = asyncio.run(
-        visitor.face_search(req, photo=None, captured="data:image/jpeg;base64,a", top_n=1)
-    )
-    assert isinstance(resp2, HTMLResponse)
-
-
 # Test invite and custom report
 def test_invite_and_custom_report(tmp_path):
     cfg = {

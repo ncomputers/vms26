@@ -145,8 +145,6 @@ def init_context(
 ):
     """Initialise module level state."""
 
-    global face_app, _face_search_enabled
-
     # mutate config in-place so submodules importing it receive updated values
     _ctx.config.clear()
     _ctx.config.update(cfg)
@@ -165,12 +163,7 @@ def init_context(
 
     # ensure submodules referencing ``get_context`` receive updated state
     try:
-        from . import faces as _faces
         from . import visit_requests as _visit_requests
-
-        _faces.ctx = _ctx
-        _faces.redis = _ctx.redis
-        _faces.templates = _ctx.templates
 
         _visit_requests.ctx = _ctx
         _visit_requests.redis = _ctx.redis
@@ -215,7 +208,6 @@ __all__ = [
     "VISITOR_LOG_RETENTION_SECS",
     "_trim_visitor_logs",
     "get_context",
-    "face_app",
     "invite_create",
     "invite_list",
     "invite_lookup",

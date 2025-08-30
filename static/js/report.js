@@ -78,7 +78,7 @@ async function fetchReport(append=false){
         }else{
             document.getElementById('graphBox').style.display='none';
             const lbl=document.getElementById('labelHdr');
-            if(lbl) lbl.textContent=type==='face'?'Face ID':'Label';
+            if(lbl) lbl.textContent='Label';
             const tbody=document.querySelector('#tbl tbody');
             if(!append) tbody.innerHTML='';
             d.rows.forEach(row=>{
