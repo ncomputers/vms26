@@ -26,6 +26,7 @@ import numpy as np
 from app.core.utils import getenv_num
 from utils.logging import log_capture_event
 from utils.logx import log_throttled
+from utils.url import mask_credentials
 
 from .base import Backoff, FrameSourceError, IFrameSource
 
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 MAX_SHORT_READS = 3
+MAX_RESTART_ATTEMPTS = 5
 
 
 class RtspFfmpegSource(IFrameSource):
@@ -103,6 +105,8 @@ class RtspFfmpegSource(IFrameSource):
         self.last_frame_ts = 0.0
         self._udp_fallback = False
         self._ffmpeg_supports_rw_timeout: bool | None = None
+        self._restart_failures = 0
+        self._error: FrameSourceError | None = None
 
     def _probe_resolution(self) -> None:
         """Fill ``self.width`` and ``self.height`` from stream metadata."""
@@ -219,18 +223,32 @@ class RtspFfmpegSource(IFrameSource):
 
     def read(self, timeout: float | None = None) -> np.ndarray:
         """Return the latest decoded frame from the internal queue."""
+        if self._error:
+            raise self._error
         if not self._frame_queue:
             raise FrameSourceError("NOT_OPEN")
         if not self.width or not self.height:
             self._log_stderr()
-            logger.warning("ffmpeg stderr:\n%s", self.last_stderr)
+            stderr = mask_credentials(self.last_stderr)
+            if self._invalid_stream():
+                logger.warning("ffmpeg stderr:\n%s", stderr)
+                raise FrameSourceError(
+                    f"INVALID_STREAM: {stderr} -- check credentials or stream format"
+                )
+            logger.warning("ffmpeg stderr:\n%s", stderr)
             logger.warning("HINT: increase probesize/analyzeduration; try TCP transport.")
             raise FrameSourceError("NO_VIDEO_STREAM")
         try:
             return self._frame_queue.get(timeout=timeout or self.latency_ms / 1000)
         except queue.Empty:
             self._log_stderr()
-            logger.warning("ffmpeg stderr:\n%s", self.last_stderr)
+            stderr = mask_credentials(self.last_stderr)
+            if self._invalid_stream():
+                logger.warning("ffmpeg stderr:\n%s", stderr)
+                raise FrameSourceError(
+                    f"INVALID_STREAM: {stderr} -- check credentials or stream format"
+                )
+            logger.warning("ffmpeg stderr:\n%s", stderr)
             log_capture_event(self.cam_id, "read_timeout", backend="ffmpeg")
             raise FrameSourceError("READ_TIMEOUT")
 
@@ -242,23 +260,33 @@ class RtspFfmpegSource(IFrameSource):
         mv = memoryview(buf)
         while self._stop_event and not self._stop_event.is_set():
             if not self.proc or not self.proc.stdout:
-                self._restart_proc()
+                try:
+                    self._restart_proc()
+                except FrameSourceError:
+                    break
                 continue
             try:
                 read = self.proc.stdout.readinto(mv)
             except (EOFError, BrokenPipeError):
-                self._restart_proc()
+                try:
+                    self._restart_proc()
+                except FrameSourceError:
+                    break
                 continue
             except Exception:
                 read = 0
             if read != expected:
                 self._short_reads += 1
                 if self._short_reads >= MAX_SHORT_READS:
-                    self._restart_proc()
+                    try:
+                        self._restart_proc()
+                    except FrameSourceError:
+                        break
                 continue
             frame = np.frombuffer(mv, np.uint8).reshape((self.height, self.width, 3)).copy()
             self._short_reads = 0
             self._backoff.reset()
+            self._restart_failures = 0
             if self._frame_queue:
                 if self._frame_queue.full():
                     try:
@@ -273,8 +301,25 @@ class RtspFfmpegSource(IFrameSource):
 
     def _restart_proc(self) -> None:
         self._log_stderr()
+        stderr = mask_credentials(self.last_stderr)
+        invalid_stream = "invalid data found when processing input" in stderr.lower()
         self._stop_proc()
         self.restarts += 1
+        self._restart_failures += 1
+        if invalid_stream:
+            logger.warning("ffmpeg stderr:\n%s", stderr)
+            self._error = FrameSourceError(
+                f"INVALID_STREAM: {stderr} -- check credentials or stream format"
+            )
+            if self._stop_event:
+                self._stop_event.set()
+            raise self._error
+        if self._restart_failures > MAX_RESTART_ATTEMPTS:
+            logger.warning("ffmpeg connect failed: %s", stderr)
+            self._error = FrameSourceError(f"CONNECT_FAILED: {stderr}")
+            if self._stop_event:
+                self._stop_event.set()
+            raise self._error
         log_throttled(
             logger.warning,
             f"[rtsp:{self.cam_id}] reconnecting ffmpeg",
@@ -337,17 +382,21 @@ class RtspFfmpegSource(IFrameSource):
             stderr_thread.join(timeout=1)
         self._stderr_buffer.clear()
 
+    def _invalid_stream(self) -> bool:
+        return "invalid data found when processing input" in self.last_stderr.lower()
+
     def _drain_stderr(self) -> None:
         if not self.proc or not self.proc.stderr:
             return
         for line in self.proc.stderr:
             if not line:
                 break
-            self._stderr_buffer.append(line.decode("utf-8", "replace").rstrip())
+            sanitized = mask_credentials(line.decode("utf-8", "replace").rstrip())
+            self._stderr_buffer.append(sanitized)
 
     def _log_stderr(self) -> None:
         if self._stderr_buffer:
-            logger.debug("ffmpeg stderr:\n%s", "\n".join(self._stderr_buffer))
+            logger.debug("ffmpeg stderr:\n%s", mask_credentials("\n".join(self._stderr_buffer)))
 
     @property
     def last_stderr(self) -> str:

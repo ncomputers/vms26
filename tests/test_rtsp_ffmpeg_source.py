@@ -1,6 +1,7 @@
 import io
 import logging
 import subprocess
+import threading
 
 import pytest
 
@@ -67,3 +68,19 @@ def test_startup_without_rw_timeout(monkeypatch, caplog):
     assert "cmd" in captured and "-rw_timeout" not in captured["cmd"]
     assert any("rw_timeout" in r.message for r in caplog.records)
     src.close()
+
+
+def test_restart_attempt_threshold(monkeypatch):
+    src = RtspFfmpegSource("rtsp://user:pass@host")
+    src._stop_event = threading.Event()
+    src._stderr_buffer.append("rtsp://user:pass@host error")
+
+    monkeypatch.setattr(src, "_stop_proc", lambda: None)
+    monkeypatch.setattr(src, "_start_proc", lambda: None)
+
+    for _ in range(5):
+        src._restart_proc()
+    with pytest.raises(FrameSourceError) as exc:
+        src._restart_proc()
+    assert "CONNECT_FAILED" in str(exc.value)
+    assert "***:***@" in str(exc.value)
