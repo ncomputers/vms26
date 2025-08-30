@@ -22,10 +22,12 @@ from core.tracker_manager import count_log_loop
 from logging_config import LOG_LEVEL, set_log_level, setup_json_logger
 from modules.license import verify_license
 from modules.profiler import profiler_manager
+from modules.rtsp_client import choose_url, ffmpeg_input_args
 from modules.tracker import PersonTracker
 from routers import blueprints
 from routers.health import monitor_readiness
 from startup import start_background_workers
+from utils import logx
 from utils.cpu import apply_thread_limits
 from utils.gpu import configure_onnxruntime
 from utils.gstreamer import probe_gstreamer
@@ -250,6 +252,26 @@ async def lifespan(app: FastAPI):
     redis_client = app.state.redis_client
     cams = app.state.cameras
     trackers: dict[int, PersonTracker] = app.state.trackers
+
+    base_url = os.getenv("CAM_RTSP_URL")
+    if not base_url:
+        logx.error("RTSP_FAILED", url="", error="CAM_RTSP_URL not set")
+        raise SystemExit(1)
+    try:
+        final_url = await choose_url(
+            base_url,
+            os.getenv("CAM_TRY_SUBSTREAM", "true").lower() == "true",
+            int(os.getenv("CAM_HEALTHCHECK_TIMEOUT_MS", "4000")),
+            int(os.getenv("CAM_MAX_RETRIES", "8")),
+            int(os.getenv("CAM_BACKOFF_BASE_MS", "500")),
+        )
+    except RuntimeError as exc:
+        logx.error("RTSP_FAILED", url=base_url, error=str(exc))
+        raise SystemExit(1) from exc
+    os.environ["FINAL_URL"] = final_url
+    ff_args = ffmpeg_input_args(final_url)
+    os.environ["FFMPEG_ARGS"] = " ".join(ff_args)
+    logx.event("RTSP_READY", url=final_url)
 
     tasks = await start_background_workers(app, cfg, cams, trackers, redis_client)
     app.state.worker_tasks = tasks
