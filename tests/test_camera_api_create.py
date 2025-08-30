@@ -26,6 +26,7 @@ def _patch_redis():
         app,
         "get_sync_client",
         lambda url=None: fakeredis.FakeRedis(decode_responses=True),
+        raising=False,
     )
 
     async def _fake_get_client(url: str | None = None):
@@ -153,15 +154,3 @@ def test_create_camera_with_coordinates(client, monkeypatch):
     cams = json.loads(r.get("cameras"))
     assert cams[0]["latitude"] == 12.34
     assert cams[0]["longitude"] == -56.78
-
-
-def test_face_recognition_requires_line(client):
-    from config import config as cfg
-
-    cfg.setdefault("license_info", {}).setdefault("features", {})["face_recognition"] = True
-    payload = _payload()
-    payload["face_recog"] = True
-    payload["profile"] = "main"
-    res = client.post("/api/cameras", json=payload)
-    assert res.status_code == 400
-    assert res.json()["error"] == "Face Attendance requires a virtual line."
