@@ -13,7 +13,7 @@ class ReportQuery(BaseModel):
 
     start: datetime
     end: datetime
-    type: Literal["person", "vehicle", "face"] = "person"
+    type: Literal["person", "vehicle"] = "person"
     view: Literal["graph", "table"] = "graph"
     rows: conint(gt=0, le=200) = 50
     cam_id: Annotated[int | None, BeforeValidator(lambda v: None if v == "" else v)] = None

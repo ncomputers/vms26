@@ -72,8 +72,6 @@ class RedisStore:
             key = "person_logs"
         elif label == "vehicle":
             key = "vehicle_logs"
-        elif label == "face":
-            key = "face_logs"
         return self.r.zrangebyscore(key, start_ts, end_ts)
 
     # count_events routine
