@@ -10,10 +10,6 @@ Redis events using constants from `core.events` and PPE status strings. The
 |------------|------------|-------------|
 | `ppe_violation` | `modules.ppe_worker` | `{ "metric": "ppe_violation", "type": "event", "value": 1, "recipients": "safety@example.com" }` |
 | `failed_login` | `routers.auth` | `{ "metric": "failed_login", "type": "event", "value": 1, "recipients": "admin@example.com" }` |
-| `gatepass_created` | `routers.gatepass.create` | `{ "metric": "gatepass_created", "type": "event", "value": 1, "recipients": "security@example.com" }` |
-| `gatepass_approved` | `routers.gatepass.approval` | `{ "metric": "gatepass_approved", "type": "event", "value": 1, "recipients": "host@example.com" }` |
-| `gatepass_rejected` | `routers.gatepass.approval` | `{ "metric": "gatepass_rejected", "type": "event", "value": 1, "recipients": "host@example.com" }` |
-| `gatepass_overdue` | `modules.alerts` | `{ "metric": "gatepass_overdue", "type": "event", "value": 1, "recipients": "security@example.com" }` |
 | `visitor_registered` | `routers.visitor.registration` | `{ "metric": "visitor_registered", "type": "event", "value": 1, "recipients": "reception@example.com" }` |
 | `camera_offline` | `core.camera_manager` | `{ "metric": "camera_offline", "type": "event", "value": 1, "recipients": "ops@example.com" }` |
 | `network_usage_high` | `workers.system_monitor` | `{ "metric": "network_usage_high", "type": "event", "value": 1, "recipients": "ops@example.com" }` |
@@ -37,8 +33,6 @@ emitted by `modules.ppe_worker`. A rule example:
 
 * `events` – sorted set of published events. Each item is a JSON object with
   a `ts` timestamp and `event` field.
-* `vms_logs` – visitor management system logs used for rules involving
-  visitor activity.
 * `ppe_logs` – PPE detection logs for anomaly-based rules.
 
 ## Report Attachments
@@ -46,6 +40,5 @@ emitted by `modules.ppe_worker`. A rule example:
 `AlertWorker` uses two helpers to generate email reports:
 
 * `_send_report` – builds a PPE spreadsheet and optionally attaches images.
-* `_send_vms_report` – builds a visitor log spreadsheet.
 
 Both helpers attach the generated report when `attach` is true in the rule.

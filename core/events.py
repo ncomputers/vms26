@@ -11,12 +11,6 @@ PPE_VIOLATION = "ppe_violation"
 # Authentication events
 FAILED_LOGIN = "failed_login"
 
-# Gate pass events
-GATEPASS_CREATED = "gatepass_created"
-GATEPASS_APPROVED = "gatepass_approved"
-GATEPASS_REJECTED = "gatepass_rejected"
-GATEPASS_OVERDUE = "gatepass_overdue"
-
 # Visitor management events
 VISITOR_REGISTERED = "visitor_registered"
 
@@ -52,10 +46,6 @@ ALL_EVENTS = {
     VEHICLE_ENTRY,
     VEHICLE_EXIT,
     VEHICLE_DETECTED,
-    GATEPASS_CREATED,
-    GATEPASS_APPROVED,
-    GATEPASS_REJECTED,
-    GATEPASS_OVERDUE,
     VISITOR_REGISTERED,
     CAMERA_OFFLINE,
     CAPTURE_START,
@@ -77,10 +67,6 @@ __all__ = [
     "VEHICLE_ENTRY",
     "VEHICLE_EXIT",
     "VEHICLE_DETECTED",
-    "GATEPASS_CREATED",
-    "GATEPASS_APPROVED",
-    "GATEPASS_REJECTED",
-    "GATEPASS_OVERDUE",
     "VISITOR_REGISTERED",
     "CAMERA_OFFLINE",
     "CAPTURE_START",

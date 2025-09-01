@@ -69,7 +69,6 @@ class CameraBase(BaseModel):
     transport: Optional[Transport] = None
     resolution: Optional[Resolution | str] = None
     ppe: Optional[bool] = None
-    vms: Optional[bool] = None
     inout_count: Optional[bool] = None
     reverse: Optional[bool] = None
     show: Optional[bool] = None
@@ -146,7 +145,6 @@ class CameraCreate(CameraBase):
     transport: Transport = Transport.tcp
     resolution: Resolution | str = Resolution.original
     ppe: bool = False
-    vms: bool = False
     inout_count: bool = False
     reverse: bool = False
     show: bool = False

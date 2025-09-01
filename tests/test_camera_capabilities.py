@@ -11,7 +11,6 @@ def _patch(monkeypatch):
             "license_info": {
                 "features": {
                     "ppe_detection": True,
-                    "visitor_mgmt": False,
                     "face_recognition": True,
                     "in_out_counting": True,
                 }
@@ -49,4 +48,3 @@ def test_camera_capabilities(client, monkeypatch):
     assert data["resolution"] == {"width": 1280, "height": 720}
     assert data["fps"] == 30
     assert data["license"]["ppe_detection"] is True
-    assert data["license"]["visitor_mgmt"] is False

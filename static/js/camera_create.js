@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const resolutionEl = getEl("resolution", "camRes");
   const transportEl = getEl("transport", "camStreamType");
   const ppeEl = getEl("ppe", "setPPE");
-  const vmsEl = getEl("vms", "setVms");
   const inoutCountEl = getEl("inout_count", "setCount");
   const reverseEl = getEl("reverse");
   const showEl = getEl("show");
@@ -112,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
         transport: transportEl?.value || undefined,
         show: !!showEl?.checked,
         ppe: !!ppeEl?.checked,
-        vms: !!vmsEl?.checked,
         inout_count: !!inoutCountEl?.checked,
         reverse: !!reverseEl?.checked,
         latitude: latEl?.value ? parseFloat(latEl.value) : undefined,

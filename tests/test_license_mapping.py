@@ -44,7 +44,6 @@ def setup(tmp_path, features):
             "type": "http",
             "tasks": [],
             "ppe": False,
-            "visitor_mgmt": False,
             "face_recognition": False,
         }
     ]
@@ -62,10 +61,7 @@ def setup(tmp_path, features):
 
 # Test license mapping
 def test_license_mapping(tmp_path, monkeypatch):
-    app, cams = setup(
-        tmp_path,
-        {"ppe_detection": False, "visitor_mgmt": True, "face_recognition": True},
-    )
+    app, cams = setup(tmp_path, {"ppe_detection": False, "face_recognition": True})
     monkeypatch.setattr(cameras, "require_roles", lambda r, roles: {"role": "admin"})
     client = TestClient(app)
 

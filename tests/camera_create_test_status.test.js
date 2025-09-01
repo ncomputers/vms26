@@ -23,7 +23,7 @@ test('Next button requires successful test and resets on input change', async ()
     <div id="settings">
       <button id="backPreview"></button>
       <button id="toReview"></button>
-      <input id="setPPE"><input id="setVms"><input id="setFr"><input id="setCount">
+      <input id="setPPE"><input id="setFr"><input id="setCount">
       <select id="lineOrientation"></select>
       <input id="reverse"><input id="show">
     </div>

@@ -40,7 +40,7 @@ function setupDom() {
     <button id="backSettings"></button>
     <button id="confirmCam"></button>
     <div id="reviewSummary"></div>
-    <input id="setPPE"><input id="setVms"><input id="setFr"><input id="setCount">
+    <input id="setPPE"><input id="setFr"><input id="setCount">
     <select id="lineOrientation"></select>
     <input id="reverse">
     <input id="show">

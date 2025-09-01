@@ -12,7 +12,6 @@
 {% set session = request.session if request else {} %}
 {% set role = session.get('user', {}).get('role') %}
 {% if has_vms %}
-  <li class="nav-item ms-lg-3"><a class="nav-link" href="/vms">VMS</a></li>
 {% endif %}
 <li class="nav-item dropdown ms-lg-3">
   <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button"
