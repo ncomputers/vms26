@@ -157,6 +157,7 @@
                       </div>
                       <div class="feed-container">
                         <img class="card-img-top feed-img" alt="feed" data-cam="{{cam.id}}" data-token="{{ cam.token }}">
+
                       </div>
 
                     </div>
@@ -360,12 +361,6 @@ feeds.forEach(img=>{
   img.addEventListener('load',()=>{
     err.style.display='none';
     img.style.display='';
-  });
-});
-document.querySelectorAll('.modal').forEach(m=>{
-  m.addEventListener('hidden.bs.modal',()=>{
-    const img=m.querySelector('img');
-    if(img) img.removeAttribute('src');
   });
 });
 let graphInit=false;

@@ -18,13 +18,14 @@
   }
   function initMjpegFeeds(root=document){
     root.querySelectorAll('img.feed-img').forEach(img=>{startFeed(img);});
+
   }
-  if (typeof module !== 'undefined') {
+  if (typeof module !== "undefined") {
     module.exports = { initMjpegFeeds };
   } else {
     globalThis.initMjpegFeeds = initMjpegFeeds;
   }
-  if (typeof document !== 'undefined' && !globalThis.__TEST__) {
+  if (typeof document !== "undefined" && !globalThis.__TEST__) {
     initMjpegFeeds();
   }
 })();
