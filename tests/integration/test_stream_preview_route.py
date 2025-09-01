@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from starlette.routing import Mount
 
 from routers import blueprints, dashboard
+from modules.frame_bus import FrameBus
+from modules.preview.mjpeg_publisher import PreviewPublisher
 
 
 class DummyTracker:
@@ -43,3 +45,26 @@ def test_stream_preview_endpoint(monkeypatch) -> None:
     client = TestClient(app)
     resp = client.head("/stream/preview/1")
     assert resp.status_code == 405
+
+
+class DummyConnector:
+    def __init__(self) -> None:
+        self.start_count = 0
+        self.stop_count = 0
+
+    def start(self) -> None:
+        self.start_count += 1
+
+    def stop(self) -> None:
+        self.stop_count += 1
+
+
+def test_preview_toggle_no_connector_restart() -> None:
+    connector = DummyConnector()
+    connector.start()
+    bus = FrameBus()
+    pub = PreviewPublisher({1: bus})
+    pub.start_show(1)
+    pub.stop_show(1)
+    assert connector.start_count == 1
+    assert connector.stop_count == 0
