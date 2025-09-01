@@ -26,9 +26,7 @@ except Exception:  # pragma: no cover - fallback encoders
 
         def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
             q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
-            ok, buf = cv2.imencode(
-                ".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q]
-            )
+            ok, buf = cv2.imencode(".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q])
             return buf.tobytes() if ok else b""
 
     except Exception:  # pragma: no cover - fallback to Pillow
