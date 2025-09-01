@@ -45,7 +45,7 @@ workbox.routing.registerRoute(
 
 self.addEventListener('push', event => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'VMS21';
+  const title = data.title || 'Crowd Management System';
   const options = {
     body: data.body || '',
     icon: 'https://via.placeholder.com/192.png',
