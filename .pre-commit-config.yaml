@@ -6,7 +6,7 @@ repos:
         args: ["--line-length=100"]
         language_version: python3
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
         args: ["--profile=black"]
@@ -16,7 +16,7 @@ repos:
       - id: ruff
         args: ["--fix"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
