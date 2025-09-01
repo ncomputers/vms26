@@ -133,6 +133,16 @@ async def _collect_cam_info(cams, trackers_map, redisfx, secret):
             except Exception:
                 summary = debug
         stats = tr.get_debug_stats() if tr and hasattr(tr, "get_debug_stats") else {}
+        # Merge in RTSP connector stats and preview state.
+        try:
+            from routers import cameras as cam_router
+
+            conn = cam_router.rtsp_connectors.get(cid)
+            if conn:
+                stats.update(conn.stats())
+            stats["preview"] = cam_router.preview_publisher.is_showing(cid)
+        except Exception:  # pragma: no cover - defensive
+            stats["preview"] = False
         if stats.get("last_capture_ts"):
             stats["last_capture_ts"] = datetime.fromtimestamp(stats["last_capture_ts"]).isoformat()
         if stats.get("last_process_ts"):
