@@ -6,7 +6,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from modules.ffmpeg_stream import FFmpegCameraStream
 from modules.gstreamer_stream import GstCameraStream
 from utils.url import normalize_stream_url
 
@@ -38,12 +37,6 @@ def test_stream_classes_use_normalized_url(monkeypatch):
     import cv2
 
     monkeypatch.setattr(cv2, "VideoCapture", DummyVideoCapture, raising=False)
-    monkeypatch.setattr(FFmpegCameraStream, "_start_process", lambda self: None)
-
-    ff = FFmpegCameraStream(url, width=1, height=1, start_thread=False)
-    assert ff.url == url
-    ff.release()
-
     gst = GstCameraStream(url, width=1, height=1, start_thread=False)
     assert f'location="{url}"' in gst.pipeline
     gst.release()

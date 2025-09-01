@@ -179,10 +179,8 @@ Example output for an authentication error:
 
 ## Dependencies
 - cv2
-- ffmpeg_stream
 - gstreamer_stream
 - loguru
-- opencv_stream
 - time
 
 ## Examples

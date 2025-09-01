@@ -1,4 +1,4 @@
-"""Minimal tests for stream subclasses using mocked backends."""
+"""Minimal test for GStreamer stream using mocked backend."""
 
 import sys
 import time
@@ -9,11 +9,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-sys.modules.setdefault("cv2", type("cv2", (), {}))
-
-from modules.ffmpeg_stream import FFmpegCameraStream  # noqa: E402
 from modules.gstreamer_stream import GstCameraStream  # noqa: E402
-from modules.opencv_stream import OpenCVCameraStream  # noqa: E402
 
 
 def _check_stream(monkeypatch, cls):
@@ -34,13 +30,5 @@ def _check_stream(monkeypatch, cls):
     stream.release()
 
 
-def test_ffmpeg_stream(monkeypatch):
-    _check_stream(monkeypatch, FFmpegCameraStream)
-
-
 def test_gst_stream(monkeypatch):
     _check_stream(monkeypatch, GstCameraStream)
-
-
-def test_opencv_stream(monkeypatch):
-    _check_stream(monkeypatch, OpenCVCameraStream)
