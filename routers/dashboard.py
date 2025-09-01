@@ -10,6 +10,7 @@ import queue
 import threading
 import time
 from typing import Annotated, AsyncIterator, Dict, Iterable
+
 try:  # pragma: no cover - OpenCV is optional
     import cv2  # type: ignore
 except Exception:  # pragma: no cover - dependency may be missing

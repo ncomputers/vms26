@@ -43,7 +43,6 @@ def test_alerts_page_metrics(tmp_path):
     assert 'id="toggleMetrics"' in html
 
 
-
 def test_alert_worker_threshold(tmp_path, monkeypatch):
     calls = []
 

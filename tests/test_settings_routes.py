@@ -133,4 +133,3 @@ def test_track_objects_always_include_person(tmp_path):
     res = asyncio.run(settings.update_settings(req, ctx))
     assert res["saved"]
     assert "person" in ctx.cfg["track_objects"]
-

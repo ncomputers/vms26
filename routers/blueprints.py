@@ -6,15 +6,7 @@ from fastapi import FastAPI
 
 from . import alerts, api_identities, api_summary, auth
 from . import cameras as cam_routes
-from . import (
-    config_api,
-    dashboard,
-    debug,
-    detections,
-    diagnostics,
-    feedback,
-    health,
-)
+from . import config_api, dashboard, debug, detections, diagnostics, feedback, health
 from . import help as help_pages
 from . import logs, mcp, ppe_reports, profile, reports, rtsp, settings, troubleshooter
 from .admin import users as admin_users
