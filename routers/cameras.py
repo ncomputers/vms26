@@ -1247,12 +1247,7 @@ async def camera_mjpeg(
             except FrameSourceError:
                 frame = None
             if frame is not None:
-                ok, buf = cv2.imencode(
-                    ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), FRAME_JPEG_QUALITY]
-                )
-                if not ok:
-                    continue
-                data = buf.tobytes()
+                data = encode_jpeg(frame, FRAME_JPEG_QUALITY)
                 last_frame = data
                 part = (
                     boundary
@@ -1379,8 +1374,7 @@ async def test_camera(request: Request):
                 cap.release()
                 if not ret or frame is None:
                     return None
-                _, buf = cv2.imencode(".jpg", frame)
-                return buf.tobytes()
+                return encode_jpeg(frame)
 
             buf = await asyncio.to_thread(_local_capture)
             if buf is None:
@@ -1421,8 +1415,7 @@ async def test_camera(request: Request):
                 status = err = hint = stderr = cmd = ""
                 if not ret or frame is None:
                     return tr, None, status, err, hint, stderr, cmd
-                _, buf = cv2.imencode(".jpg", frame)
-                return tr, buf.tobytes(), status, err, "", "", cmd
+                return tr, encode_jpeg(frame), status, err, "", "", cmd
 
             tr_used, result, status, err, hint, stderr, cmd = await asyncio.to_thread(
                 _net_capture, tr
