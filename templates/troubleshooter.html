@@ -23,7 +23,7 @@
             {% for cam in cameras %}
             <tr data-id="{{ cam.id }}">
                 <td>{{ cam.name }}</td>
-                <td><img src="/api/cameras/{{ cam.id }}/mjpeg" class="img-fluid"/></td>
+                <td><img class="img-fluid feed-img" data-cam="{{ cam.id }}"/></td>
                 <td><button class="btn btn-sm btn-outline-primary run-btn">Run diagnostics</button></td>
                 <td><ul class="list-unstyled results small mb-0"></ul></td>
             </tr>
@@ -107,5 +107,6 @@ es.onmessage=e=>{
   list.scrollTop=list.scrollHeight;
 };
 </script>
+<script src="{{ url_for('static', path='js/mjpeg_feed.js') }}"></script>
 </body>
 </html>

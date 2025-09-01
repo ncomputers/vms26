@@ -2,8 +2,9 @@
  * @jest-environment jsdom
  */
 
-test('removes src on modal hidden', () => {
-  document.body.innerHTML = '<div class="modal"><img class="feed-img" src="foo"></div>';
+test('calls show/hide endpoints and clears src', () => {
+  document.body.innerHTML = '<div class="modal"><img class="feed-img" data-cam="1"></div>';
+  global.fetch = jest.fn(() => Promise.resolve());
   globalThis.__TEST__ = true;
   const fs = require('fs');
   const path = require('path');
@@ -11,6 +12,9 @@ test('removes src on modal hidden', () => {
   new Function(code)();
   globalThis.initMjpegFeeds(document);
   const img = document.querySelector('img.feed-img');
+  expect(fetch).toHaveBeenCalledWith('/api/cameras/1/show', {method: 'POST'});
+  expect(img.getAttribute('src')).toBe('/api/cameras/1/mjpeg');
   document.querySelector('.modal').dispatchEvent(new Event('hidden.bs.modal'));
+  expect(fetch).toHaveBeenCalledWith('/api/cameras/1/hide', {method: 'POST'});
   expect(img.getAttribute('src')).toBeNull();
 });

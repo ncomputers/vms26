@@ -155,8 +155,8 @@
                       <div class="card-header">
                         {{cam.name}}
                       </div>
-                      <div class="feed-container" data-token="{{ cam.token }}">
-                        <img src="/api/cameras/{{ cam.id }}/mjpeg" class="card-img-top feed-img" alt="feed" data-cam="{{cam.id}}">
+                      <div class="feed-container">
+                        <img class="card-img-top feed-img" alt="feed" data-cam="{{cam.id}}" data-token="{{ cam.token }}">
                       </div>
 
                     </div>
@@ -261,7 +261,7 @@
         {% if cameras %}
         {% set cam = cameras[0] %}
         <div class="col-md-2">
-            <img src="/api/cameras/{{ cam.id }}/mjpeg" class="img-fluid feed-img" alt="feed" data-cam="{{ cam.id }}" data-token="{{ cam.token }}">
+            <img class="img-fluid feed-img" alt="feed" data-cam="{{ cam.id }}" data-token="{{ cam.token }}">
         </div>
         {% endif %}
 

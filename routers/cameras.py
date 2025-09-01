@@ -41,6 +41,11 @@ from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
 from modules.tracker import tracker
+from modules.preview.mjpeg_publisher import PreviewPublisher
+from modules.stream.rtsp_connector import RtspConnector
+from modules.frame_bus import FrameBus
+
+import threading
 
 # Import role helpers directly so tests can monkeypatch ``require_roles`` on
 # this module and affect the admin dependency used below.
@@ -96,6 +101,11 @@ preview_semaphore = asyncio.Semaphore(3)
 
 # persistent capture workers for MJPEG preview
 PREVIEW_CAPS: Dict[int, object] = {}
+
+# Preview publisher and RTSP connectors for frame streaming
+preview_publisher = PreviewPublisher()
+rtsp_connectors: Dict[int, RtspConnector] = {}
+_frame_buses: Dict[int, FrameBus] = {}
 
 
 def _cleanup_tokens() -> None:
@@ -289,6 +299,30 @@ def init_context(
         start_tracker_fn,
         stop_tracker_fn,
     )
+    # set up preview publisher and RTSP connectors
+    global preview_publisher, rtsp_connectors, _frame_buses
+    _frame_buses = {}
+    rtsp_connectors = {}
+    for cam in cams:
+        try:
+            res = cam.get("resolution") or "640x480"
+            w, h = (int(x) for x in res.lower().split("x"))
+        except Exception:
+            w, h = (640, 480)
+        bus = FrameBus()
+        conn = RtspConnector(cam.get("url", ""), w, h)
+        q = conn.subscribe()
+
+        def _forward(q=q, bus=bus):
+            while True:
+                frame = q.get()
+                bus.put(frame)
+
+        threading.Thread(target=_forward, daemon=True).start()
+        conn.start()
+        _frame_buses[cam.get("id")] = bus
+        rtsp_connectors[cam.get("id")] = conn
+    preview_publisher = PreviewPublisher(_frame_buses)
     if USE_PIPELINE:
         try:
             from modules.pipeline import Pipeline
@@ -1227,85 +1261,38 @@ async def camera_mjpeg(
     if not cam or not cam.get("url"):
         raise HTTPException(status_code=404, detail="camera not found")
 
-    try:
-        cap = await _get_preview_cap(cam)
-    except FrameSourceError as exc:
-        logger.error("[%s] preview source error: %s", cam["id"], exc)
-        raise HTTPException(status_code=503, detail="stream unavailable") from exc
-
-    async def generator():
-        boundary = b"--frame"
-        interval = 1 / TARGET_FPS if TARGET_FPS > 0 else 0
-        last_sent = 0.0
-        last_frame: bytes | None = None
-        last_hb = 0.0
-        no_frame_timeout = NO_FRAME_TIMEOUT_MS / 1000
-        heartbeat_iv = HEARTBEAT_INTERVAL_MS / 1000
-        while True:
-            try:
-                frame = await asyncio.to_thread(cap.read, 0.5)
-            except FrameSourceError:
-                frame = None
-            if frame is not None:
-                data = encode_jpeg(frame, FRAME_JPEG_QUALITY)
-                last_frame = data
-                part = (
-                    boundary
-                    + b"\r\nContent-Type: image/jpeg\r\nContent-Length: "
-                    + str(len(data)).encode()
-                    + b"\r\n\r\n"
-                    + data
-                    + b"\r\n"
-                )
-                try:
-                    yield part
-                except Exception as exc:
-                    log_throttled(
-                        logger.warning,
-                        f"[{camera_id}] mjpeg broken pipe: {exc}",
-                        key=f"mjpeg:{camera_id}:broken_pipe",
-                        interval=5,
-                    )
-                    return
-                last_sent = time.time()
-            else:
-                now = time.time()
-                age = now - getattr(cap, "last_frame_ts", 0)
-                if age > no_frame_timeout:
-                    asyncio.create_task(_restart_preview_cap(camera_id))
-                if last_frame is None or now - last_hb > heartbeat_iv:
-                    hb = HEARTBEAT_JPEG
-                    part = (
-                        boundary
-                        + b"\r\nContent-Type: image/jpeg\r\nContent-Length: "
-                        + str(len(hb)).encode()
-                        + b"\r\n\r\n"
-                        + hb
-                        + b"\r\n"
-                    )
-                    try:
-                        yield part
-                    except Exception as exc:
-                        log_throttled(
-                            logger.warning,
-                            f"[{camera_id}] mjpeg broken pipe: {exc}",
-                            key=f"mjpeg:{camera_id}:broken_pipe",
-                            interval=5,
-                        )
-                        return
-                    last_hb = now
-                    last_sent = now
-            if interval > 0:
-                wait = interval - (time.time() - last_sent)
-                if wait > 0:
-                    await asyncio.sleep(wait)
+    if not preview_publisher.is_showing(camera_id):
+        preview_publisher.start_show(camera_id)
 
     headers = {"Cache-Control": "no-store", "Pragma": "no-cache"}
     return StreamingResponse(
-        generator(),
+        preview_publisher.stream(camera_id),
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers=headers,
     )
+
+
+@router.post("/api/cameras/{camera_id}/show")
+async def camera_show(camera_id: int):
+    """Enable preview streaming for the camera."""
+    preview_publisher.start_show(camera_id)
+    return {"showing": preview_publisher.is_showing(camera_id)}
+
+
+@router.post("/api/cameras/{camera_id}/hide")
+async def camera_hide(camera_id: int):
+    """Disable preview streaming for the camera."""
+    preview_publisher.stop_show(camera_id)
+    return {"showing": preview_publisher.is_showing(camera_id)}
+
+
+@router.get("/api/cameras/{camera_id}/stats")
+async def camera_stats(camera_id: int):
+    """Return RTSP connector stats with preview state."""
+    conn = rtsp_connectors.get(camera_id)
+    data = conn.stats() if conn else {}
+    data["preview"] = preview_publisher.is_showing(camera_id)
+    return data
 
 
 @router.get("/api/cameras/{camera_id}/health")
