@@ -1,6 +1,6 @@
 {
-  "name": "VMS21",
-  "short_name": "VMS21",
+  "name": "Crowd Management System",
+  "short_name": "CMS",
   "start_url": "/",
   "display": "standalone",
   "scope": "/",

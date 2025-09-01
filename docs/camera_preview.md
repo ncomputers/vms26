@@ -28,7 +28,7 @@ The preview subsystem honours several environment variables:
   to prevent browser timeouts when the stream stalls.
 - `RECONNECT_BACKOFF_MS_MIN`/`RECONNECT_BACKOFF_MS_MAX` – bounds for exponential
   backoff when reconnecting to a dropped stream.
-- `VMS26_RTSP_TCP` – set to `1` to force TCP transport for RTSP sources.
+- `RTSP_TCP` – set to `1` to force TCP transport for RTSP sources.
 
 ## Example
 

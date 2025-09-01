@@ -25,4 +25,4 @@ cap, _ = open_capture(url, cam_id)
 Capture sources now retry automatically using an exponential backoff starting
 at 0.5s (configurable via `RECONNECT_BACKOFF_MS_MIN`) and capped by
 `RECONNECT_BACKOFF_MS_MAX` (both in milliseconds). All RTSP commands default to
-TCP transport; set `VMS26_RTSP_TCP=1` to enforce TCP if a source requests UDP.
+TCP transport; set `RTSP_TCP=1` to enforce TCP if a source requests UDP.

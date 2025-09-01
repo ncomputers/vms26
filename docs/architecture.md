@@ -45,9 +45,9 @@ ffmpeg -loglevel error -rtsp_transport tcp -fflags nobuffer -flags low_delay \
 options, and `ffmpeg_flags` appends them. The global `frame_skip` parameter
 drops frames before analysis to reduce load. Capture runs on a background
 thread reading into a preallocated buffer and placing complete frames into a
-small deque whose length is controlled by ``VMS26_QUEUE_MAX`` (default ``2``),
+small deque whose length is controlled by ``QUEUE_MAX`` (default ``2``),
 discarding the oldest frame when full. The processing stage paces work to
-``VMS26_TARGET_FPS`` to avoid backlog growth. Consecutive short reads
+``TARGET_FPS`` to avoid backlog growth. Consecutive short reads
 trigger FFmpeg restarts with exponential backoff. Unexpected EOFs or broken
 pipes cause the reader to restart FFmpeg with an exponential backoff capped at
 10 s, and the total restart count is exposed via the `/debug` endpoint.
@@ -85,7 +85,7 @@ pipes cause the reader to restart FFmpeg with an exponential backoff capped at
 
 A watchdog thread performs periodic housekeeping every 60 s. It prunes
 registered caches beyond 10 000 entries (keeping the newest items) and, when
-``VMS26_CUDA_EMPTY_EVERY=60`` and a CUDA device is present, calls
+``CUDA_EMPTY_EVERY=60`` and a CUDA device is present, calls
 ``torch.cuda.empty_cache()``. Each run logs a throttled ``[perf] housekeeping``
 message including prune counts.
 

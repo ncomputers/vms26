@@ -10,7 +10,7 @@ to auto-probe common stream paths and logs the selected URL.
 
 ### Environment Variables
 
-- `VMS21_PIPELINE` - When set to `1`, MJPEG frames are streamed from a
+- `PIPELINE` - When set to `1`, MJPEG frames are streamed from a
   lightweight in-process pipeline instead of spawning FFmpeg.
 
 ## Key Classes

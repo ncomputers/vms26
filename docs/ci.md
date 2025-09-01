@@ -63,7 +63,7 @@ These environment variables affect tests and local development:
 |----------|-------------|
 | `CONFIG_PATH` | Path to the configuration file. Defaults to `config.json`. |
 | `WORKERS` | Override the number of worker threads used by the server. |
-| `VMS26_QUEUE_MAX` | Maximum size of the internal processing queue. |
-| `VMS26_TARGET_FPS` | Target frame processing rate for the pipeline. |
+| `QUEUE_MAX` | Maximum size of the internal processing queue. |
+| `TARGET_FPS` | Target frame processing rate for the pipeline. |
 | `TZ` | Time zone used in tests for date/time handling. |
 | `ALLOW_UNAUTHENTICATED_STREAM` | If set, disables stream authentication in development. |

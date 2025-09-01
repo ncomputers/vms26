@@ -1,5 +1,3 @@
-![CI](https://github.com/ncomputers/vms26/actions/workflows/ci.yml/badge.svg)
-
 # Crowd Management System v81
 
 Version 81 separates the person counting and PPE detection logic into two
@@ -138,7 +136,7 @@ Environment knobs influencing the preview stream:
   (default `1500`).
 - `RECONNECT_BACKOFF_MS_MIN` / `RECONNECT_BACKOFF_MS_MAX` – bounds for
   exponential reconnect backoff.
-- `VMS26_RTSP_TCP=1` forces TCP transport for RTSP sources.
+- `RTSP_TCP=1` forces TCP transport for RTSP sources.
 
 Fields accepted by the camera creation endpoint:
 
@@ -362,7 +360,7 @@ The first camera uses the default pipeline, while the second overrides the trans
 
 Logging is configured via [`logging_config.py`](logging_config.py) using Loguru with JSON output and rotation. Adjust verbosity by setting the `LOG_LEVEL` environment variable (e.g., `LOG_LEVEL=DEBUG`) or by adding a `log_level` entry in `config.json`.
 
-Set `VMS21_COUNTING_PURE=1` to enable the new counting-only pipeline which emits entry/exit events to an in-memory list. The variable is unset by default, preserving the legacy counting behaviour.
+Set `COUNTING_PURE=1` to enable the new counting-only pipeline which emits entry/exit events to an in-memory list. The variable is unset by default, preserving the legacy counting behaviour.
 
 ## Licensing
 
