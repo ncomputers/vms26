@@ -43,7 +43,10 @@ logger = logger.bind(module="startup")
 # perform CPU setup before heavy imports
 _early_cpu_setup()
 
-import cv2  # noqa: F401,E402
+try:  # pragma: no cover - OpenCV is optional
+    import cv2  # type: ignore  # noqa: F401,E402
+except Exception:  # pragma: no cover - dependency may be missing
+    cv2 = None  # type: ignore[assignment]
 from fastapi.templating import Jinja2Templates  # noqa: E402
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -254,24 +257,24 @@ async def lifespan(app: FastAPI):
     trackers: dict[int, PersonTracker] = app.state.trackers
 
     base_url = os.getenv("CAM_RTSP_URL")
-    if not base_url:
-        logx.error("RTSP_FAILED", url="", error="CAM_RTSP_URL not set")
-        raise SystemExit(1)
-    try:
-        final_url = await choose_url(
-            base_url,
-            os.getenv("CAM_TRY_SUBSTREAM", "true").lower() == "true",
-            int(os.getenv("CAM_HEALTHCHECK_TIMEOUT_MS", "4000")),
-            int(os.getenv("CAM_MAX_RETRIES", "8")),
-            int(os.getenv("CAM_BACKOFF_BASE_MS", "500")),
-        )
-    except RuntimeError as exc:
-        logx.error("RTSP_FAILED", url=base_url, error=str(exc))
-        raise SystemExit(1) from exc
-    os.environ["FINAL_URL"] = final_url
-    ff_args = ffmpeg_input_args(final_url)
-    os.environ["FFMPEG_ARGS"] = " ".join(ff_args)
-    logx.event("RTSP_READY", url=final_url)
+    if base_url:
+        try:
+            final_url = await choose_url(
+                base_url,
+                os.getenv("CAM_TRY_SUBSTREAM", "true").lower() == "true",
+                int(os.getenv("CAM_HEALTHCHECK_TIMEOUT_MS", "4000")),
+                int(os.getenv("CAM_MAX_RETRIES", "8")),
+                int(os.getenv("CAM_BACKOFF_BASE_MS", "500")),
+            )
+        except RuntimeError as exc:
+            logx.error("RTSP_FAILED", url=base_url, error=str(exc))
+            raise SystemExit(1) from exc
+        os.environ["FINAL_URL"] = final_url
+        ff_args = ffmpeg_input_args(final_url)
+        os.environ["FFMPEG_ARGS"] = " ".join(ff_args)
+        logx.event("RTSP_READY", url=final_url)
+    else:
+        logx.warn("RTSP_DISABLED", reason="CAM_RTSP_URL not set")
 
     tasks = await start_background_workers(app, cfg, cams, trackers, redis_client)
     app.state.worker_tasks = tasks

@@ -10,8 +10,10 @@ import queue
 import threading
 import time
 from typing import Annotated, AsyncIterator, Dict, Iterable
-
-import cv2
+try:  # pragma: no cover - OpenCV is optional
+    import cv2  # type: ignore
+except Exception:  # pragma: no cover - dependency may be missing
+    cv2 = None  # type: ignore[assignment]
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
