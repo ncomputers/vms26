@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from fastapi.templating import Jinja2Templates
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -85,24 +84,29 @@ def test_debug_camera_page(redis_cls, summary):
     trackers = {1: DummyTracker()}
     cams = [{"id": 1, "name": "cam1"}]
 
+    # Patch camera preview and connector stats
+    from routers import cameras
+
+    class FakePub:
+        def is_showing(self, cid):
+            return cid == 1
+
+    class FakeConn:
+        def stats(self):
+            return {"state": "ok"}
+
+    cameras.preview_publisher = FakePub()
+    cameras.rtsp_connectors = {1: FakeConn()}
+
     redis = RedisFacade(redis_cls())
-    templates = Jinja2Templates(directory=str(ROOT / "templates"))
-    req = DummyRequest()
-    resp = asyncio.run(
-        debug.debug_overview(
-            req,
-            trackers_map=trackers,
-            cams=cams,
-            redisfx=redis,
-            cfg={},
-            templates=templates,
-        )
-    )
-    cam_ctx = resp.context["cameras"][0]
+    cam_info = asyncio.run(debug._collect_cam_info(cams, trackers, redis, "secret"))
+    cam_ctx = cam_info[0]
     assert cam_ctx["pipeline"] == "orig"
     assert cam_ctx["backend"] == "ffmpeg"
     assert cam_ctx["debug_summary"] == summary
     assert cam_ctx["debug_attempts"] == []
+    assert cam_ctx["stats"]["preview"] is True
+    assert cam_ctx["stats"]["state"] == "ok"
 
 
 @pytest.mark.parametrize("cam_id", [1, "1"])

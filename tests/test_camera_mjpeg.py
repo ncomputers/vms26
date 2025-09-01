@@ -91,6 +91,8 @@ def test_show_hide_and_stats(monkeypatch):
         assert stats["state"] == "ok"
         await cameras.camera_hide(1)
         assert not cameras.preview_publisher.is_showing(1)
+        stats2 = await cameras.camera_stats(1)
+        assert stats2["preview"] is False
         assert fake_conn.started == 0 and fake_conn.stopped == 0
 
     asyncio.run(_run())
