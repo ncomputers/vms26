@@ -269,7 +269,6 @@ Edit `config.json` to set camera URLs, model paths, thresholds, and email settin
 
 - `FFPROBE_TIMEOUT_SEC` – Seconds to wait for RTSP metadata probes. Defaults to **30**.
 - `RTSP_STIMEOUT_USEC` – Microseconds for RTSP connect timeout passed as ``-stimeout``. Defaults to **5000000**.
-- `RTSP_RW_TIMEOUT_USEC` – Microseconds for RTSP read/write timeout passed as ``-rw_timeout``. Defaults to **5000000**.
 
 ### Entry/exit logging with PPE detection
 

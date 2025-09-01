@@ -5,9 +5,8 @@ from __future__ import annotations
 """RTSP capture using FFmpeg.
 
 This source supports optional command-line flags via the ``FFMPEG_EXTRA_FLAGS``
-environment variable. ``RTSP_RW_TIMEOUT_USEC`` and ``RTSP_STIMEOUT_USEC``
-control the ``-rw_timeout`` and ``-stimeout`` parameters (in microseconds,
-default ``2000000`` and ``20000000`` respectively). Stream dimensions are
+environment variable. ``RTSP_STIMEOUT_USEC`` controls the ``-stimeout``
+parameter (in microseconds, default ``20000000``). Stream dimensions are
 probed with ``ffprobe`` when not specified explicitly.
 """
 
@@ -54,7 +53,6 @@ class RtspFfmpegSource(IFrameSource):
         tcp: bool = True,
         latency_ms: int = 100,
         cam_id: int | str | None = None,
-        rw_timeout_usec: int | None = None,
         stimeout_usec: int | None = None,
         extra_flags: list[str] | None = None,
     ) -> None:
@@ -72,9 +70,6 @@ class RtspFfmpegSource(IFrameSource):
             Queue latency in milliseconds.
         cam_id:
             Optional camera identifier for logging.
-        rw_timeout_usec:
-            Microseconds before aborting blocking read/write operations
-            passed to FFmpeg as ``-rw_timeout``. Defaults to ``5000000``.
         stimeout_usec:
             Microseconds to wait for establishing the connection passed as
             ``-stimeout``. Defaults to ``5000000``.
@@ -87,7 +82,6 @@ class RtspFfmpegSource(IFrameSource):
         env_tcp = os.getenv("VMS26_RTSP_TCP") == "1"
         self.tcp = tcp or env_tcp
         self.latency_ms = latency_ms
-        self.rw_timeout_usec = rw_timeout_usec
         self.stimeout_usec = stimeout_usec
         self.extra_flags = extra_flags or []
         self.proc: subprocess.Popen[bytes] | None = None
@@ -104,7 +98,6 @@ class RtspFfmpegSource(IFrameSource):
         self.restarts = 0
         self.last_frame_ts = 0.0
         self._udp_fallback = False
-        self._ffmpeg_supports_rw_timeout: bool | None = None
         self._restart_failures = 0
         self._error: FrameSourceError | None = None
 
@@ -142,24 +135,11 @@ class RtspFfmpegSource(IFrameSource):
         with self._proc_lock:
             self._probe_resolution()
             transport = "tcp" if self.tcp else "udp"
-            rw_timeout = (
-                self.rw_timeout_usec
-                if self.rw_timeout_usec is not None
-                else getenv_num("RTSP_RW_TIMEOUT_USEC", 2_000_000, int)
-            )
             stimeout = (
                 self.stimeout_usec
                 if self.stimeout_usec is not None
                 else getenv_num("RTSP_STIMEOUT_USEC", 20_000_000, int)
             )
-            if self._ffmpeg_supports_rw_timeout is None:
-                try:
-                    res = subprocess.run(["ffmpeg", "-h"], capture_output=True, text=True)
-                    self._ffmpeg_supports_rw_timeout = "-rw_timeout" in res.stdout
-                except Exception:
-                    self._ffmpeg_supports_rw_timeout = False
-                if not self._ffmpeg_supports_rw_timeout:
-                    logger.warning("ffmpeg does not support -rw_timeout; continuing without it")
             cmd = [
                 "ffmpeg",
                 "-hide_banner",
@@ -172,8 +152,6 @@ class RtspFfmpegSource(IFrameSource):
             if self.tcp:
                 cmd.extend(["-rtsp_flags", "prefer_tcp"])
             cmd.extend(["-stimeout", str(stimeout)])
-            if self._ffmpeg_supports_rw_timeout:
-                cmd.extend(["-rw_timeout", str(rw_timeout)])
             cmd.extend(
                 [
                     "-fflags",
