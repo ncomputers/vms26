@@ -36,7 +36,6 @@ FFmpeg is the default backend and executes:
 ```bash
 ffmpeg -loglevel error -rtsp_transport tcp -fflags nobuffer -flags low_delay \
        -analyzeduration 0 -probesize 32 \
-       -rw_timeout ${RTSP_RW_TIMEOUT_USEC:-5000000} \
        -stimeout ${RTSP_STIMEOUT_USEC:-5000000} \
        -i {url} -f rawvideo -pix_fmt bgr24 -
 ```

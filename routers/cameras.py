@@ -50,7 +50,7 @@ from routers.visitor_utils import visitor_disabled_response
 from schemas.camera import CameraCreate
 from utils import require_feature
 from utils.api_errors import stream_error_message
-from utils.ffmpeg import _build_timeout_flags, build_snapshot_cmd
+from utils.ffmpeg import build_snapshot_cmd
 from utils.ffmpeg_snapshot import capture_snapshot
 from utils.jpeg import encode_jpeg
 from utils.logx import log_throttled
@@ -1396,9 +1396,6 @@ async def test_camera(request: Request):
             def _net_capture(
                 tr: str,
             ) -> tuple[str, bytes | None, str, str, str, str, str]:
-                extra = None
-                if connect_timeout is not None:
-                    extra = _build_timeout_flags()
                 if cfg.get("stream_mode") == "gstreamer":
                     cap = RtspGstSource(test_url, tcp=(tr == "tcp"))
                 else:
