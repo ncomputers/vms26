@@ -16,7 +16,7 @@
   {% for cam in cameras %}
   <div class="cam">
     <h3>{{ cam.id }}: {{ cam.name }}</h3>
-    <img src="/api/cameras/{{ cam.id }}/mjpeg?token={{ cam.token }}" alt="Camera {{ cam.id }}" />
+    <img class="feed-img" data-cam="{{ cam.id }}" data-token="{{ cam.token }}" alt="Camera {{ cam.id }}" />
     <div>Status: {{ cam.status }}</div>
     <div>Pipeline:</div>
     <pre>{{ cam.pipeline }}</pre>
@@ -24,4 +24,5 @@
   </div>
   {% endfor %}
 </body>
+<script src="{{ url_for('static', path='js/mjpeg_feed.js') }}"></script>
 </html>

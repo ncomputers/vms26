@@ -2,8 +2,10 @@
  * @jest-environment jsdom
  */
 
-test('calls show and hide around modal preview', () => {
+test('calls show/hide endpoints and clears src', () => {
   document.body.innerHTML = '<div class="modal"><img class="feed-img" data-cam="1"></div>';
+  global.fetch = jest.fn(() => Promise.resolve());
+
   globalThis.__TEST__ = true;
   const fetchMock = jest.fn(() => Promise.resolve({}));
   global.fetch = fetchMock;
@@ -14,10 +16,9 @@ test('calls show and hide around modal preview', () => {
   globalThis.initMjpegFeeds(document);
   const modal = document.querySelector('.modal');
   const img = document.querySelector('img.feed-img');
-  modal.dispatchEvent(new Event('shown.bs.modal'));
-  expect(fetchMock).toHaveBeenCalledWith('/api/cameras/1/show', { method: 'POST' });
-  expect(img.src).toContain('/api/cameras/1/mjpeg');
-  modal.dispatchEvent(new Event('hidden.bs.modal'));
-  expect(fetchMock).toHaveBeenLastCalledWith('/api/cameras/1/hide', { method: 'POST' });
+  expect(fetch).toHaveBeenCalledWith('/api/cameras/1/show', {method: 'POST'});
+  expect(img.getAttribute('src')).toBe('/api/cameras/1/mjpeg');
+  document.querySelector('.modal').dispatchEvent(new Event('hidden.bs.modal'));
+  expect(fetch).toHaveBeenCalledWith('/api/cameras/1/hide', {method: 'POST'});
   expect(img.getAttribute('src')).toBeNull();
 });
