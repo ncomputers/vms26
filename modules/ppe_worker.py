@@ -7,7 +7,10 @@ import time
 from os import getenv
 from pathlib import Path
 
-import cv2
+try:  # pragma: no cover - OpenCV is optional
+    import cv2  # type: ignore
+except Exception:  # pragma: no cover - dependency may be missing
+    cv2 = None  # type: ignore[assignment]
 import psutil
 from loguru import logger
 

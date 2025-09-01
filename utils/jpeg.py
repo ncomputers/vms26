@@ -20,13 +20,29 @@ try:  # Prefer turbojpeg when available
 
     else:  # pragma: no cover - explicit disable
         raise ImportError
-except Exception:  # pragma: no cover - fallback to OpenCV
-    import cv2  # type: ignore
+except Exception:  # pragma: no cover - fallback encoders
+    try:  # Prefer OpenCV if available
+        import cv2  # type: ignore
 
-    def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
-        q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
-        ok, buf = cv2.imencode(".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q])
-        return buf.tobytes() if ok else b""
+        def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
+            q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
+            ok, buf = cv2.imencode(
+                ".jpg", np_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), q]
+            )
+            return buf.tobytes() if ok else b""
+
+    except Exception:  # pragma: no cover - fallback to Pillow
+        from io import BytesIO
+
+        import numpy as np
+        from PIL import Image
+
+        def encode_jpeg(np_bgr, quality: int | None = None) -> bytes:
+            q = int(quality if quality is not None else DEFAULT_JPEG_QUALITY)
+            img = Image.fromarray(np_bgr[:, :, ::-1])
+            buf = BytesIO()
+            img.save(buf, format="JPEG", quality=q)
+            return buf.getvalue()
 
     encode_jpeg = profiled("enc")(encode_jpeg)
 
