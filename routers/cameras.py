@@ -874,20 +874,6 @@ async def toggle_ppe(cam_id: int, request: Request):
     raise HTTPException(status_code=404, detail="Not found")
 
 
-@router.post("/cameras/{cam_id}/vms")
-@require_feature("visitor_mgmt")
-async def toggle_vms(cam_id: int, request: Request):
-    async with cams_lock:
-        for cam in cams:
-            if cam["id"] == cam_id:
-                cam["visitor_mgmt"] = not cam.get("visitor_mgmt", False)
-                save_cameras(cams, redis)
-                return {"vms": cam["visitor_mgmt"]}
-    from fastapi import HTTPException
-
-    raise HTTPException(status_code=404, detail="Not found")
-
-
 @router.put("/cameras/{cam_id}")
 async def update_camera(
     cam_id: int, request: Request, manager: CameraManager = Depends(get_camera_manager)

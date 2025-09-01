@@ -30,7 +30,7 @@ class DummyRequest:
 
 # Test alerts page metrics
 def test_alerts_page_metrics(tmp_path):
-    cfg = {"alert_rules": [], "email": {}, "features": {"visitor_mgmt": True}}
+    cfg = {"alert_rules": [], "email": {}, "features": {}}
     r = fakeredis.FakeRedis()
     (tmp_path / "email_alerts.html").write_text(
         '<button id="toggleMetrics"></button><span id="metric_person_in"></span>{{ anomaly_items }}'
@@ -42,38 +42,6 @@ def test_alerts_page_metrics(tmp_path):
     assert "visitor_registered" in html
     assert 'id="toggleMetrics"' in html
 
-
-# Test alert worker vms
-def test_alert_worker_vms(tmp_path, monkeypatch):
-    calls = []
-
-    # mock_send routine
-    def mock_send(*a, **k):
-        calls.append(a)
-        return True, None
-
-    monkeypatch.setattr(alerts_module, "send_email", mock_send)
-    r = fakeredis.FakeRedis()
-    cfg = {
-        "alert_rules": [
-            {
-                "metric": "visitor_registered",
-                "type": "event",
-                "value": 1,
-                "recipients": "a@example.com",
-            }
-        ],
-        "email": {},
-        "email_enabled": True,
-    }
-    worker = alerts_module.AlertWorker(cfg, "redis://localhost", tmp_path, start=False)
-    worker.redis = r
-    r.zadd(
-        "vms_logs",
-        {json.dumps({"ts": 1, "name": "A", "gate_id": "GP1", "host": "H", "phone": "1"}): 1},
-    )
-    worker.check_rules()
-    assert calls
 
 
 def test_alert_worker_threshold(tmp_path, monkeypatch):

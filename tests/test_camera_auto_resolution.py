@@ -58,7 +58,6 @@ def test_resolution_update_restarts_capture(client, monkeypatch):
             "type": "rtsp",
             "tasks": [],
             "ppe": False,
-            "visitor_mgmt": False,
             "face_recognition": False,
             "enabled": True,
             "show": True,

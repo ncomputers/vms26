@@ -72,7 +72,6 @@ class AlertWorker:
         """Execute periodic checks if the interval has elapsed."""
         if now - last >= 60:
             self.check_rules()
-            self.check_overdue_gatepasses()
             self._log_cycle(now - last)
             return now
         return last
@@ -84,40 +83,6 @@ class AlertWorker:
     def _log_cycle(self, elapsed: float) -> None:
         """Log completion of a worker cycle."""
         logger.info(f"AlertWorker cycle completed in {elapsed:.1f}s")
-
-    # check_overdue_gatepasses routine
-    def check_overdue_gatepasses(self) -> None:
-        """Mark issued gate passes past expiry as overdue and alert."""
-        now = int(time.time())
-        try:
-            entries = self.redis.zrange("vms_logs", 0, -1)
-        except RedisError as exc:
-            logger.exception("failed to scan gate passes: {}", exc)
-            return
-        for e in entries:
-            try:
-                obj = json.loads(e if isinstance(e, str) else e.decode())
-            except json.JSONDecodeError:
-                continue
-            if obj.get("status") not in {"Issued", "approved"}:
-                continue
-            if int(obj.get("valid_to", now)) >= now:
-                continue
-            obj["status"] = "Overdue"
-            self.redis.zrem("vms_logs", e)
-            self.redis.zadd("vms_logs", {json.dumps(obj): obj["ts"]})
-            try:
-                self.redis.hset(f"gatepass:pass:{obj['gate_id']}", "status", "Overdue")
-            except RedisError:
-                pass
-            recipient = self.cfg.get("security_email")
-            if recipient:
-                send_email(
-                    "Gate pass overdue",
-                    f"Gate pass {obj['gate_id']} for {obj.get('name','')} is overdue",
-                    [recipient],
-                    self.cfg.get("email", {}),
-                )
 
     # _collect_rows routine
     def _collect_rows(self, key: str, start_ts: int, end_ts: int, filter_fn=None):

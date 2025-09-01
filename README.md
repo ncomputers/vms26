@@ -97,27 +97,7 @@ to stream raw frames without server-side overlays.
 - **Historical reports**: A background task records per-minute counts to Redis so
   the reports page can graph occupancy over time. Log entries are stored in Redis
   sorted sets for efficient range queries.
-- **Redis stream debug**: Stats are also written to `stats_stream` for reliable debugging.
-- **Visitor management**: Manage visitor registrations and gate passes through the web interface.
-- **Pre-registration & approval**: Hosts can pre-register visitors, approve or reject requests, and receive email notifications.
-- **Gatepass creation**: Register visitors with a gatepass ID and print passes with your company logo.
-- **Gatepass expiry**: Specify a validity period when creating passes so they automatically expire.
-- **Printable gate pass**: Each pass can be opened via `/gatepass/print/{id}` and saved as PDF using html2pdf.js.
-- **Multi-format exports**: Visitor and gate pass logs can be downloaded as CSV, XLSX (with photos) or PDF.
-- **SaaS-style VMS dashboard**: `/vms` shows occupancy widgets and charts built from `/api/vms/stats`.
-- **Dashboard timeframe filter**: Choose Today, Last 7 Days, Last 30 Days, This Month or Year for stats.
-- **Phone lookup**: Enter a phone number to auto-fill visitor details and reuse the same `visitor_id` for history.
-- **Visitor invitations**: Generate appointment links with expiry so guests can self-fill details.
-- **Invite page**: Create invites and view pending invitations with quick links.
-- **Custom visitor/host reports**: Summaries can be exported as CSV.
-- **Printable gate pass**: Includes phone/email and signature boxes, with one-click PDF export.
-- **Visit request export**: Download requests filtered by status.
-- **Smart suggestions**: Forms auto-complete frequent visitor and host info.
-- **Export module**: CSV and Excel exports share a common implementation for reports and logs.
-- **Collapsible email settings**: The Email & Alerts page hides SMTP fields until you click **Configure Email**. Alert rules now include visitor registration events.
-- **Branding → Company Logo now updates live; if you still see the old image, clear browser cache.**
-- **Visitor dashboard revamp**: animated KPI cards and auto-refreshing charts provide a livelier overview.
-- **GStreamer streaming**: RTSP cameras use `avdec_h264` for software decoding and a leaky queue to drop stale frames for low latency.
+- **Redis stream debug**: Stats are also written to `stats_stream` for reliable debugging.- **GStreamer streaming**: RTSP cameras use `avdec_h264` for software decoding and a leaky queue to drop stale frames for low latency.
 
 ## Quick Start
 
@@ -168,7 +148,6 @@ Fields accepted by the camera creation endpoint:
 - `transport`
 - `resolution`
 - `ppe`
-- `vms`
 - `inout_count`
 - `reverse`
 - `show`
@@ -198,12 +177,6 @@ curl -X POST http://localhost:8000/cameras \
   -H "Content-Type: application/json" \
 -d '{"name":"Gate","url":"rtsp://cam/stream","orientation":"normal","transport":"tcp","resolution":"original","enabled":true}'
 ```
-
-## Invite Lifecycle
-
-1. **Link generation** – a host creates an invite link. The system saves a placeholder record with status `link` along with the host and timestamp. Optional `expiry` or `purpose` fields are stored if supplied.
-2. **Visitor submission** – the visitor opens the link and submits their details. The invite becomes `created` and a visit request with status `pending` is queued for host action.
-3. **Approval** – the host approves or rejects the request, transitioning the invite to `approved` or `rejected`.
 
 ## Installation
 
@@ -254,7 +227,6 @@ Edit `config.json` to set camera URLs, model paths, thresholds, and email settin
 - `redis_url` – Location of the Redis instance (required). The server must be reachable at startup or the application will terminate.
 - `email` – SMTP configuration. Set `smtp_host`, `smtp_port`, `smtp_user`, `smtp_pass`, `use_tls`/`use_ssl`, and `from_addr` to enable email alerts.
 - `default_host` – Optional host name used when no host is provided. When set,
-  the visitor form pre-fills this value and host validation is skipped.
 - `stream_mode` – Maintained for backward compatibility; FFmpeg is tried first
   and GStreamer is used only if initialization fails.
 - `stream_probe_timeout` – Seconds to wait for `ffprobe` when resolving stream
@@ -446,23 +418,6 @@ networks, or lower for minimal latency. Worst-case latency is roughly
 - `public/` – Optional PHP pages.
 - `tests/` – Simple unit tests.
 
-## Visitor Management
-
-When the `visitor_mgmt` feature is licensed, the navigation bar includes a
-**VMS** link. This link is hidden if the feature is disabled. The VMS page
-provides visitor registration with optional photo capture and shows recent
-visitors. Records are stored in Redis and can be exported as CSV.
-
-### Configuration
-
-- `features.visitor_mgmt` – Enable the visitor management interface and
-  invitation workflows; must be licensed and set to `true` to expose VMS
-  navigation links.
-
-### Invite links
-
-Visitor invite creation is available only when `features.visitor_mgmt` is enabled in the configuration. Set `base_url` to the externally accessible address so that generated links are absolute. If `base_url` is omitted, the service falls back to the request URL and scheme.
-
 ## Development Tips
 
 This repository uses a `.gitattributes` file that keeps incoming changes during merges.
@@ -471,15 +426,10 @@ If merge conflicts occur, Git will prefer the incoming version.
 ## Redis Key Naming
 
 Redis keys follow a colon-separated scheme of `<module>:<entity>:<id>` to avoid collisions.
-Collections without a specific identifier may omit the final segment
-(e.g., `visitor:master`). Additional segments may be appended for attributes.
 
 Examples:
 
 - `person_tracker:cam:1:in` – entry count for camera `1`.
-- `visitor:master` – hash of visitor names to contact info.
-- `visitor:record:5551234` – visitor details keyed by phone number.
-- `visitor:host:alice` – host information.
 
 Use this pattern for any new Redis keys to keep the namespace consistent.
 
@@ -524,7 +474,6 @@ The repository contains the following files:
 - `modules/profiler.py` – lightweight profiling utilities.
 - `modules/utils.py` – misc helpers (password hashing, email, etc.).
 - `modules/export.py` – helper functions for CSV, Excel and PDF exports.
-- `modules/visitor_db.py` – Redis storage for frequent visitors and hosts.
 
 ### routers
 
@@ -535,18 +484,12 @@ The repository contains the following files:
 - `routers/dashboard.py` – dashboard pages and streaming APIs.
 - `routers/ppe_reports.py` – PPE report generation endpoints.
 - `routers/reports.py` – person/vehicle report APIs.
-- `routers/settings.py` – update and export configuration.
-- `routers/visitor.py` – visitor management HTTP endpoints.
-- `routers/vms.py` – blueprint that includes the VMS entry and gate pass routers.
-- `routers/entry.py` – routes for visitor entries and exports.
-- `routers/gatepass.py` – route for printing gate passes.
+ - `routers/settings.py` – update and export configuration.
 
 ### templates
 
 - `templates/*.html` – Jinja2 templates for the web UI.
 - `templates/partials/header.html` and `footer.html` – shared layout pieces.
-- `templates/appointment.html` – visitor self-fill appointment form.
-- `templates/gatepass_print.html` – printable gate pass used by `/gatepass/print/{id}`.
 
 ### static
 
@@ -567,9 +510,6 @@ The repository contains the following files:
 - `tests/test_ppe_worker.py` – test PPE worker logic.
 - `tests/test_reports.py` – test reporting endpoints.
 - `tests/test_alerts.py` – test email alerts and metrics.
-- `tests/test_visitor_worker.py` – test visitor worker functions.
-- `tests/test_visitors.py` – test visitor routes.
-- `tests/test_vms.py` – test VMS endpoints.
 - `tests/TEST.PY` – simple FFmpeg stream example.
 
 ### Low-latency capture
@@ -609,7 +549,6 @@ Detailed documentation for internal modules and routers is available below.
 - [export](docs/modules/modules_export.md)
 - [feedback_db](docs/modules/modules_feedback_db.md)
 - [ffmpeg_stream](docs/modules/modules_ffmpeg_stream.md)
-- [gatepass_service](docs/modules/modules_gatepass_service.md)
 - [getinfo](docs/modules/modules_getinfo.md)
 - [gstreamer_stream](docs/modules/modules_gstreamer_stream.md)
 - [license](docs/modules/modules_license.md)
@@ -622,8 +561,6 @@ Detailed documentation for internal modules and routers is available below.
 - [stream_probe](docs/modules/modules_stream_probe.md)
 - [tracker](docs/modules/modules_tracker.md)
 - [utils](docs/modules/modules_utils.md)
-- [visitor_db](docs/modules/modules_visitor_db.md)
-- [visitor_worker](docs/modules/modules_visitor_worker.md)
 
 ### Routers
 
@@ -633,13 +570,9 @@ Detailed documentation for internal modules and routers is available below.
 - [blueprints](docs/modules/routers_blueprints.md)
 - [cameras](docs/modules/routers_cameras.md)
 - [dashboard](docs/modules/routers_dashboard.md)
-- [entry](docs/modules/routers_entry.md)
-- [gatepass](docs/modules/routers_gatepass.md)
 - [ppe_reports](docs/modules/routers_ppe_reports.md)
 - [reports](docs/modules/routers_reports.md)
 - [settings](docs/modules/routers_settings.md)
-- [visitor](docs/modules/routers_visitor.md)
-- [vms](docs/modules/routers_vms.md)
 
 ## Progressive Web App
 

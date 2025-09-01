@@ -58,7 +58,6 @@ def cfg():
         "track_ppe": ["helmet"],
         "branding": {},
         "logo_url": "",
-        "features": {"visitor_mgmt": False},
     }
 
 

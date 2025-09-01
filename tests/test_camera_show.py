@@ -33,7 +33,6 @@ def test_toggle_show_uses_stored_value(client, monkeypatch):
             "type": "rtsp",
             "tasks": [],
             "ppe": False,
-            "visitor_mgmt": False,
             "face_recognition": False,
             "enabled": True,
             "show": False,

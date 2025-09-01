@@ -16,7 +16,7 @@ import utils.redis as redis_utils
 from config import config as _CONFIG
 from config import set_config
 
-from .redis_keys import CFG_UI_VMS, CFG_VERSION
+from .redis_keys import CFG_VERSION
 
 
 class Config(BaseSettings):
@@ -104,47 +104,9 @@ def watch_config(client: Redis, callback: Callable[[Config], None]) -> threading
     return t
 
 
-def get_vms_ui(redis: Optional[Redis] = None) -> dict:
-    """Return stored VMS UI configuration."""
-
-    client = redis or redis_utils.get_sync_client()
-    data = client.hgetall(CFG_UI_VMS)
-    config: dict[str, dict[str, str]] = {"tiles": {}, "alerts": {}}
-    for k, v in data.items():
-        if k.startswith("tiles."):
-            config["tiles"][k.split(".", 1)[1]] = v
-        elif k.startswith("alerts."):
-            config["alerts"][k.split(".", 1)[1]] = v
-        else:
-            config[k] = v
-    return config
-
-
-def _flatten(prefix: str, data: dict, out: dict) -> None:
-    for k, v in data.items():
-        if isinstance(v, dict):
-            _flatten(f"{prefix}{k}.", v, out)
-        else:
-            out[f"{prefix}{k}"] = v
-
-
-def set_vms_ui(patch: dict, redis: Optional[Redis] = None) -> dict:
-    """Patch VMS UI configuration and bump version."""
-
-    client = redis or redis_utils.get_sync_client()
-    flat: dict[str, Any] = {}
-    _flatten("", patch, flat)
-    if flat:
-        client.hset(CFG_UI_VMS, mapping=flat)
-    client.incr(CFG_VERSION)
-    return get_vms_ui(client)
-
-
 __all__ = [
     "Config",
     "get_config",
     "load_config",
     "watch_config",
-    "get_vms_ui",
-    "set_vms_ui",
 ]

@@ -26,7 +26,6 @@ async def client(tmp_path, monkeypatch):
             "url": "rtsp://example",
             "tasks": [],
             "face_recognition": False,
-            "visitor_mgmt": False,
             "ppe": False,
             "enabled": True,
         }

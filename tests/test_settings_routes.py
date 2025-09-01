@@ -134,13 +134,3 @@ def test_track_objects_always_include_person(tmp_path):
     assert res["saved"]
     assert "person" in ctx.cfg["track_objects"]
 
-
-def test_vms_requires_license(tmp_path):
-    ctx = setup_context(tmp_path)
-    ctx.cfg["license_info"] = {"features": {"visitor_mgmt": False}}
-    ctx.cfg["features"] = {"visitor_mgmt": False}
-    req = DummyRequest(form={"password": "pass", "visitor_mgmt": "on"})
-    with pytest.raises(HTTPException) as exc:
-        asyncio.run(settings.update_settings(req, ctx))
-    assert exc.value.status_code == 403
-    assert ctx.cfg["features"]["visitor_mgmt"] is False

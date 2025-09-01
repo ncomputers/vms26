@@ -20,7 +20,6 @@ def _setup_context(tmp_path):
         "track_objects": ["person", "vehicle"],
         "branding": {},
         "logo_url": "",
-        "features": {"visitor_mgmt": False},
         "count_classes": ["person", "vehicle"],
     }
     config_mod.set_config(cfg)

@@ -38,7 +38,6 @@ def test_preload_models_cpu_skips_insightface(monkeypatch):
     cfg = {
         "person_model": "p.pt",
         "plate_model": "pl.pt",
-        "features": {"visitor_mgmt": True},
     }
 
     cams = [{"tasks": ["in_count"]}]
@@ -48,7 +47,6 @@ def test_preload_models_cpu_skips_insightface(monkeypatch):
     assert ("yolo", "pl.pt") in calls
     assert not any(c == ("yolo", "p.pt") for c in calls)
     assert not any(c[0] == "face" for c in calls)
-    assert cfg["features"]["visitor_mgmt"] is False
     assert cfg["features"]["face_recognition"] is False
     assert cfg["enable_person_tracking"] is False
 
@@ -69,7 +67,6 @@ def test_preload_models_gpu_loads_insightface(monkeypatch):
     cfg = {
         "person_model": "p.pt",
         "plate_model": "pl.pt",
-        "features": {"visitor_mgmt": True},
     }
 
     cams = [{"tasks": ["in_count"]}]
@@ -79,7 +76,6 @@ def test_preload_models_gpu_loads_insightface(monkeypatch):
     assert ("yolo", "p.pt") in calls
     assert ("yolo", "pl.pt") in calls
     assert ("face", "buffalo_l") in calls
-    assert cfg["features"]["visitor_mgmt"] is True
     assert cfg.get("enable_person_tracking", True) is True
 
 
@@ -123,7 +119,6 @@ def test_preload_models_skips_person_when_no_counting_tasks(monkeypatch):
     monkeypatch.setattr("startup.get_device", lambda device=None: SimpleNamespace(type="cuda"))
 
     cfg = {"person_model": "p.pt", "plate_model": "pl.pt", "features": {}}
-    cams = [{"tasks": []}, {"tasks": ["visitor_mgmt"]}]
 
     asyncio.run(preload_models(cfg, cams))
 
