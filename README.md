@@ -463,7 +463,6 @@ The repository contains the following files:
 - `modules/alerts.py` – background email alert worker.
 - `modules/camera_factory.py` – helpers for opening camera streams.
 - `modules/duplicate_filter.py` – drop nearly identical frames.
-- `modules/ffmpeg_stream.py` – FFmpeg based camera wrapper.
 - `modules/gstreamer_stream.py` – GStreamer camera wrapper.
 - `modules/license.py` – license token utilities.
 - `modules/tracker/manager.py` – main tracking and counting logic.
@@ -503,7 +502,6 @@ The repository contains the following files:
 ### tests
 
 - `tests/test_license.py` – verify license helpers.
-- `tests/test_ffmpeg_stream.py` – test FFmpeg stream wrapper.
 - `tests/test_ppe_worker.py` – test PPE worker logic.
 - `tests/test_reports.py` – test reporting endpoints.
 - `tests/test_alerts.py` – test email alerts and metrics.
@@ -545,12 +543,10 @@ Detailed documentation for internal modules and routers is available below.
 - [email_utils](docs/modules/modules_email_utils.md)
 - [export](docs/modules/modules_export.md)
 - [feedback_db](docs/modules/modules_feedback_db.md)
-- [ffmpeg_stream](docs/modules/modules_ffmpeg_stream.md)
 - [getinfo](docs/modules/modules_getinfo.md)
 - [gstreamer_stream](docs/modules/modules_gstreamer_stream.md)
 - [license](docs/modules/modules_license.md)
 - [model_registry](docs/modules/modules_model_registry.md)
-- [opencv_stream](docs/modules/modules_opencv_stream.md)
 - [ppe_worker](docs/modules/modules_ppe_worker.md)
 - [profiler](docs/modules/modules_profiler.md)
 - [renderer](docs/modules/modules_renderer.md)

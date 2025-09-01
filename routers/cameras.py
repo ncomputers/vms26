@@ -36,7 +36,6 @@ from models.camera import Camera, Orientation, Transport, create_camera
 from models.camera import delete_camera as delete_camera_model
 from models.camera import get_camera, update_camera
 from modules.capture import RtspFfmpegSource, RtspGstSource
-from modules.capture.base import FrameSourceError
 from modules.email_utils import sign_token
 from modules.getinfo import probe_rtsp
 from modules.rtsp_probe import probe_rtsp_base
@@ -99,9 +98,6 @@ TOKEN_TTL = 60
 PREVIEW_TOKENS: dict[str, dict[str, float | str]] = {}
 preview_semaphore = asyncio.Semaphore(3)
 
-# persistent capture workers for MJPEG preview
-PREVIEW_CAPS: Dict[int, object] = {}
-
 # Preview publisher and RTSP connectors for frame streaming
 preview_publisher = PreviewPublisher()
 rtsp_connectors: Dict[int, RtspConnector] = {}
@@ -130,38 +126,6 @@ def _consume_preview_token(token: str) -> str | None:
     return str(info.get("url"))
 
 
-async def _get_preview_cap(cam: dict) -> object:
-    cap = PREVIEW_CAPS.get(cam["id"])
-    if cap is None:
-        uri = cam["url"]
-        if cfg.get("use_gstreamer") and RtspGstSource is not None:
-            gst = RtspGstSource(uri, cam_id=cam["id"])
-            try:
-                await asyncio.to_thread(gst.open)
-                cap = gst
-            except FrameSourceError as exc:
-                logger.warning("[%s] gst preview open failed: %s", cam["id"], exc)
-        if cap is None:
-            cap = RtspFfmpegSource(uri, cam_id=cam["id"])
-            await asyncio.to_thread(cap.open)
-        PREVIEW_CAPS[cam["id"]] = cap
-    return cap
-
-
-async def _restart_preview_cap(cam_id: int) -> None:
-    cap = PREVIEW_CAPS.get(cam_id)
-    if not cap:
-        return
-    try:
-        await asyncio.to_thread(cap.close)
-    except Exception:
-        pass
-    try:
-        await asyncio.to_thread(cap.open)
-    except Exception:
-        pass
-
-
 # default runtime context
 cfg = config
 cams: List[dict] = []
@@ -181,10 +145,6 @@ camera_manager = CameraManager(
     stop_tracker_fn,
 )
 manager = camera_manager
-
-# optional experimental pipeline support
-USE_PIPELINE = os.getenv("VMS21_PIPELINE") == "1"
-pipelines_map: Dict[int, object] = {}
 
 
 def get_camera_manager() -> CameraManager:  # pragma: no cover - simple accessor
@@ -323,16 +283,6 @@ def init_context(
         _frame_buses[cam.get("id")] = bus
         rtsp_connectors[cam.get("id")] = conn
     preview_publisher = PreviewPublisher(_frame_buses)
-    if USE_PIPELINE:
-        try:
-            from modules.pipeline import Pipeline
-
-            for cam in cams:
-                pipe = Pipeline(cam)
-                pipe.start()
-                pipelines_map[cam.get("id")] = pipe
-        except Exception:
-            logger.exception("failed to start pipeline")
     # Start background health monitoring task
     try:
         loop = asyncio.get_running_loop()
@@ -1293,19 +1243,6 @@ async def camera_stats(camera_id: int):
     data = conn.stats() if conn else {}
     data["preview"] = preview_publisher.is_showing(camera_id)
     return data
-
-
-@router.get("/api/cameras/{camera_id}/health")
-async def camera_health(camera_id: int):
-    cap = PREVIEW_CAPS.get(camera_id)
-    if not cap:
-        return {"capturing": False, "last_frame_age_ms": -1, "restarts": 0}
-    age_ms = int((time.time() - getattr(cap, "last_frame_ts", 0)) * 1000)
-    return {
-        "capturing": True,
-        "last_frame_age_ms": age_ms,
-        "restarts": getattr(cap, "restarts", 0),
-    }
 
 
 @router.post("/cameras/test")
