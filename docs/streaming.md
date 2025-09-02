@@ -1,6 +1,6 @@
 # Streaming Modes
 
-The camera stack now supports two FFmpeg streaming modes:
+The camera stack supports two FFmpeg streaming modes:
 
 - **Raw decoding (default)** – FFmpeg decodes the incoming H.264 stream into
   BGR frames that are pushed through the pipeline.
@@ -20,9 +20,47 @@ from modules.camera_factory import open_capture
 cap, _ = open_capture(url, cam_id)
 ```
 
+## Connect-only RTSP connector
+
+A lightweight `RtspConnector` process establishes the RTSP session and emits
+decoded frames. The connector focuses solely on keeping the FFmpeg process
+running; it does not handle previews or additional processing.
+
+Frames from each connector are published to a dedicated :class:`FrameBus`, a
+small thread-safe ring buffer that exposes ``put`` and ``get_latest`` helpers.
+Multiple consumers can subscribe to a bus without interfering with one another.
+
+## MJPG preview publisher
+
+The preview service subscribes to ``FrameBus`` instances through an
+``PreviewPublisher``. Clients request previews via
+``/api/cameras/{id}/mjpeg``. The publisher encodes frames to JPEG and yields
+them as ``multipart/x-mixed-replace`` chunks.
+
+Because preview consumption is decoupled from the connector, a camera can
+stream and be analysed even when no preview clients are connected.
+
+### Configuration example
+
+```json
+{
+  "cameras": [
+    {"id": 1, "url": "rtsp://cam/stream", "resolution": "1280x720"}
+  ]
+}
+```
+
+Connectors start automatically for all configured cameras. Preview is optional
+and can be toggled independently:
+
+```bash
+curl -X POST /api/cameras/1/show   # start preview
+curl -X POST /api/cameras/1/hide   # stop preview
+```
+
 ## Reconnection
 
-Capture sources now retry automatically using an exponential backoff starting
-at 0.5s (configurable via `RECONNECT_BACKOFF_MS_MIN`) and capped by
-`RECONNECT_BACKOFF_MS_MAX` (both in milliseconds). All RTSP commands default to
-TCP transport; set `RTSP_TCP=1` to enforce TCP if a source requests UDP.
+The legacy `-rw_timeout` flag and Python retry/backoff logic have been
+removed. The connector relies on FFmpeg's internal reconnect handling and a
+watchdog to detect stalled streams. All RTSP commands default to TCP transport;
+set `RTSP_TCP=1` to enforce TCP if a source requests UDP.

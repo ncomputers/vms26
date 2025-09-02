@@ -126,6 +126,10 @@ Only one pipeline runs at a time; restart after changing this flag.
 ## Camera API
 
 
+Each camera starts a connect-only RTSP connector that feeds decoded frames into
+an internal **FrameBus**. The MJPG preview endpoint subscribes to this bus so
+connectors continue running even when no preview clients are connected.
+
 Environment knobs influencing the preview stream:
 
 - `FRAME_JPEG_QUALITY` – JPEG quality for streamed frames (default `80`).
@@ -134,9 +138,10 @@ Environment knobs influencing the preview stream:
   within this window (default `2000`).
 - `HEARTBEAT_INTERVAL_MS` – interval for keep-alive JPEGs during stalls
   (default `1500`).
-- `RECONNECT_BACKOFF_MS_MIN` / `RECONNECT_BACKOFF_MS_MAX` – bounds for
-  exponential reconnect backoff.
 - `RTSP_TCP=1` forces TCP transport for RTSP sources.
+
+The FFmpeg `-rw_timeout` option and Python-based reconnect backoff have been
+removed; the connector now relies on FFmpeg's internal retry logic.
 
 Fields accepted by the camera creation endpoint:
 
