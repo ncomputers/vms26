@@ -14,7 +14,10 @@ The response includes a `stream_url` pointing to
 response sets `Access-Control-Allow-Origin: *` so it can be embedded from other
 origins.
 
-Streams are transient and stop when the client disconnects.
+Streams are transient and stop when the client disconnects. Behind the scenes
+the preview service reads frames from the camera's :class:`FrameBus` via a
+`PreviewPublisher`. Connectors remain active whether or not a preview client is
+connected.
 
 ## Environment variables
 
@@ -26,8 +29,6 @@ The preview subsystem honours several environment variables:
   window the capture source is restarted.
 - `HEARTBEAT_INTERVAL_MS` (default `1500`) – interval for tiny keep‑alive JPEGs
   to prevent browser timeouts when the stream stalls.
-- `RECONNECT_BACKOFF_MS_MIN`/`RECONNECT_BACKOFF_MS_MAX` – bounds for exponential
-  backoff when reconnecting to a dropped stream.
 - `RTSP_TCP` – set to `1` to force TCP transport for RTSP sources.
 
 ## Example
